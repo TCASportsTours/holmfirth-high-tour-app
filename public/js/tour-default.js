@@ -64,7 +64,8 @@ window.TOUR_DEFAULT = {
    "title": "UK clocks went back last night",
    "where": "",
    "detail": "UK clocks went back one hour overnight (Saturday into Sunday). Check your phone has updated before we leave for the airport.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e2-tonymeetsthegroupattheai",
@@ -77,7 +78,8 @@ window.TOUR_DEFAULT = {
    "title": "Tony meets the group at the airport",
    "where": "",
    "detail": "Tony from TCA Tours meets the group.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e3-flymanchesterlondonheath",
@@ -90,7 +92,8 @@ window.TOUR_DEFAULT = {
    "title": "Fly Manchester → London Heathrow · BA1367",
    "where": "Manchester T2 → Heathrow T5",
    "detail": "Depart Manchester Terminal 2 at 12:55 (UK time).",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e4-flyheathrownewyorknewark",
@@ -103,7 +106,8 @@ window.TOUR_DEFAULT = {
    "title": "Fly Heathrow → New York Newark · BA189",
    "where": "Heathrow T5 → Newark Terminal B",
    "detail": "Connect at Heathrow. Depart 16:25 UK time, arrive Newark 20:35 New York time.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e5-arrivenewyorknewark",
@@ -116,7 +120,8 @@ window.TOUR_DEFAULT = {
    "title": "Arrive New York Newark",
    "where": "Newark Liberty International, Terminal B",
    "detail": "Collect luggage, stay together, then go outside to the Passenger Pick-up Area with staff.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e6-coachtransfertothehostel",
@@ -129,7 +134,8 @@ window.TOUR_DEFAULT = {
    "title": "Coach transfer to the hostel",
    "where": "Newark → HI New York City Hostel",
    "detail": "Pick-up 21:30–22:00. Coach to the hostel and check in.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e7-eatlocallyorientation",
@@ -142,7 +148,8 @@ window.TOUR_DEFAULT = {
    "title": "Eat locally & orientation",
    "where": "Upper West Side",
    "detail": "Eat locally and get our bearings on the Upper West Side.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e8-breakfastatthehostel",
@@ -155,7 +162,8 @@ window.TOUR_DEFAULT = {
    "title": "Breakfast at the hostel",
    "where": "HI New York City Hostel",
    "detail": "",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e9-centralparkstrawberryfie",
@@ -168,7 +176,13 @@ window.TOUR_DEFAULT = {
    "title": "Central Park & Strawberry Fields",
    "where": "Central Park",
    "detail": "Spend some time in Central Park and see the musicians at Strawberry Fields.\nTravel light! There is a bag check at Madison Square Garden tonight — or we head back to the hostel to drop things off first.",
-   "route": "Walk into the park from the hostel (Central Park West is 3 blocks east). Strawberry Fields is at W 72nd St & Central Park West."
+   "route": "Walk into the park from the hostel (Central Park West is 3 blocks east). Strawberry Fields is at W 72nd St & Central Park West.",
+   "links": [
+    {
+     "label": "Strawberry Fields",
+     "url": "https://centralparknyc.org/locations/strawberry-fields"
+    }
+   ]
   },
   {
    "id": "e10-dumbotimeoutmarketbrookl",
@@ -181,7 +195,13 @@ window.TOUR_DEFAULT = {
    "title": "DUMBO, Time Out Market & Brooklyn Bridge",
    "where": "DUMBO, Brooklyn",
    "detail": "Subway to DUMBO. Check out Time Out Market and eat there, then walk across the Brooklyn Bridge back to Manhattan. Walk back uptown via Little Italy — grab a slice of pizza and a gelato on the way.",
-   "route": "Suggested: 2 or 3 train (Downtown & Brooklyn) from 96 St to Clark St, Brooklyn, then about 15 minutes' walk to DUMBO."
+   "route": "Suggested: 2 or 3 train (Downtown & Brooklyn) from 96 St to Clark St, Brooklyn, then about 15 minutes' walk to DUMBO.",
+   "links": [
+    {
+     "label": "Time Out Market — how to get there",
+     "url": "https://www.timeout.com/time-out-market-new-york/how-to-get-here"
+    }
+   ]
   },
   {
    "id": "e11-arriveatmadisonsquaregar",
@@ -194,7 +214,13 @@ window.TOUR_DEFAULT = {
    "title": "Arrive at Madison Square Garden",
    "where": "Madison Square Garden",
    "detail": "Arrive at the venue for 6pm. Eat at the venue or before/after the game. Erin has the tickets.",
-   "route": "1, 2 or 3 train to 34 St–Penn Station — MSG is directly above the station."
+   "route": "1, 2 or 3 train to 34 St–Penn Station — MSG is directly above the station.",
+   "links": [
+    {
+     "label": "Madison Square Garden",
+     "url": "https://www.msg.com/madison-square-garden"
+    }
+   ]
   },
   {
    "id": "e12-nhlnewyorkrangersvlaking",
@@ -207,7 +233,17 @@ window.TOUR_DEFAULT = {
    "title": "NHL: New York Rangers v LA Kings",
    "where": "Madison Square Garden",
    "detail": "Live ice hockey. Game starts at 7pm. NHL tickets booked.\nAfter the game: subway back to 103rd St / Amsterdam.",
-   "route": "Home: 1 train (Uptown & The Bronx) from 34 St–Penn Station to 103 St."
+   "route": "Home: 1 train (Uptown & The Bronx) from 34 St–Penn Station to 103 St.",
+   "links": [
+    {
+     "label": "New York Rangers",
+     "url": "https://www.nhl.com/rangers"
+    },
+    {
+     "label": "Madison Square Garden",
+     "url": "https://www.msg.com/madison-square-garden"
+    }
+   ]
   },
   {
    "id": "e13-breakfastatthehostel",
@@ -220,7 +256,8 @@ window.TOUR_DEFAULT = {
    "title": "Breakfast at the hostel",
    "where": "HI New York City Hostel",
    "detail": "",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e14-subwaytotimessquare",
@@ -233,7 +270,8 @@ window.TOUR_DEFAULT = {
    "title": "Subway to Times Square",
    "where": "Times Sq–42 St",
    "detail": "Meet ready to leave at 9.30am.",
-   "route": "1, 2 or 3 train (Downtown & Brooklyn) to Times Sq–42 St."
+   "route": "1, 2 or 3 train (Downtown & Brooklyn) to Times Sq–42 St.",
+   "links": []
   },
   {
    "id": "e15-hersheysbusinesstour",
@@ -246,7 +284,13 @@ window.TOUR_DEFAULT = {
    "title": "Hershey's Business Tour",
    "where": "Hershey's Chocolate World, Times Square",
    "detail": "Business tour at Hershey's Chocolate World.",
-   "route": ""
+   "route": "",
+   "links": [
+    {
+     "label": "Hershey's Chocolate World (NYC Tourism)",
+     "url": "https://nyctourism.com/shopping/hersheys-chocolate-world-times-square/"
+    }
+   ]
   },
   {
    "id": "e16-ghostbustersfirehouse",
@@ -259,7 +303,8 @@ window.TOUR_DEFAULT = {
    "title": "Ghostbusters Fire House",
    "where": "Hook & Ladder 8, 14 N Moore St, Tribeca",
    "detail": "Subway downtown to see the Ghostbusters Fire House.",
-   "route": "A, C or E train to Canal St. (The 1 train to Franklin St also stops right by it.)"
+   "route": "A, C or E train to Canal St. (The 1 train to Franklin St also stops right by it.)",
+   "links": []
   },
   {
    "id": "e17-lunch",
@@ -272,7 +317,8 @@ window.TOUR_DEFAULT = {
    "title": "Lunch",
    "where": "Times Square or Financial District",
    "detail": "Lunch in Times Square or the Financial District.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e18-statenislandferrystatueo",
@@ -285,7 +331,13 @@ window.TOUR_DEFAULT = {
    "title": "Staten Island Ferry — Statue of Liberty",
    "where": "Whitehall Terminal, South Ferry",
    "detail": "Take the free Staten Island Ferry for views of the Statue of Liberty.",
-   "route": "1 train to South Ferry, at the bottom tip of Manhattan."
+   "route": "1 train to South Ferry, at the bottom tip of Manhattan.",
+   "links": [
+    {
+     "label": "Staten Island Ferry",
+     "url": "https://www.siferry.com"
+    }
+   ]
   },
   {
    "id": "e19-911memorialthefinanciald",
@@ -298,7 +350,13 @@ window.TOUR_DEFAULT = {
    "title": "9/11 Memorial & the Financial District",
    "where": "9/11 Memorial, Financial District",
    "detail": "Visit the 9/11 Memorial and sites in the Financial District.",
-   "route": "Walk up from the ferry terminal (about 15 minutes), or 1 train to WTC Cortlandt."
+   "route": "Walk up from the ferry terminal (about 15 minutes), or 1 train to WTC Cortlandt.",
+   "links": [
+    {
+     "label": "9/11 Memorial & Museum",
+     "url": "https://www.911memorial.org"
+    }
+   ]
   },
   {
    "id": "e20-flatironbuilding5thavenu",
@@ -311,7 +369,8 @@ window.TOUR_DEFAULT = {
    "title": "Flatiron Building → 5th Avenue",
    "where": "Flatiron Building",
    "detail": "Subway to the Flatiron Building and walk up 5th Avenue to the Empire State Building.",
-   "route": "Suggested: R or W train from Cortlandt St to 23 St — the Flatiron is right outside. Then walk up 5th Ave to 34th St."
+   "route": "Suggested: R or W train from Cortlandt St to 23 St — the Flatiron is right outside. Then walk up 5th Ave to 34th St.",
+   "links": []
   },
   {
    "id": "e21-empirestatebuilding",
@@ -324,7 +383,13 @@ window.TOUR_DEFAULT = {
    "title": "Empire State Building",
    "where": "Empire State Building, 5th Ave & 34th St",
    "detail": "Arrive 6.30pm for entrance at 7pm.",
-   "route": ""
+   "route": "",
+   "links": [
+    {
+     "label": "Empire State Building",
+     "url": "https://www.esbnyc.com"
+    }
+   ]
   },
   {
    "id": "e22-timessquareatnightfreeti",
@@ -337,7 +402,13 @@ window.TOUR_DEFAULT = {
    "title": "Times Square at night & free time to eat",
    "where": "Times Square",
    "detail": "Walk up Broadway to see Times Square at night. Free time in Times Square to eat.\nSubway back to 103rd St / Amsterdam when ready.",
-   "route": "Home: 1 train (Uptown & The Bronx) from Times Sq–42 St to 103 St."
+   "route": "Home: 1 train (Uptown & The Bronx) from Times Sq–42 St to 103 St.",
+   "links": [
+    {
+     "label": "Times Square",
+     "url": "https://www.timessquarenyc.org"
+    }
+   ]
   },
   {
    "id": "e23-breakfastatthehostel",
@@ -350,7 +421,8 @@ window.TOUR_DEFAULT = {
    "title": "Breakfast at the hostel",
    "where": "HI New York City Hostel",
    "detail": "",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e24-rooseveltislandtram",
@@ -363,7 +435,13 @@ window.TOUR_DEFAULT = {
    "title": "Roosevelt Island Tram",
    "where": "59th St & 2nd Ave",
    "detail": "Subway to 59th Street / Columbus Circle, walk across 59th Street and take the cable car to Roosevelt Island for great views of Manhattan.",
-   "route": "1 train (Downtown & Brooklyn) to 59 St–Columbus Circle, then walk east along 59th St to the tram at 2nd Ave (about 25–30 minutes)."
+   "route": "1 train (Downtown & Brooklyn) to 59 St–Columbus Circle, then walk east along 59th St to the tram at 2nd Ave (about 25–30 minutes).",
+   "links": [
+    {
+     "label": "Roosevelt Island Tram",
+     "url": "https://www.rioc.ny.gov/community/transportation/tram"
+    }
+   ]
   },
   {
    "id": "e25-hudsonyardsthehighlinech",
@@ -376,7 +454,25 @@ window.TOUR_DEFAULT = {
    "title": "Hudson Yards, the High Line & Chelsea Market",
    "where": "Hudson Yards → High Line → Little Island",
    "detail": "Check out the Vessel and Hudson Yards mall. Walk downtown on the High Line. Eat at Chelsea Market. Visit Little Island.",
-   "route": "Subway to 34 St–Hudson Yards (7 train)."
+   "route": "Subway to 34 St–Hudson Yards (7 train).",
+   "links": [
+    {
+     "label": "Hudson Yards & the Vessel",
+     "url": "https://www.hudsonyardsnewyork.com"
+    },
+    {
+     "label": "The High Line",
+     "url": "https://www.thehighline.org"
+    },
+    {
+     "label": "Chelsea Market",
+     "url": "https://www.chelseamarket.com"
+    },
+    {
+     "label": "Little Island",
+     "url": "https://littleisland.org"
+    }
+   ]
   },
   {
    "id": "e26-greenwichvillage",
@@ -389,7 +485,13 @@ window.TOUR_DEFAULT = {
    "title": "Greenwich Village",
    "where": "Greenwich Village",
    "detail": "Walk to Greenwich Village — Stonewall, the Friends building and Washington Square Park.",
-   "route": "Walk from Little Island (about 15 minutes)."
+   "route": "Walk from Little Island (about 15 minutes).",
+   "links": [
+    {
+     "label": "Washington Square Park",
+     "url": "https://www.nycgovparks.org/parks/washington-square-park"
+    }
+   ]
   },
   {
    "id": "e27-arriveatgroove",
@@ -402,7 +504,13 @@ window.TOUR_DEFAULT = {
    "title": "Arrive at Groove",
    "where": "Groove, 125 MacDougal St",
    "detail": "Arrive from 6–6.30pm. Eat at the venue. Tickets paid.",
-   "route": ""
+   "route": "",
+   "links": [
+    {
+     "label": "Groove",
+     "url": "https://www.clubgroovenyc.com"
+    }
+   ]
   },
   {
    "id": "e28-livemusicatgroove",
@@ -415,7 +523,13 @@ window.TOUR_DEFAULT = {
    "title": "Live music at Groove",
    "where": "Groove, 125 MacDougal St",
    "detail": "Live music from 7pm.\nAfter the show: subway back to 103rd St / Amsterdam.",
-   "route": "Home: 1 train (Uptown & The Bronx) from Christopher St–Stonewall to 103 St."
+   "route": "Home: 1 train (Uptown & The Bronx) from Christopher St–Stonewall to 103 St.",
+   "links": [
+    {
+     "label": "Groove",
+     "url": "https://www.clubgroovenyc.com"
+    }
+   ]
   },
   {
    "id": "e29-breakfaststoreluggage",
@@ -428,7 +542,8 @@ window.TOUR_DEFAULT = {
    "title": "Breakfast & store luggage",
    "where": "HI New York City Hostel",
    "detail": "Breakfast at the hostel. Pack up and store luggage — we leave for the airport tonight.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e30-centralparkzoo",
@@ -441,7 +556,13 @@ window.TOUR_DEFAULT = {
    "title": "Central Park Zoo",
    "where": "Central Park Zoo, 5th Ave & 64th St",
    "detail": "Central Park Zoo, 10:00–13:00.",
-   "route": "1 train to 59 St–Columbus Circle, then walk through the park (about 15 minutes)."
+   "route": "1 train to 59 St–Columbus Circle, then walk through the park (about 15 minutes).",
+   "links": [
+    {
+     "label": "Central Park Zoo",
+     "url": "https://www.centralparkzoo.com"
+    }
+   ]
   },
   {
    "id": "e31-5thavenuetherockefellerc",
@@ -454,7 +575,13 @@ window.TOUR_DEFAULT = {
    "title": "5th Avenue & the Rockefeller Center",
    "where": "5th Avenue",
    "detail": "Walk down 5th Avenue to see the Rockefeller Center.",
-   "route": ""
+   "route": "",
+   "links": [
+    {
+     "label": "Rockefeller Center",
+     "url": "https://www.rockefellercenter.com"
+    }
+   ]
   },
   {
    "id": "e32-lastminuteshopping",
@@ -467,7 +594,8 @@ window.TOUR_DEFAULT = {
    "title": "Last-minute shopping",
    "where": "5th Avenue / Times Square",
    "detail": "Last-minute shopping on 5th Avenue or around Times Square.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e33-ellensstardustdiner",
@@ -480,7 +608,13 @@ window.TOUR_DEFAULT = {
    "title": "Ellen's Stardust Diner",
    "where": "1650 Broadway at W 51st St",
    "detail": "Early dinner at Ellen's Stardust Diner (the singing waiters!).",
-   "route": "1 train to 50 St."
+   "route": "1 train to 50 St.",
+   "links": [
+    {
+     "label": "Ellen's Stardust Diner",
+     "url": "https://www.ellensstardustdiner.com"
+    }
+   ]
   },
   {
    "id": "e34-coachpickupatthehosteljf",
@@ -493,7 +627,8 @@ window.TOUR_DEFAULT = {
    "title": "Coach pick-up at the hostel → JFK",
    "where": "HI New York City Hostel",
    "detail": "Pick-up 7.15–7.30pm at the hostel for JFK Airport. Be in reception with all your luggage before 7.15pm.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e35-flynewyorkjfklondonheath",
@@ -506,7 +641,8 @@ window.TOUR_DEFAULT = {
    "title": "Fly New York JFK → London Heathrow · BA182",
    "where": "JFK Terminal 8 → Heathrow T5",
    "detail": "Departs 00:20 — that's just after midnight, so late on Thursday night.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e36-arrivelondonheathrow",
@@ -519,7 +655,8 @@ window.TOUR_DEFAULT = {
    "title": "Arrive London Heathrow",
    "where": "Heathrow T5",
    "detail": "Arrive Heathrow Terminal 5 at 11:10 UK time.",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e37-flyheathrowmanchesterba1",
@@ -532,7 +669,8 @@ window.TOUR_DEFAULT = {
    "title": "Fly Heathrow → Manchester · BA1368",
    "where": "Heathrow T5 → Manchester T2",
    "detail": "Depart 13:05. Due into Manchester Terminal 2 around 14:15–14:20 (to be confirmed).",
-   "route": ""
+   "route": "",
+   "links": []
   },
   {
    "id": "e38-arrivemanchestercoachtos",
@@ -545,7 +683,8 @@ window.TOUR_DEFAULT = {
    "title": "Arrive Manchester & coach to school",
    "where": "Manchester T2 → Holmfirth High",
    "detail": "Coach back to school — arranged by Erin.",
-   "route": ""
+   "route": "",
+   "links": []
   }
  ],
  "flights": [

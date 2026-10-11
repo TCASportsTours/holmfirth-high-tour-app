@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v2  |  11 October 2026 (v2: Teacher + TCA Tours staff sign-ins, parent/family option removed)
+  Version: v3  |  11 October 2026 (v3: website links on itinerary events; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v2">
+<meta name="version" content="v3">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -277,7 +277,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v2 · 11 Oct 2026';
+var BUILD = 'v3 · 11 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -469,7 +469,7 @@ function dayRows(list,evs){
     return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
       '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
       '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
-      (e.staffOnly?'<span class="tag">Staff only</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.links&&e.links.length?' <span class="tag"><i class="ti ti-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
   }).join('')+'</div>';
 }
 
@@ -495,6 +495,7 @@ function openEvent(id){
     (e.where?'<dt>Where</dt><dd>'+esc(e.where)+'</dd>':'')+'</dl>';
   if(e.detail) html+='<div class="card rule prose">'+paras(e.detail)+'</div>';
   if(e.route) html+='<p class="label">How to get there</p><div class="card prose">'+paras(e.route)+'<p class="small muted" style="margin-top:8px">Stay with your group and teacher on the subway.</p></div>';
+  if(e.links&&e.links.length) html+='<p class="label">Links</p>'+e.links.map(function(l,i){ return '<a class="btn '+(i===0?'gold':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>'; }).join('');
   if(q && e.clock!=='UK') html+='<a class="btn dark" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+q+'"><i class="ti ti-map-2"></i> Open in Maps</a>';
   if(e.staffOnly) html+='<p class="tag" style="margin-top:12px">Staff only</p>';
   openPage(html);

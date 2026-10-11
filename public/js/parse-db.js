@@ -59,6 +59,16 @@
     return '';
   }
   function slug(s) { return norm(s).slice(0, 24) || 'x'; }
+  /* Links cell: one per line, either a bare URL or "Label | URL". */
+  function parseLinks(cell) {
+    return str(cell).split(/\n+/).map(function (line) {
+      line = line.trim(); if (!line) return null;
+      var m = line.match(/^(.*?)\s*\|\s*(https?:\/\/\S+)$/i);
+      if (m) return { label: m[1] || 'Website', url: m[2] };
+      if (/^https?:\/\/\S+$/i.test(line)) return { label: line.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0], url: line };
+      return null;
+    }).filter(Boolean);
+  }
 
   function parse(XLSX, wb) {
     var warnings = [];
@@ -88,7 +98,7 @@
       var ev = {
         id: 'e' + (++n) + '-' + slug(r.title), day: day, date: date, time: parseTime(r.time), end: parseTime(r.end),
         clock: /uk/i.test(r.clock) ? 'UK' : 'NY', type: str(r.type) || 'Activity', title: r.title,
-        where: r.location || '', detail: r.detail || '', route: r.gettingthere || ''
+        where: r.location || '', detail: r.detail || '', route: r.gettingthere || '', links: parseLinks(r.links || r.website)
       };
       if (str(r.time) && !ev.time) warnings.push('Schedule: could not read time "' + r.time + '" for "' + r.title + '"');
       (isStaffOnly(r.whoseesit) ? priv.events : pub.events).push(ev);

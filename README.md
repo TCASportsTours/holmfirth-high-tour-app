@@ -3,7 +3,7 @@
 A phone app (installable web app) for the Holmfirth High "Business and New York Experience" trip, 25–30 October 2026.
 Same idea as the GCS Tobago app: one spreadsheet, uploaded through the admin page, drives everything. Built to the **TCA Tours brand book**: charcoal and gold, Cormorant Garamond and Work Sans, square corners.
 
-Version: **v2** · 11 October 2026 (v2: separate Teacher and TCA Tours staff sign-ins; parent/family option removed)
+Version: **v3** · 11 October 2026 (v3: website links on itinerary events; v2: separate Teacher and TCA Tours staff sign-ins; parent/family option removed)
 
 ## What's in it
 
