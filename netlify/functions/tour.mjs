@@ -8,7 +8,7 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour                     -> published itinerary (public half of the App Database)
 //   GET  /tour?type=alerts         -> alerts list
 //
-//   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD>)
+//   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
 //   GET  /tour?type=private        -> students, medical, dietary, contacts, transfers, meal orders
 //                                     + live room numbers + register, merged in
@@ -22,7 +22,7 @@ import { getStore } from "@netlify/blobs";
 //   DELETE /tour?type=register|roomnums|alerts -> clear test data
 //
 // Passwords live in Netlify environment variables, never in the repo:
-//   STAFF_PASSWORD (required for anything staff-only), ADMIN_PASSWORD (optional).
+//   STAFF_PASSWORD (teachers, required), TCA_PASSWORD (TCA Tours staff, optional), ADMIN_PASSWORD (optional).
 
 const MERGE = new Set(["roomnums", "register"]);
 const STAFF_READ = new Set(["private", "auth", "roomnums", "register"]);
@@ -58,7 +58,8 @@ export default async (req) => {
   const staffPass = env("STAFF_PASSWORD");
   const adminPass = env("ADMIN_PASSWORD") || staffPass;
   const given = req.headers.get("x-staff-key") || "";
-  const isStaff = same(given, staffPass) || same(given, adminPass);
+  const tcaPass = env("TCA_PASSWORD");
+  const isStaff = same(given, staffPass) || same(given, adminPass) || (!!tcaPass && same(given, tcaPass));
   const isAdmin = same(given, adminPass);
   const notConfigured = () => reply(headers, 503, { ok: false, error: "STAFF_PASSWORD is not set in Netlify environment variables" });
   const denied = () => reply(headers, 401, { ok: false, error: "staff password required" });

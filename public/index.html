@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v1  |  11 October 2026
+  Version: v2  |  11 October 2026 (v2: Teacher + TCA Tours staff sign-ins, parent/family option removed)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v1">
+<meta name="version" content="v2">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -277,10 +277,10 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v1 · 11 Oct 2026';
+var BUILD = 'v2 · 11 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
-var LS = { role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
+var LS = { kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
 
 var T = window.TOUR_DEFAULT || {tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]};
 var P = null;            // staff-only data (only after staff sign-in)
@@ -399,27 +399,28 @@ function renderSignin(){
     (gap&&first.start>Date.now()?'<div class="rule"></div><p><span class="num" style="font-size:30px">'+esc(gap.n)+'</span> <span class="muted">'+esc(gap.l)+' until we fly</span></p>':'<div class="rule"></div>')+
     '<p class="label">Who are you?</p>'+
     '<button class="who primary" onclick="pickRole(\'student\')"><span class="ic"><i class="ti ti-backpack"></i></span><span><b>Student</b><span>Itinerary, getting around, safety</span></span><i class="ti ti-chevron-right arr"></i></button>'+
-    '<button class="who" onclick="pickRole(\'family\')"><span class="ic"><i class="ti ti-home-heart"></i></span><span><b>Parent or family</b><span>Follow the trip from home</span></span><i class="ti ti-chevron-right arr"></i></button>'+
-    '<button class="who" onclick="staffPrompt()"><span class="ic"><i class="ti ti-lock"></i></span><span><b>Staff</b><span>Password required</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+    '<button class="who" onclick="staffPrompt(\'teacher\')"><span class="ic"><i class="ti ti-school"></i></span><span><b>Teacher</b><span>Holmfirth High · password required</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+    '<button class="who" onclick="staffPrompt(\'tca\')"><span class="ic"><i class="ti ti-lock"></i></span><span><b>TCA Tours staff</b><span>Password required</span></span><i class="ti ti-chevron-right arr"></i></button>'+
     '<div id="staffBox" style="display:none;margin-top:6px"><input class="field" id="staffPass" type="password" placeholder="Staff password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')staffCheck()">'+
     '<button class="btn dark" style="margin-top:10px" onclick="staffCheck()"><i class="ti ti-login-2"></i> Enter staff view</button><div class="err" id="staffErr"></div></div>'+
     '<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>'+
     '<p class="foot">TCA Tours · Build '+esc(BUILD)+'</p></div>';
 }
 function pickRole(r){ role=r; lsSet(LS.role,r); enter(); }
-function staffPrompt(){ $('staffBox').style.display='block'; setTimeout(function(){$('staffPass').focus();},50); }
+var staffKind='teacher';
+function staffPrompt(k){ staffKind=k||'teacher'; $('staffBox').style.display='block'; $('staffPass').placeholder=(staffKind==='tca'?'TCA Tours':'Teacher')+' password'; setTimeout(function(){$('staffPass').focus();},50); }
 function staffCheck(){
   var pw=$('staffPass').value, err=$('staffErr'); err.classList.remove('on');
   if(!pw){ err.textContent='Enter the staff password.'; err.classList.add('on'); return; }
   fetch(API+'?type=auth',{headers:{'x-staff-key':pw},cache:'no-store'}).then(function(r){
-    if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); enter(); loadPrivate(); return; }
+    if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); lsSet(LS.kind,staffKind); enter(); loadPrivate(); return; }
     return r.json().catch(function(){return {};}).then(function(j){
       err.textContent = r.status===503 ? 'Staff area not set up yet: the STAFF_PASSWORD hasn\'t been added in Netlify.' : (r.status===401 ? 'That password isn\'t right. Try again.' : 'Could not check the password ('+r.status+').');
       err.classList.add('on'); });
   }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
 }
 function signOut(){
-  lsSet(LS.role,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
+  lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
 function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); }
@@ -559,7 +560,7 @@ function subwaySVG(){
 /* ================= MORE ================= */
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
-  var html='<p class="label">Signed in as '+esc(role==='staff'?'staff':role==='family'?'parent / family':'student')+'</p>';
+  var html='<p class="label">Signed in as '+esc(role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':'teacher'):'student')+'</p>';
   html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
@@ -663,7 +664,7 @@ function openAlerts(){
     return '<div class="card rule"><h3 style="font-size:20px">'+esc(a.title||'Message')+'</h3><div class="prose small">'+paras(a.msg)+'</div><p class="small muted">'+esc(a.by||'Staff')+' · '+esc(new Date(a.at).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY time</p></div>'; }).join(''):'<div class="card"><p class="small muted">No alerts yet. Staff messages will appear here and pop up on your phone when the app is open.</p></div>'));
 }
 function openSendAlert(){
-  openPage('<p class="label">Staff</p><h2>Send an <em>alert</em></h2><p class="small muted">Goes to everyone using the app — students, families and staff. It pops up next time their app checks in (about once a minute while open).</p>'+
+  openPage('<p class="label">Staff</p><h2>Send an <em>alert</em></h2><p class="small muted">Goes to everyone using the app — students and staff. It pops up next time their app checks in (about once a minute while open).</p>'+
     '<input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" style="margin-top:12px" maxlength="80">'+
     '<textarea class="field" id="alMsg" rows="5" placeholder="Message" style="margin-top:10px;resize:vertical"></textarea>'+
     '<button class="btn gold" style="margin-top:12px" onclick="sendAlert()"><i class="ti ti-send"></i> Send to everyone</button>'+
@@ -835,11 +836,12 @@ function openA2HS(){
 }
 
 /* ================= DATA LOADING ================= */
+function withDefaults(j){ var d={tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]}; Object.keys(d).forEach(function(k){ if(j[k]==null||typeof j[k]!==typeof d[k]) j[k]=d[k]; }); j.events=j.events.filter(function(e){return e&&e.title&&e.day;}); return j; }
 function loadTour(){
-  try{ var c=JSON.parse(lsGet(LS.tour)||'null'); if(c&&c.events&&c.events.length) T=c; }catch(e){}
+  try{ var c=JSON.parse(lsGet(LS.tour)||'null'); if(c&&c.events&&c.events.length) T=withDefaults(c); }catch(e){}
   return fetch(API,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
     $('offline').classList.remove('on');
-    if(j&&Array.isArray(j.events)&&j.events.length){ T=j; lsSet(LS.tour,JSON.stringify(j)); }
+    if(j&&Array.isArray(j.events)&&j.events.length){ T=withDefaults(j); lsSet(LS.tour,JSON.stringify(j)); }
   }).catch(function(){ $('offline').classList.add('on'); });
 }
 function refresh(){
@@ -851,7 +853,7 @@ function refresh(){
 }
 
 (function init(){
-  if(role==='staff'&&!lsGet(LS.key)) role=null;
+  if((role==='staff'&&!lsGet(LS.key))||(role&&role!=='staff'&&role!=='student')){ role=null; lsSet(LS.role,null); }
   if(role){ enter(); } else { renderSignin(); }
   loadTour().then(function(){ if(role) refresh(); else renderSignin(); });
   if(role==='staff') loadPrivate();

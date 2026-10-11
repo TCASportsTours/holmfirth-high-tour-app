@@ -68,9 +68,9 @@
 
   <p class="label">1 · Admin password</p>
   <div class="card rule">
-    <div class="row"><input type="password" id="pw" placeholder="Admin or staff password" autocomplete="current-password"><button class="btn dark" onclick="checkPw()">Check</button></div>
+    <div class="row"><input type="password" id="pw" placeholder="Admin password" autocomplete="current-password"><button class="btn dark" onclick="checkPw()">Check</button></div>
     <p class="msg" id="pwMsg"></p>
-    <p class="small muted" style="margin-top:10px">Set in Netlify → Site configuration → Environment variables: <code>STAFF_PASSWORD</code> (and optionally <code>ADMIN_PASSWORD</code>, so only you can publish). Redeploy after adding it.</p>
+    <p class="small muted" style="margin-top:10px">Set in Netlify → Site configuration → Environment variables: <code>STAFF_PASSWORD</code> (teachers), <code>TCA_PASSWORD</code> (TCA Tours staff) and <code>ADMIN_PASSWORD</code> (publishing). Redeploy after adding it.</p>
   </div>
 
   <p class="label">2 · Load the App Database</p>

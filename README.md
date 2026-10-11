@@ -3,11 +3,11 @@
 A phone app (installable web app) for the Holmfirth High "Business and New York Experience" trip, 25–30 October 2026.
 Same idea as the GCS Tobago app: one spreadsheet, uploaded through the admin page, drives everything. Built to the **TCA Tours brand book**: charcoal and gold, Cormorant Garamond and Work Sans, square corners.
 
-Version: **v1** · 11 October 2026
+Version: **v2** · 11 October 2026 (v2: separate Teacher and TCA Tours staff sign-ins; parent/family option removed)
 
 ## What's in it
 
-| Everyone (students, families, staff) | Staff only (password) |
+| Students and staff | Staff only (teacher or TCA Tours password) |
 |---|---|
 | **Today**: live New York and UK clocks, weather, "Up next" countdown | **Register**: live head-count roll calls, shared across staff phones |
 | **Itinerary**: every day, tap for details and how to get there | **Rooms**: room groups and teachers, type in room numbers once allocated |
@@ -46,8 +46,9 @@ This repository is **public**. It must never contain pupil data.
 1. Netlify → **Add new site → Import an existing project → GitHub** → pick this repo.
    Leave the build command blank. `netlify.toml` already sets publish = `public`, functions = `netlify/functions`.
 2. Site configuration → **Environment variables**, add:
-   - `STAFF_PASSWORD`: the password teachers type in the app (required)
-   - `ADMIN_PASSWORD`: a different password only you use for publishing (optional but recommended)
+   - `STAFF_PASSWORD`: the **Teacher** sign-in password (required)
+   - `TCA_PASSWORD`: the **TCA Tours staff** sign-in password
+   - `ADMIN_PASSWORD`: the password for publishing in admin.html
 3. **Deploys → Trigger deploy** (environment variables only take effect after a deploy).
 4. Check the **Functions** tab lists `tour`.
 5. Open `https://<your-site>/admin.html`, enter the admin password, load the App Database and press **Publish**.
