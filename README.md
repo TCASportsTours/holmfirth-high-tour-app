@@ -49,6 +49,7 @@ This repository is **public**. It must never contain pupil data.
    - `STAFF_PASSWORD`: the **Teacher** sign-in password (required)
    - `TCA_PASSWORD`: the **TCA Tours staff** sign-in password
    - `ADMIN_PASSWORD`: the password for publishing in admin.html
+   Save them as ordinary (not "secret") variables: on this Netlify plan, secret values didn't save.
 3. **Deploys → Trigger deploy** (environment variables only take effect after a deploy).
 4. Check the **Functions** tab lists `tour`.
 5. Open `https://<your-site>/admin.html`, enter the admin password, load the App Database and press **Publish**.
