@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<!--
+  TCA Tours — Holmfirth High · New York 2026 — admin (publish the App Database)
+  Version: v1  |  11 October 2026
+  The workbook is read inside this browser only. Public and staff-only halves are published separately.
+-->
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="version" content="v1">
+<title>Tour Admin · Holmfirth NYC</title>
+<link rel="icon" type="image/png" href="img/favicon-64.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--charcoal:#414042;--gold:#EFCA50;--ink:#2A292B;--stone:#F4F3F1;--slate:#6E6D70;--hairline:#DDDCDC;--alarm:#B03A2E;
+    --display:'Cormorant Garamond',Garamond,Georgia,serif;--body:'Work Sans',system-ui,Arial,sans-serif}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--body);color:var(--charcoal);background:var(--stone);line-height:1.6;font-size:15px}
+  header{background:var(--ink);padding:20px 16px}
+  header .wrap{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  header img{width:170px;height:auto;display:block}
+  header span{color:#B7B6B9;font-size:13px;letter-spacing:.04em}
+  .wrap{max-width:860px;margin:0 auto;padding:0 16px}
+  main .wrap{padding-top:28px;padding-bottom:60px}
+  h1,h2,h3{font-family:var(--display);font-weight:500;line-height:1.1}
+  h1{font-size:40px} h1 em{font-style:italic}
+  h2{font-size:28px;margin-bottom:6px}
+  .label{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);display:flex;align-items:center;gap:11px;margin:30px 0 10px}
+  .label::before{content:"";width:3px;height:16px;background:var(--gold)}
+  .card{background:#fff;border:1px solid var(--hairline);padding:20px;margin:12px 0;position:relative}
+  .card.rule::before{content:"";position:absolute;left:-1px;top:-1px;width:3px;height:52px;background:var(--gold)}
+  .muted{color:var(--slate)} .small{font-size:13px}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;font:600 14px var(--body);letter-spacing:.06em;text-transform:uppercase;padding:14px 22px}
+  .btn.gold{background:var(--gold);color:var(--charcoal)} .btn.line{background:#fff;box-shadow:inset 0 0 0 1px var(--charcoal);color:var(--charcoal)}
+  .btn.dark{background:var(--charcoal);color:#fff} .btn[disabled]{opacity:.4;cursor:not-allowed}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  input[type=password],input[type=text]{border:1px solid var(--charcoal);padding:12px 13px;font:16px var(--body);min-width:260px;border-radius:0;background:#fff}
+  input:focus{outline:2px solid var(--gold)}
+  .drop{border:2px dashed var(--hairline);background:#fff;padding:34px 20px;text-align:center;cursor:pointer}
+  .drop.over{border-color:var(--gold)}
+  .drop b{font-family:var(--display);font-size:24px;font-weight:600;display:block}
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+  .stat{background:#fff;border:1px solid var(--hairline);padding:14px}
+  .stat b{font-family:var(--display);font-size:34px;font-weight:600;line-height:1;display:block}
+  .stat span{font-size:12.5px;color:var(--slate)}
+  .stat.private{background:var(--ink);border-color:var(--ink);color:#fff}.stat.private span{color:#B7B6B9}
+  table{width:100%;border-collapse:collapse;background:#fff;font-size:13.5px}
+  th{font-family:var(--display);font-weight:600;letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--slate);text-align:left;padding:9px 10px;border-bottom:2px solid var(--gold)}
+  td{padding:8px 10px;border-bottom:1px solid var(--hairline);vertical-align:top}
+  .warn{border-left:3px solid var(--alarm);background:#fff;padding:10px 14px;margin:6px 0;font-size:14px}
+  .ok{border-left:3px solid var(--gold);background:#fff;padding:10px 14px;margin:6px 0;font-size:14px}
+  .msg{margin-top:12px;font-size:14px}
+  .msg.err{color:var(--alarm);font-weight:600}
+  .tableWrap{overflow-x:auto;border:1px solid var(--hairline)}
+  code{background:var(--stone);padding:1px 5px;font-size:13px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v1</span></div></header>
+<main><div class="wrap">
+  <p class="label">Publish</p>
+  <h1>Update the <em>app</em></h1>
+  <p class="muted" style="max-width:640px;margin-top:10px">Load the App Database spreadsheet, check the summary, then press Publish. The spreadsheet is read in this browser only — it is never uploaded as a file.</p>
+
+  <p class="label">1 · Admin password</p>
+  <div class="card rule">
+    <div class="row"><input type="password" id="pw" placeholder="Admin or staff password" autocomplete="current-password"><button class="btn dark" onclick="checkPw()">Check</button></div>
+    <p class="msg" id="pwMsg"></p>
+    <p class="small muted" style="margin-top:10px">Set in Netlify → Site configuration → Environment variables: <code>STAFF_PASSWORD</code> (and optionally <code>ADMIN_PASSWORD</code>, so only you can publish). Redeploy after adding it.</p>
+  </div>
+
+  <p class="label">2 · Load the App Database</p>
+  <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls" hidden><b>Choose the App Database (.xlsx)</b><span class="small muted">or drag it here · e.g. Holmfirth_NYC_App_Database_v1.xlsx</span></label>
+  <p class="msg" id="fileMsg"></p>
+
+  <div id="summary" style="display:none">
+    <p class="label">3 · Check</p>
+    <div id="checks"></div>
+    <div class="stats" id="stats"></div>
+    <h2 style="margin-top:24px">Itinerary preview</h2>
+    <p class="small muted">Public — what students and families see.</p>
+    <div class="tableWrap" style="margin-top:8px"><table id="evTable"></table></div>
+
+    <p class="label">4 · Publish</p>
+    <div class="card rule">
+      <button class="btn gold" id="pubBtn" onclick="publish()">Publish to the app</button>
+      <p class="msg" id="pubMsg"></p>
+    </div>
+  </div>
+
+  <p class="label">Live status</p>
+  <div class="card" id="live"><p class="small muted">Checking…</p></div>
+
+  <p class="label">Clear test data</p>
+  <div class="card">
+    <p class="small muted">Use before the trip if you've been testing. Needs the admin password.</p>
+    <div class="row" style="margin-top:10px">
+      <button class="btn line" onclick="clearSlot('register')">Clear register</button>
+      <button class="btn line" onclick="clearSlot('roomnums')">Clear room numbers</button>
+      <button class="btn line" onclick="clearSlot('alerts')">Clear alerts</button>
+    </div>
+    <p class="msg" id="clearMsg"></p>
+  </div>
+</div></main>
+
+<script src="js/parse-db.js"></script>
+<script>
+'use strict';
+var API='/.netlify/functions/tour', RES=null;
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pw(){ return $('pw').value || sessionStorage.getItem('hny_admin') || ''; }
+function say(id,t,bad){ var e=$(id); e.textContent=t; e.className='msg'+(bad?' err':''); }
+
+/* SheetJS: try its CDN first (newest), fall back to the copy bundled with the site. */
+function loadXLSX(cb){
+  if(window.XLSX) return cb();
+  var s=document.createElement('script'); s.src='https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+  s.onload=cb; s.onerror=function(){ var f=document.createElement('script'); f.src='vendor/xlsx-0.18.5.full.min.js'; f.onload=cb; f.onerror=function(){ say('fileMsg','Could not load the spreadsheet reader.',true); }; document.head.appendChild(f); };
+  document.head.appendChild(s);
+}
+
+function checkPw(){
+  fetch(API+'?type=auth',{headers:{'x-staff-key':pw()},cache:'no-store'}).then(function(r){
+    if(r.status===200) return r.json().then(function(j){ sessionStorage.setItem('hny_admin',pw()); say('pwMsg',j.admin?'Password accepted — you can publish.':'That is the staff password. Publishing needs the ADMIN_PASSWORD.',!j.admin); });
+    if(r.status===503) return say('pwMsg','STAFF_PASSWORD has not been set in Netlify yet (then redeploy).',true);
+    say('pwMsg','Password not recognised.',true);
+  }).catch(function(){ say('pwMsg','Could not reach the server.',true); });
+}
+
+/* ---------- file ---------- */
+var drop=$('drop');
+$('file').addEventListener('change',function(e){ handle(e.target.files[0]); });
+['dragover','dragenter'].forEach(function(ev){ drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.add('over');}); });
+['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev,function(e){e.preventDefault();drop.classList.remove('over');}); });
+drop.addEventListener('drop',function(e){ handle(e.dataTransfer.files[0]); });
+
+function handle(file){
+  if(!file) return;
+  if(!/\.xlsx?$/i.test(file.name)) return say('fileMsg','Please choose the .xlsx App Database.',true);
+  say('fileMsg','Reading '+file.name+'…');
+  loadXLSX(function(){
+    var rd=new FileReader();
+    rd.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array'});
+        RES=TourDB.parse(XLSX,wb); RES.file=file.name;
+        say('fileMsg','Loaded '+file.name+'.');
+        render();
+      }catch(err){ console.error(err); say('fileMsg','Could not read that file: '+err.message,true); }
+    };
+    rd.readAsArrayBuffer(file);
+  });
+}
+
+/* Guard: make sure nothing staff-only has leaked into the public half (e.g. a student name typed into the Schedule). */
+function leakCheck(){
+  var pubText=JSON.stringify(RES.public).toLowerCase(), leaks=[];
+  (RES.private.students||[]).forEach(function(s){ if(s.name && pubText.indexOf(s.name.toLowerCase())>=0) leaks.push('Student name "'+s.name+'"'); });
+  (RES.private.transfers||[]).forEach(function(t){ if(t.ref && pubText.indexOf(String(t.ref).toLowerCase())>=0) leaks.push('Transfer ref "'+t.ref+'"'); });
+  var d=RES.private.details||{}; Object.keys(d).forEach(function(k){ var v=String(d[k]||''); if(/\d{6}/.test(v.replace(/\s/g,'')) && pubText.indexOf(v.toLowerCase())>=0) leaks.push(k+' ('+v+')'); });
+  return leaks;
+}
+
+function render(){
+  var p=RES.public, q=RES.private, leaks=leakCheck();
+  $('summary').style.display='block';
+  var ch='';
+  RES.warnings.forEach(function(w){ ch+='<div class="warn">'+esc(w)+'</div>'; });
+  leaks.forEach(function(l){ ch+='<div class="warn"><b>Privacy:</b> '+esc(l)+' appears in the public itinerary. Move it to a Staff only row before publishing.</div>'; });
+  if(!RES.warnings.length&&!leaks.length) ch='<div class="ok">No problems found. Staff-only data is kept out of the public half.</div>';
+  $('checks').innerHTML=ch;
+  var withMed=q.students.filter(function(s){return s.meds||s.side;}).length, withDiet=q.students.filter(function(s){return s.diet;}).length;
+  var stats=[[p.days.length,'days','pub'],[p.events.length,'public events','pub'],[p.flights.length,'flights','pub'],[p.more.length,'info pages','pub'],
+    [q.students.length,'students','priv'],[withMed,'with medication','priv'],[withDiet,'with dietary needs','priv'],[q.contacts.length,'emergency contacts','priv'],
+    [q.transfers.length,'transfers','priv'],[q.meals.reduce(function(a,m){return a+m.orders.length;},0),'meal pre-orders','priv'],[q.events.length,'staff-only events','priv']];
+  $('stats').innerHTML=stats.map(function(s){return '<div class="stat'+(s[2]==='priv'?' private':'')+'"><b>'+s[0]+'</b><span>'+s[1]+(s[2]==='priv'?' · staff only':'')+'</span></div>';}).join('');
+  var rows='<tr><th>Day</th><th>Date</th><th>Time</th><th>Title</th><th>Location</th></tr>';
+  p.events.forEach(function(e){ rows+='<tr><td>'+e.day+'</td><td>'+esc(e.date)+'</td><td>'+esc(e.time||'—')+(e.clock==='UK'?' UK':'')+'</td><td>'+esc(e.title)+'</td><td>'+esc(e.where)+'</td></tr>'; });
+  $('evTable').innerHTML=rows;
+  $('pubBtn').disabled=leaks.length>0;
+  say('pubMsg','');
+}
+
+function post(type,body){
+  return fetch(API+(type?'?type='+type:''),{method:'POST',headers:{'content-type':'application/json','x-staff-key':pw()},body:JSON.stringify(body)})
+    .then(function(r){ return r.json().catch(function(){return {};}).then(function(j){ if(!r.ok) throw new Error(r.status===401?'password not accepted for publishing':r.status===503?'STAFF_PASSWORD not set in Netlify':(j.error||('error '+r.status))); return j; }); });
+}
+function publish(){
+  if(!RES) return;
+  if(!pw()) return say('pubMsg','Enter the admin password first (step 1).',true);
+  $('pubBtn').disabled=true; say('pubMsg','Publishing…');
+  var pub=Object.assign({},RES.public,{publishedAt:new Date().toISOString(),source:RES.file});
+  var priv=Object.assign({},RES.private,{publishedAt:pub.publishedAt,source:RES.file});
+  post('',pub).then(function(){ return post('private',priv); }).then(function(){
+    say('pubMsg','Published. Phones pick it up next time the app is opened or brought back to the front.');
+    sessionStorage.setItem('hny_admin',pw()); liveStatus();
+  }).catch(function(e){ say('pubMsg','Not published: '+e.message,true); }).then(function(){ $('pubBtn').disabled=false; });
+}
+
+function clearSlot(type){
+  if(!confirm('Clear the '+type+' data for everyone? This cannot be undone.')) return;
+  fetch(API+'?type='+type,{method:'DELETE',headers:{'x-staff-key':pw()}}).then(function(r){ say('clearMsg',r.ok?'Cleared '+type+'.':'Not cleared ('+r.status+').',!r.ok); }).catch(function(){ say('clearMsg','Could not reach the server.',true); });
+}
+
+function liveStatus(){
+  fetch(API,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    if(!j){ $('live').innerHTML='<p><b>Nothing published yet.</b></p><p class="small muted">Until you publish, the app shows the itinerary bundled with the site (public data only). The staff area stays empty.</p>'; return; }
+    $('live').innerHTML='<p><b>Live:</b> '+esc(j.source||'App Database')+'</p><p class="small muted">Published '+esc(new Date(j.publishedAt).toLocaleString('en-GB'))+' · '+(j.events||[]).length+' public events</p>';
+  }).catch(function(){ $('live').innerHTML='<p class="small muted">Can\'t reach the server from here (opened as a local file?). Use the live site\'s /admin.html.</p>'; });
+}
+if(sessionStorage.getItem('hny_admin')) $('pw').value=sessionStorage.getItem('hny_admin');
+liveStatus();
+</script>
+</body>
+</html>

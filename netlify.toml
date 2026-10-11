@@ -1,0 +1,5 @@
+# TCA Tours — Holmfirth NYC tour app (v1) — Netlify configuration
+# Only public/ is served. The function source and dev tools are not.
+[build]
+  publish = "public"
+  functions = "netlify/functions"

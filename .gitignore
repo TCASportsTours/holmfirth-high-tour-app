@@ -1,0 +1,8 @@
+node_modules/
+.netlify/
+# Never commit the app database or anything with pupil data in it
+*.xlsx
+*.xls
+*.csv
+*private*.json
+dev/.data/

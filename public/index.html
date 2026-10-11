@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<!--
+  TCA Tours — Holmfirth High · New York 2026 — tour app
+  Version: v1  |  11 October 2026
+  Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
+  Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
+-->
+<html lang="en-GB">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="version" content="v1">
+<title>Holmfirth High · New York 2026</title>
+<meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
+<meta name="theme-color" content="#2A292B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Holmfirth NYC">
+<link rel="icon" type="image/png" href="img/favicon-64.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<script>
+/* Remove any old service worker / caches so a new deploy always shows. */
+(function(){ try{
+  if('serviceWorker' in navigator){ navigator.serviceWorker.getRegistrations().then(function(rs){ rs.forEach(function(r){ r.unregister(); }); }).catch(function(){}); }
+  if(window.caches && caches.keys){ caches.keys().then(function(ks){ ks.forEach(function(k){ caches.delete(k); }); }).catch(function(){}); }
+}catch(e){} })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+  :root{
+    --charcoal:#414042; --gold:#EFCA50; --white:#FFFFFF; --ink:#2A292B;
+    --stone:#F4F3F1; --slate:#6E6D70; --hairline:#DDDCDC;
+    --alarm:#B03A2E;            /* emergency only — see README */
+    --display:'Cormorant Garamond', Garamond, Georgia, serif;
+    --body:'Work Sans', system-ui, -apple-system, 'Segoe UI', Arial, sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:var(--body);font-size:15px;line-height:1.55;color:var(--charcoal);background:var(--ink);
+    -webkit-font-smoothing:antialiased;display:flex;justify-content:center;align-items:center;min-height:100dvh}
+  button,input,select,textarea{font:inherit;color:inherit}
+  a{color:inherit;text-decoration-color:var(--gold);text-underline-offset:3px}
+
+  /* ---------- shell: full-screen on a phone, a phone-sized frame on a desktop ---------- */
+  .app{position:relative;width:100%;height:100dvh;background:var(--stone);display:flex;flex-direction:column;overflow:hidden}
+  @media (min-width:560px){
+    body{padding:24px;background:var(--ink)}
+    .app{width:400px;height:min(860px,calc(100dvh - 48px));box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  }
+
+  .appbar{flex:0 0 auto;background:var(--ink);color:#fff;display:flex;align-items:center;gap:10px;
+    padding:calc(env(safe-area-inset-top) + 12px) 16px 12px}
+  .appbar .brand{display:flex;align-items:center;flex:1;min-width:0}
+  .appbar .brand img{width:170px;height:auto;display:block}
+  .iconbtn{width:40px;height:40px;border:0;background:rgba(255,255,255,.08);color:#fff;display:grid;place-items:center;font-size:20px;cursor:pointer;position:relative;flex:0 0 auto}
+  .iconbtn:active{transform:scale(.95)}
+  .iconbtn.sos{background:var(--alarm)}
+  .iconbtn .dot{position:absolute;top:7px;right:7px;width:8px;height:8px;background:var(--gold);display:none}
+  .iconbtn .dot.on{display:block}
+  .app.locked .iconbtn.bell, .app.locked .tabbar{display:none}
+
+  .screens{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+  .screens::-webkit-scrollbar{width:0}
+  .screen{display:none;padding:18px 16px 28px;animation:fade .2s ease}
+  .screen.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){.screen{animation:none}}
+
+  /* ---------- type ---------- */
+  .label{font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);
+    display:flex;align-items:center;gap:11px;margin:22px 0 10px}
+  .label::before{content:"";width:3px;height:16px;background:var(--gold);flex:none}
+  .label:first-child{margin-top:4px}
+  h1,h2,h3{font-family:var(--display);color:var(--charcoal);line-height:1.08;font-weight:500}
+  h1{font-size:40px} h1 em,h2 em{font-style:italic}
+  h2{font-size:30px;margin-bottom:6px}
+  h3{font-size:22px;font-weight:600}
+  .muted{color:var(--slate)}
+  .small{font-size:13px}
+  p+p{margin-top:.6em}
+  .num{font-family:var(--display);font-weight:600}
+
+  /* ---------- cards ---------- */
+  .card{background:var(--white);border:1px solid var(--hairline);padding:16px;margin:10px 0;position:relative}
+  .card.rule::before{content:"";position:absolute;left:-1px;top:-1px;width:3px;height:52px;background:var(--gold)}
+  .card.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+  .card.dark h2,.card.dark h3{color:#fff}
+  .card.dark .muted{color:#B7B6B9}
+  .card .cardhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+
+  /* ---------- buttons (square, gold = the one primary action) ---------- */
+  .btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;border:0;cursor:pointer;
+    font-family:var(--body);font-weight:600;font-size:14px;letter-spacing:.06em;text-transform:uppercase;padding:15px 18px;text-decoration:none;text-align:center}
+  .btn i{font-size:19px}
+  .btn.gold{background:var(--gold);color:var(--charcoal)}
+  .btn.line{background:transparent;color:var(--charcoal);box-shadow:inset 0 0 0 1px var(--charcoal)}
+  .btn.dark{background:var(--charcoal);color:#fff}
+  .btn.alarm{background:var(--alarm);color:#fff}
+  .btn.ghost{background:transparent;color:var(--slate);text-transform:none;letter-spacing:0;font-weight:500}
+  .btn+.btn{margin-top:10px}
+  .btn:active{filter:brightness(.95);transform:scale(.99)}
+  .btnrow{display:flex;gap:10px}.btnrow .btn{margin:0}
+  .linkbtn{border:0;background:none;color:var(--charcoal);font-weight:600;font-size:13px;text-decoration:underline;text-decoration-color:var(--gold);text-underline-offset:3px;cursor:pointer;padding:0}
+
+  /* ---------- sign-in ---------- */
+  .signin{padding-top:28px}
+  .signin .lockup{width:150px;margin:6px 0 28px}
+  .signin h1{font-size:46px;font-weight:400;margin-bottom:12px}
+  .signin .rule{height:3px;width:64px;background:var(--gold);margin:18px 0}
+  .who{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--white);border:1px solid var(--hairline);padding:15px 16px;margin:10px 0;cursor:pointer}
+  .who .ic{width:42px;height:42px;display:grid;place-items:center;background:var(--stone);font-size:21px;flex:none}
+  .who.primary .ic{background:var(--gold)}
+  .who b{display:block;font-family:var(--display);font-size:21px;font-weight:600;line-height:1.1}
+  .who span{font-size:13px;color:var(--slate)}
+  .who .arr{margin-left:auto;color:var(--slate);font-size:20px}
+  .field{width:100%;border:1px solid var(--charcoal);background:#fff;padding:13px 14px;font-size:16px;border-radius:0}
+  .field:focus{outline:2px solid var(--gold);outline-offset:0}
+  .err{color:var(--alarm);font-size:13px;margin-top:8px;display:none}
+  .err.on{display:block}
+
+  /* ---------- weather / clocks ---------- */
+  .wx{display:flex;align-items:center;gap:14px;background:var(--white);border:1px solid var(--hairline);padding:12px 14px;cursor:pointer;width:100%;text-align:left}
+  .wx .wi{font-size:30px;color:var(--charcoal)}
+  .wx .wt{font-family:var(--display);font-size:32px;font-weight:600;line-height:1}
+  .wx .wl{font-size:13px;color:var(--slate)}
+  .wx .wr{margin-left:auto;text-align:right;font-size:12.5px;color:var(--slate)}
+  .clocks{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--hairline);border-top:0;background:var(--white)}
+  .clocks div{padding:9px 14px;font-size:12px;color:var(--slate);letter-spacing:.04em}
+  .clocks div+div{border-left:1px solid var(--hairline)}
+  .clocks b{font-family:var(--display);font-size:22px;font-weight:600;color:var(--charcoal);display:block;line-height:1.1;letter-spacing:0}
+
+  /* ---------- up next ---------- */
+  .next{background:var(--ink);color:#fff;padding:18px 16px 16px;margin:14px 0 6px;position:relative;cursor:pointer}
+  .next::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--gold)}
+  .next .eyb{font-family:var(--display);font-weight:600;font-size:12.5px;letter-spacing:.22em;text-transform:uppercase;color:#B7B6B9}
+  .next h2{color:#fff;font-size:28px;margin:6px 0 6px}
+  .next .meta{font-size:13.5px;color:#D9D8DA;display:flex;gap:6px;align-items:center}
+  .cd{display:flex;align-items:baseline;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.14)}
+  .cd .n{font-family:var(--display);font-size:34px;font-weight:600;line-height:1}
+  .cd .l{font-size:12.5px;color:#B7B6B9}
+
+  /* ---------- itinerary rows ---------- */
+  .day{margin-top:22px}
+  .dayhead{display:flex;align-items:baseline;gap:12px;padding:0 0 8px;border-bottom:1px solid var(--hairline);cursor:pointer;width:100%;background:none;border-left:0;border-right:0;border-top:0;text-align:left}
+  .dayhead .dn{font-family:var(--display);font-size:13px;font-weight:600;letter-spacing:.22em;text-transform:uppercase;color:var(--slate);white-space:nowrap}
+  .dayhead h3{font-size:24px;font-weight:500}
+  .dayhead .today{margin-left:auto;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;background:var(--gold);color:var(--charcoal);padding:3px 8px}
+  .row{display:flex;gap:12px;align-items:flex-start;background:var(--white);border:1px solid var(--hairline);border-top:0;padding:12px 12px;cursor:pointer;width:100%;text-align:left}
+  .dayhead+.row,.daybody>.row:first-child{border-top:1px solid var(--hairline);margin-top:10px}
+  .row:active{background:#FBFAF8}
+  .row .t{min-width:56px;font-family:var(--display);font-size:19px;font-weight:600;line-height:1.1;color:var(--charcoal)}
+  .row .t small{display:block;font-family:var(--body);font-size:10.5px;font-weight:500;color:var(--slate);letter-spacing:.06em;text-transform:uppercase;margin-top:2px}
+  .row .ic{width:30px;height:30px;display:grid;place-items:center;background:var(--stone);font-size:17px;flex:none;color:var(--charcoal)}
+  .row .bd{flex:1;min-width:0}
+  .row .tt{font-weight:600;font-size:14.5px;line-height:1.3;overflow-wrap:anywhere}
+  .row .wh{font-size:12.5px;color:var(--slate);margin-top:2px;overflow-wrap:anywhere}
+  .row.past{opacity:.5}
+  .row.now{box-shadow:inset 3px 0 0 var(--gold)}
+  .row .chev{color:var(--slate);font-size:18px;align-self:center}
+  .tag{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;background:var(--stone);color:var(--charcoal);margin-top:6px}
+  .tag.gold{background:var(--gold)}
+  .tag.alarm{background:var(--alarm);color:#fff}
+
+  /* ---------- detail ---------- */
+  .back{display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--charcoal);font-weight:600;font-size:14px;padding:4px 0 8px;cursor:pointer}
+  .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin-top:10px}
+  .kv dt{font-family:var(--display);font-weight:600;font-size:12.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--slate);padding-top:2px}
+  .kv dd{overflow-wrap:anywhere}
+  .prose p{margin:.55em 0}
+  .prose ul{margin:.5em 0 .5em 0;padding:0;list-style:none}
+  .prose li{padding:8px 0 8px 18px;position:relative;border-bottom:1px solid var(--hairline)}
+  .prose li:last-child{border-bottom:0}
+  .prose li::before{content:"";position:absolute;left:0;top:16px;width:7px;height:2px;background:var(--gold)}
+
+  /* ---------- tiles ---------- */
+  .tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{background:var(--white);border:1px solid var(--hairline);padding:14px;min-height:96px;display:flex;flex-direction:column;justify-content:space-between;cursor:pointer;text-align:left;position:relative}
+  .tile i{font-size:24px;color:var(--charcoal)}
+  .tile b{font-family:var(--display);font-size:19px;font-weight:600;line-height:1.1;margin-top:10px}
+  .tile span{font-size:12px;color:var(--slate);margin-top:2px}
+  .tile.alarm{background:var(--alarm);border-color:var(--alarm);color:#fff}
+  .tile.alarm i,.tile.alarm span{color:#fff}
+  .tile.dark{background:var(--ink);border-color:var(--ink);color:#fff}
+  .tile.dark i{color:#fff}.tile.dark span{color:#B7B6B9}
+  .tile::before{content:"";position:absolute;left:-1px;top:-1px;width:3px;height:26px;background:var(--gold)}
+  .tile.alarm::before{display:none}
+
+  /* ---------- lists / tables ---------- */
+  .list{background:var(--white);border:1px solid var(--hairline)}
+  .li{display:flex;gap:12px;align-items:center;padding:12px 14px;border-top:1px solid var(--hairline)}
+  .li:first-child{border-top:0}
+  .li .bd{flex:1;min-width:0}
+  .li b{font-weight:600}
+  .li .sub{font-size:12.5px;color:var(--slate);overflow-wrap:anywhere}
+  .li a.call,.li button.call{flex:none;width:40px;height:40px;display:grid;place-items:center;background:var(--charcoal);color:#fff;font-size:18px;text-decoration:none;border:0;cursor:pointer}
+  .count{font-family:var(--display);font-weight:600;font-size:24px;line-height:1;min-width:34px;text-align:right}
+  .flag{color:var(--alarm);font-weight:600}
+  .search{margin:6px 0 10px}
+
+  /* register */
+  .regbar{position:sticky;top:-18px;z-index:3;background:var(--stone);padding:10px 0;margin:-6px 0 6px;display:flex;align-items:center;gap:12px}
+  .regbar .big{font-family:var(--display);font-size:38px;font-weight:600;line-height:1}
+  .regbar .of{color:var(--slate);font-size:13px}
+  .pupil{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--white);border:1px solid var(--hairline);border-top:0;padding:12px 14px;cursor:pointer;min-height:54px}
+  .pupil:first-child{border-top:1px solid var(--hairline)}
+  .pupil .box{width:28px;height:28px;border:2px solid var(--charcoal);display:grid;place-items:center;flex:none;font-size:18px;color:transparent}
+  .pupil.on .box{background:var(--charcoal);color:#fff}
+  .pupil .nm{flex:1;font-weight:500}
+  .pupil .gp{font-size:12px;color:var(--slate)}
+  .seg{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+  .seg button{border:1px solid var(--charcoal);background:transparent;padding:7px 11px;font-size:13px;cursor:pointer}
+  .seg button.on{background:var(--charcoal);color:#fff}
+  .roominput{width:86px;border:1px solid var(--hairline);padding:8px 9px;font-size:15px;text-align:center;background:var(--stone);border-radius:0}
+  .roominput:focus{outline:2px solid var(--gold);background:#fff}
+
+  /* subway diagram */
+  .subway{background:var(--white);border:1px solid var(--hairline);padding:8px 4px}
+  .subway svg{width:100%;height:auto;display:block}
+  .bullet{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:700;font-size:12.5px;font-family:Arial,Helvetica,sans-serif;vertical-align:middle}
+  .dirs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dirs .card{margin:0}
+
+  /* ---------- tab bar ---------- */
+  .tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);background:var(--white);border-top:1px solid var(--hairline);padding-bottom:env(safe-area-inset-bottom)}
+  .tab{border:0;background:none;padding:9px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--slate);cursor:pointer;position:relative;font-weight:500}
+  .tab i{font-size:23px}
+  .tab.active{color:var(--charcoal);font-weight:600}
+  .tab.active::before{content:"";position:absolute;top:-1px;left:28%;right:28%;height:3px;background:var(--gold)}
+
+  /* ---------- modal / toast ---------- */
+  .modal{position:absolute;inset:0;background:rgba(42,41,43,.72);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .modal.on{display:flex}
+  .sheet{background:var(--white);width:100%;max-height:88%;overflow:auto;padding:22px 18px calc(18px + env(safe-area-inset-bottom));position:relative}
+  .sheet::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--gold)}
+  .toast{position:absolute;left:16px;right:16px;bottom:82px;background:var(--ink);color:#fff;padding:12px 14px;font-size:14px;z-index:30;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+  .toast.on{opacity:1;transform:none}
+  .offline{background:var(--charcoal);color:#fff;font-size:12px;padding:6px 16px;display:none;text-align:center}
+  .offline.on{display:block}
+  .foot{text-align:center;font-size:11px;color:var(--slate);margin-top:26px;letter-spacing:.04em}
+  hr{border:0;border-top:1px solid var(--hairline);margin:16px 0}
+</style>
+</head>
+<body>
+<div class="app locked" id="app">
+  <header class="appbar">
+    <div class="brand"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"></div>
+    <button class="iconbtn sos" onclick="openSOS()" aria-label="Emergency — get help now"><i class="ti ti-urgent"></i></button>
+    <button class="iconbtn bell" onclick="openAlerts()" aria-label="Alerts"><i class="ti ti-bell"></i><span class="dot" id="bellDot"></span></button>
+  </header>
+  <div class="offline" id="offline">Offline — showing the last saved copy</div>
+
+  <main class="screens" id="screens">
+    <section class="screen active" id="s-signin"></section>
+    <section class="screen" id="s-today"></section>
+    <section class="screen" id="s-trip"></section>
+    <section class="screen" id="s-around"></section>
+    <section class="screen" id="s-more"></section>
+    <section class="screen" id="s-page"></section>
+  </main>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-tab="today" onclick="go('today')"><i class="ti ti-calendar-event"></i>Today</button>
+    <button class="tab" data-tab="trip" onclick="go('trip')"><i class="ti ti-list-details"></i>Itinerary</button>
+    <button class="tab" data-tab="around" onclick="go('around')"><i class="ti ti-train"></i>Getting around</button>
+    <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i>More</button>
+  </nav>
+
+  <div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="modalBody"></div></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script src="js/tour-default.js"></script>
+<script>
+'use strict';
+var BUILD = 'v1 · 11 Oct 2026';
+var API = '/.netlify/functions/tour';
+var NY = 'America/New_York', UK = 'Europe/London';
+var LS = { role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
+
+var T = window.TOUR_DEFAULT || {tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]};
+var P = null;            // staff-only data (only after staff sign-in)
+var LIVE = {roomnums:{}, register:{}};
+var ALERTS = [];
+var role = lsGet(LS.role);
+var curTab = 'today', pageStack = [];
+
+/* ================= helpers ================= */
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function $(id){ return document.getElementById(id); }
+function tel(p){ return 'tel:'+String(p||'').replace(/[^\d+]/g,''); }
+function isPhone(p){ return /\d{3}/.test(String(p||'')) && !/@/.test(p); }
+function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');},2600); }
+function paras(text){
+  /* text -> <p>…</p>, lines starting with "• " become a list */
+  var out='', list=[];
+  String(text||'').split(/\n+/).forEach(function(line){
+    line=line.trim(); if(!line)return;
+    if(/^[•\-]\s*/.test(line)){ list.push(line.replace(/^[•\-]\s*/,'')); return; }
+    if(list.length){ out+='<ul>'+list.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>'; list=[]; }
+    out+='<p>'+esc(line)+'</p>';
+  });
+  if(list.length) out+='<ul>'+list.map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ul>';
+  return out;
+}
+function isStaff(){ return role==='staff' && !!lsGet(LS.key); }
+
+/* ---------- time zones: wall-clock time in NY/UK -> epoch ms ---------- */
+function tzOffset(ts, tz){
+  var f=new Intl.DateTimeFormat('en-GB',{timeZone:tz,hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  var p={}; f.formatToParts(new Date(ts)).forEach(function(x){p[x.type]=x.value;});
+  return Date.UTC(+p.year,+p.month-1,+p.day,+p.hour%24,+p.minute,+p.second)-ts;
+}
+function zoned(dateStr,timeStr,tz){
+  if(!dateStr)return NaN; var d=dateStr.split('-'), t=(timeStr||'00:00').split(':');
+  var guess=Date.UTC(+d[0],+d[1]-1,+d[2],+t[0],+t[1]);
+  var ts=guess-tzOffset(guess,tz); return guess-tzOffset(ts,tz);
+}
+function fmtClock(ts,tz){ return new Intl.DateTimeFormat('en-GB',{timeZone:tz,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(ts)); }
+function fmtDay(dateStr,opts){ if(!dateStr)return ''; var d=dateStr.split('-'); return new Intl.DateTimeFormat('en-GB',Object.assign({timeZone:'UTC',weekday:'short',day:'numeric',month:'short'},opts||{})).format(new Date(Date.UTC(+d[0],+d[1]-1,+d[2]))); }
+function todayIn(tz){ var f=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}); return f.format(new Date()); }
+function humanGap(ms){
+  var m=Math.round(ms/60000); if(m<1)return {n:'Now',l:''};
+  if(m<60)return {n:m,l:m===1?'minute':'minutes'};
+  var h=Math.floor(m/60), mm=m%60;
+  if(h<24)return {n:h+'h '+(mm<10?'0':'')+mm+'m',l:'to go'};
+  var d=Math.floor(h/24); return {n:d,l:d===1?'day to go':'days to go'};
+}
+
+/* ---------- events: work out start/end epochs; untimed events follow the one before ---------- */
+var ICON={travel:'ti-plane-departure',activity:'ti-map-pin',food:'ti-tools-kitchen-2',event:'ti-ticket','free time':'ti-shopping-bag',info:'ti-info-circle'};
+function evIcon(e){ var t=String(e.type||'').toLowerCase();
+  if(t==='travel'){ if(/fly|flight|ba\d/i.test(e.title))return 'ti-plane'; if(/coach|transfer|pick-up/i.test(e.title))return 'ti-bus'; if(/subway|train/i.test(e.title))return 'ti-train'; }
+  return ICON[t]||'ti-point'; }
+function allEvents(){
+  var evs=(T.events||[]).slice(); if(P&&P.events) evs=evs.concat(P.events.map(function(e){return Object.assign({staffOnly:true},e);}));
+  var byDay={}; evs.forEach(function(e,i){ e._i=i; (byDay[e.day]=byDay[e.day]||[]).push(e); });
+  var out=[];
+  Object.keys(byDay).map(Number).sort(function(a,b){return a-b;}).forEach(function(d){
+    var list=byDay[d].sort(function(a,b){return a._i-b._i;}), last=null;
+    list.forEach(function(e){
+      var tz=e.clock==='UK'?UK:NY;
+      if(e.time){ e.start=zoned(e.date,e.time,tz); e.endTs=e.end?zoned(e.date,e.end,tz):NaN; last=e.start; e.untimed=false; }
+      else { e.start=last!=null?last+1:zoned(e.date,'06:00',tz); e.endTs=NaN; e.untimed=true; e.afterTimed=last!=null; }
+      out.push(e);
+    });
+  });
+  return out;
+}
+function evTimeLabel(e){
+  if(e.untimed) return e.afterTimed?'Then':(/breakfast/i.test(e.title)?'AM':'—');
+  var d=(T.days||[]).filter(function(x){return x.n===e.day;})[0];
+  var nextDay=d&&d.date&&e.date&&e.date!==d.date;
+  return esc(e.time)+(e.end?'<small>to '+esc(e.end)+'</small>':'')+(e.clock==='UK'?'<small>UK time</small>':'')+(nextDay?'<small>'+esc(fmtDay(e.date,{month:undefined}))+'</small>':'');
+}
+function endOf(e,evs){
+  if(!isNaN(e.endTs))return e.endTs;
+  var nx=evs.filter(function(x){return x.start>e.start && !x.untimed;})[0];
+  return Math.min(nx?nx.start:e.start+3600e3, e.start+3*3600e3);
+}
+
+/* ================= navigation ================= */
+function go(tab){
+  curTab=tab; pageStack=[];
+  document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
+  show('s-'+tab);
+  ({today:renderToday,trip:renderTrip,around:renderAround,more:renderMore})[tab]();
+}
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.id===id);});
+  $('screens').scrollTop=0;
+}
+function openPage(html,fn){
+  pageStack.push(fn||null);
+  $('s-page').innerHTML='<button class="back" onclick="pageBack()"><i class="ti ti-chevron-left"></i> Back</button>'+html;
+  show('s-page');
+}
+function rerenderPage(html){ var top=$('screens').scrollTop; $('s-page').innerHTML='<button class="back" onclick="pageBack()"><i class="ti ti-chevron-left"></i> Back</button>'+html; $('screens').scrollTop=top; }
+function pageBack(){ pageStack.pop(); var fn=pageStack.pop(); if(fn){ fn(); } else go(curTab); }
+function openModal(html){ $('modalBody').innerHTML=html; $('modal').classList.add('on'); }
+function closeModal(){ $('modal').classList.remove('on'); }
+
+/* ================= sign-in ================= */
+function renderSignin(){
+  $('app').classList.add('locked');
+  var t=T.tour||{}, first=allEvents().filter(function(e){return !e.untimed;})[0];
+  var gap=first?humanGap(first.start-Date.now()):null;
+  $('s-signin').innerHTML=
+    '<div class="signin">'+
+    '<p class="label">'+esc(t['School']||'Holmfirth High School')+'</p>'+
+    '<h1>New York, <em>2026</em></h1>'+
+    '<p class="muted">'+esc(t['Trip Title']||'')+' · '+esc(t['Dates']||'')+'</p>'+
+    (gap&&first.start>Date.now()?'<div class="rule"></div><p><span class="num" style="font-size:30px">'+esc(gap.n)+'</span> <span class="muted">'+esc(gap.l)+' until we fly</span></p>':'<div class="rule"></div>')+
+    '<p class="label">Who are you?</p>'+
+    '<button class="who primary" onclick="pickRole(\'student\')"><span class="ic"><i class="ti ti-backpack"></i></span><span><b>Student</b><span>Itinerary, getting around, safety</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+    '<button class="who" onclick="pickRole(\'family\')"><span class="ic"><i class="ti ti-home-heart"></i></span><span><b>Parent or family</b><span>Follow the trip from home</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+    '<button class="who" onclick="staffPrompt()"><span class="ic"><i class="ti ti-lock"></i></span><span><b>Staff</b><span>Password required</span></span><i class="ti ti-chevron-right arr"></i></button>'+
+    '<div id="staffBox" style="display:none;margin-top:6px"><input class="field" id="staffPass" type="password" placeholder="Staff password" autocomplete="current-password" onkeydown="if(event.key===\'Enter\')staffCheck()">'+
+    '<button class="btn dark" style="margin-top:10px" onclick="staffCheck()"><i class="ti ti-login-2"></i> Enter staff view</button><div class="err" id="staffErr"></div></div>'+
+    '<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>'+
+    '<p class="foot">TCA Tours · Build '+esc(BUILD)+'</p></div>';
+}
+function pickRole(r){ role=r; lsSet(LS.role,r); enter(); }
+function staffPrompt(){ $('staffBox').style.display='block'; setTimeout(function(){$('staffPass').focus();},50); }
+function staffCheck(){
+  var pw=$('staffPass').value, err=$('staffErr'); err.classList.remove('on');
+  if(!pw){ err.textContent='Enter the staff password.'; err.classList.add('on'); return; }
+  fetch(API+'?type=auth',{headers:{'x-staff-key':pw},cache:'no-store'}).then(function(r){
+    if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); enter(); loadPrivate(); return; }
+    return r.json().catch(function(){return {};}).then(function(j){
+      err.textContent = r.status===503 ? 'Staff area not set up yet: the STAFF_PASSWORD hasn\'t been added in Netlify.' : (r.status===401 ? 'That password isn\'t right. Try again.' : 'Could not check the password ('+r.status+').');
+      err.classList.add('on'); });
+  }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
+}
+function signOut(){
+  lsSet(LS.role,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
+  show('s-signin'); renderSignin();
+}
+function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); }
+
+/* ================= TODAY ================= */
+function renderToday(){
+  var evs=allEvents(), now=Date.now(), t=T.tour||{};
+  var timed=evs.filter(function(e){return !e.untimed;});
+  var first=timed[0], last=timed[timed.length-1];
+  var html='';
+  html+='<button class="wx" onclick="openWeather()"><i class="ti ti-cloud wi" id="wxIcon"></i><div><div class="wt" id="wxTemp">—</div><div class="wl" id="wxLabel">'+esc(t['Weather Town']||'New York')+'</div></div><div class="wr"><div id="wxRange">Loading…</div><div style="font-weight:600;color:var(--charcoal);margin-top:2px">7-day <i class="ti ti-chevron-right"></i></div></div></button>';
+  html+='<div class="clocks"><div>New York<b id="clkNY">'+fmtClock(now,NY)+'</b></div><div>UK<b id="clkUK">'+fmtClock(now,UK)+'</b></div></div>';
+
+  if(first && now<first.start){
+    var g=humanGap(first.start-now);
+    html+='<div class="next" onclick="openEvent(\''+first.id+'\')"><div class="eyb">We fly in</div><h2>'+esc(g.n)+' '+esc(g.l.replace(' to go',''))+'</h2>'+
+      '<div class="meta"><i class="ti ti-plane"></i> '+esc(first.title)+' · '+esc(fmtDay(first.date))+' '+esc(first.time)+(first.clock==='UK'?' (UK)':'')+'</div></div>';
+    html+='<p class="label">Day 1 · '+esc(fmtDay(first.date,{weekday:'long'}))+'</p>'+dayRows(evs.filter(function(e){return e.day===first.day;}),evs);
+    html+='<button class="btn line" style="margin-top:14px" onclick="go(\'trip\')">See the full itinerary</button>';
+  } else if(last && now>endOf(last,evs)+2*3600e3){
+    html+='<div class="next"><div class="eyb">Trip complete</div><h2>Welcome <em>home</em></h2><div class="meta">Thanks for travelling with TCA Tours.</div></div>';
+  } else {
+    var cur=evs.filter(function(e){return !e.untimed && e.start<=now && now<endOf(e,evs);}).pop();
+    var nxt=timed.filter(function(e){return e.start>now;})[0];
+    if(cur) html+=nextCard(cur,'Happening now',null);
+    if(nxt) html+=nextCard(nxt,'Up next',nxt.start-now);
+    var d=(cur||nxt||last).day, dd=(T.days||[]).filter(function(x){return x.n===d;})[0];
+    html+='<p class="label">Day '+d+' · '+esc(fmtDay(dd?dd.date:'',{weekday:'long'}))+'</p>'+dayRows(evs.filter(function(e){return e.day===d;}),evs);
+    var tomorrow=evs.filter(function(e){return e.day===d+1;});
+    if(tomorrow.length) html+='<p class="label">Tomorrow</p>'+dayRows(tomorrow.slice(0,4),evs)+'<button class="btn line" style="margin-top:12px" onclick="go(\'trip\')">Full itinerary</button>';
+  }
+  if(t['Time Note']) html+='<div class="card rule"><h3 style="font-size:19px">Time difference</h3><p class="small muted" style="margin-top:4px">'+esc(t['Time Note'])+'</p></div>';
+  $('s-today').innerHTML=html;
+  loadWeather();
+}
+function nextCard(e,eyb,gap){
+  var g=gap!=null?humanGap(gap):null;
+  return '<div class="next" onclick="openEvent(\''+e.id+'\')"><div class="eyb">'+esc(eyb)+'</div><h2>'+esc(e.title)+'</h2>'+
+    (e.where?'<div class="meta"><i class="ti ti-map-pin"></i> '+esc(e.where)+'</div>':'')+
+    (g?'<div class="cd"><span class="n">'+esc(g.n)+'</span><span class="l">'+esc(g.l)+' · starts '+esc(e.time)+(e.clock==='UK'?' UK time':'')+'</span></div>':'')+'</div>';
+}
+function dayRows(list,evs){
+  var now=Date.now();
+  return '<div class="daybody">'+list.map(function(e){
+    var past=!e.untimed && endOf(e,evs)<now, isNow=!e.untimed && e.start<=now && now<endOf(e,evs);
+    return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
+      '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
+      '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+  }).join('')+'</div>';
+}
+
+/* ================= ITINERARY ================= */
+function renderTrip(){
+  var evs=allEvents(), today=todayIn(NY), html='<p class="label">'+esc((T.tour||{})['Dates']||'Itinerary')+'</p><h2>The <em>itinerary</em></h2><p class="small muted">Times are New York time unless marked UK. Tap anything for details and how to get there.</p>';
+  (T.days||[]).forEach(function(d){
+    var list=evs.filter(function(e){return e.day===d.n;}); if(!list.length)return;
+    html+='<div class="day" id="day'+d.n+'"><div class="dayhead"><span class="dn">Day '+d.n+'</span><h3>'+esc(fmtDay(d.date,{weekday:'long'}))+'</h3>'+(d.date===today?'<span class="today">Today</span>':'')+'</div>'+dayRows(list,evs)+'</div>';
+  });
+  html+='<button class="btn line" style="margin-top:22px" onclick="openFlights()"><i class="ti ti-plane"></i> Flights</button>';
+  $('s-trip').innerHTML=html;
+  var td=(T.days||[]).filter(function(d){return d.date===today;})[0];
+  if(td){ var el=$('day'+td.n); if(el) $('screens').scrollTop=el.offsetTop-12; }
+}
+function findEvent(id){ return allEvents().filter(function(e){return e.id===id;})[0]; }
+function openEvent(id){
+  var e=findEvent(id); if(!e)return;
+  var d=(T.days||[]).filter(function(x){return x.n===e.day;})[0];
+  var q=e.where?encodeURIComponent(e.where+', New York'):'';
+  var html='<p class="label">Day '+e.day+' · '+esc(fmtDay(e.date,{weekday:'long'}))+'</p><h2>'+esc(e.title)+'</h2>'+
+    '<dl class="kv"><dt>When</dt><dd>'+(e.time?esc(e.time)+(e.end?' – '+esc(e.end):'')+(e.clock==='UK'?' (UK time)':' (New York time)'):'See the day plan')+'</dd>'+
+    (e.where?'<dt>Where</dt><dd>'+esc(e.where)+'</dd>':'')+'</dl>';
+  if(e.detail) html+='<div class="card rule prose">'+paras(e.detail)+'</div>';
+  if(e.route) html+='<p class="label">How to get there</p><div class="card prose">'+paras(e.route)+'<p class="small muted" style="margin-top:8px">Stay with your group and teacher on the subway.</p></div>';
+  if(q && e.clock!=='UK') html+='<a class="btn dark" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+q+'"><i class="ti ti-map-2"></i> Open in Maps</a>';
+  if(e.staffOnly) html+='<p class="tag" style="margin-top:12px">Staff only</p>';
+  openPage(html);
+}
+function openFlights(){
+  var html='<p class="label">Travel</p><h2>Flights</h2>'+(T.flights||[]).map(function(f){
+    return '<div class="card rule"><div class="cardhead"><h3>'+esc(f.flight)+'</h3><span class="small muted">'+esc(fmtDay(f.date))+'</span></div>'+
+      '<dl class="kv"><dt>From</dt><dd>'+esc(f.from)+(f.depart?' · <b>'+esc(f.depart)+'</b>':'')+'</dd><dt>To</dt><dd>'+esc(f.to)+(f.arrive?' · <b>'+esc(f.arrive)+'</b>':'')+'</dd></dl>'+
+      (f.notes?'<p class="small muted" style="margin-top:8px">'+esc(f.notes)+'</p>':'')+'</div>';
+  }).join('')+'<p class="small muted">Departure times are local to the airport.</p>';
+  if(isStaff()&&P&&P.transfers&&P.transfers.length) html+='<button class="btn line" style="margin-top:12px" onclick="openTransfers()"><i class="ti ti-bus"></i> Coach transfers (staff)</button>';
+  openPage(html);
+}
+
+/* ================= GETTING AROUND ================= */
+var MTA_RED='#EE352E';
+function bullet(n,c){ return '<span class="bullet" style="background:'+(c||MTA_RED)+'">'+n+'</span>'; }
+function renderAround(){
+  var t=T.tour||{};
+  var html='<p class="label">Where we stay</p><h2>'+esc(t['Hostel Name']||'The hostel')+'</h2>'+
+    '<div class="card rule"><p><b>'+esc(t['Hostel Address']||'')+'</b></p><p class="small muted">'+esc(t['Hostel Corner']||'')+'</p>'+
+    '<div class="btnrow" style="margin-top:12px">'+(t['Hostel Map Link']?'<a class="btn dark" target="_blank" rel="noopener" href="'+esc(t['Hostel Map Link'])+'"><i class="ti ti-map-2"></i> Map</a>':'')+
+    (t['Hostel Phone']?'<a class="btn line" href="'+tel(t['Hostel Phone'])+'"><i class="ti ti-phone"></i> Call</a>':'')+'</div></div>'+
+    '<p class="label">Which train?</p><div class="dirs">'+
+    '<div class="card"><i class="ti ti-arrow-down" style="font-size:22px"></i><h3 style="font-size:19px;margin-top:6px">Going out</h3><p class="small">Take trains signed <b>Downtown &amp; Brooklyn</b>.</p></div>'+
+    '<div class="card"><i class="ti ti-arrow-up" style="font-size:22px"></i><h3 style="font-size:19px;margin-top:6px">Coming back</h3><p class="small">Take trains signed <b>Uptown &amp; The Bronx</b>.</p></div></div>'+
+    '<div class="card dark" style="margin-top:10px"><h3 style="font-size:20px">Listen for 103rd Street</h3><p class="small" style="margin-top:4px;color:#D9D8DA">On the way back, listen carefully to the announcements to make sure your train stops at 103rd Street. '+bullet(1)+' trains stop there. '+bullet(2)+' '+bullet(3)+' trains only stop at 96th Street — a 10 minute walk.</p></div>'+
+    '<p class="label">Our subway lines</p>'+subwaySVG()+
+    '<p class="small muted" style="margin-top:8px">Simplified diagram of the lines we use most — not to scale. The A, C, E, R, W and 7 trains on the itinerary are on the official map.</p>';
+  var links=(T.links||[]); if(links.length){ html+='<div style="margin-top:12px">'+links.map(function(l,i){return '<a class="btn '+(i===0?'dark':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>';}).join('')+'</div>'; }
+  html+='<div class="card" style="margin-top:14px"><p class="small"><b>Distances:</b> 20 blocks (streets) is about a mile — roughly 20 minutes\' walk.</p></div>';
+  $('s-around').innerHTML=html;
+}
+function subwaySVG(){
+  /* Schematic: 1 local (x=150) + 2/3 express (x=136) down the West Side, 2/3 branch to Brooklyn. Not to scale. */
+  var L=[['110 St','Top of Central Park'],['103 St','OUR HOSTEL',1],['96 St','2 3 stop here',2],['86 St'],['79 St'],['72 St','Strawberry Fields (walk east)',2],['66 St–Lincoln Center'],
+    ['59 St–Columbus Circle','Central Park · Zoo · Roosevelt Island Tram',1],['50 St',"Ellen's Stardust Diner",1],['Times Sq–42 St','Hershey\'s · Times Square · 7 train',2],
+    ['34 St–Penn Station','Madison Square Garden',2],['28 St'],['23 St','Walk east to the Flatiron'],['18 St'],['14 St','',2],['Christopher St–Stonewall','Greenwich Village · Groove',1],
+    ['Houston St'],['Canal St'],['Franklin St','Ghostbusters Fire House',1],['Chambers St','',2],['WTC Cortlandt','9/11 Memorial',1],['Rector St'],['South Ferry','Staten Island Ferry',1]];
+  var y0=34, dy=27, xL=150, xE=136, s='';
+  var yC=y0+19*dy, yEnd=y0+(L.length-1)*dy;
+  s+='<text x="12" y="20" font-family="Cormorant Garamond,Georgia,serif" font-size="13" font-weight="600" letter-spacing="2.5" fill="#6E6D70">UPTOWN &amp; THE BRONX ↑</text>';
+  s+='<line x1="'+xL+'" y1="'+y0+'" x2="'+xL+'" y2="'+yEnd+'" stroke="'+MTA_RED+'" stroke-width="5"/>';
+  s+='<polyline fill="none" stroke="'+MTA_RED+'" stroke-width="5" stroke-opacity=".55" points="'+xE+','+(y0+2*dy)+' '+xE+','+yC+' 64,'+(yC+40)+' 64,'+(yEnd+95)+'"/>';
+  L.forEach(function(st,i){
+    var y=y0+i*dy, key=st[2]===1, ex=st[2]===2;
+    if(ex) s+='<circle cx="'+xE+'" cy="'+y+'" r="5" fill="#fff" stroke="#2A292B" stroke-width="2"/>';
+    s+='<circle cx="'+xL+'" cy="'+y+'" r="'+(key?6:4)+'" fill="'+(key?'#2A292B':'#fff')+'" stroke="#2A292B" stroke-width="2"/>';
+    if(i===1) s+='<rect x="'+(xL-9)+'" y="'+(y-9)+'" width="18" height="18" fill="none" stroke="#EFCA50" stroke-width="3"/>';
+    s+='<text x="'+(xL+14)+'" y="'+(y+4)+'" font-family="Work Sans,Arial,sans-serif" font-size="12.5" font-weight="'+(key||ex?600:400)+'" fill="#414042">'+esc(st[0])+'</text>';
+    if(st[1]) s+='<text x="'+(xL+14)+'" y="'+(y+16)+'" font-family="Work Sans,Arial,sans-serif" font-size="10" fill="'+(i===1?'#2A292B':'#6E6D70')+'" font-weight="'+(i===1?600:400)+'">'+esc(st[1])+'</text>';
+  });
+  [['Park Place',1],['Fulton St',2],['Wall St',3]].forEach(function(b){ var y=yC+34+b[1]*20; s+='<circle cx="64" cy="'+y+'" r="4" fill="#fff" stroke="#2A292B" stroke-width="2"/><text x="56" y="'+(y+4)+'" text-anchor="end" font-family="Work Sans,Arial,sans-serif" font-size="10.5" fill="#414042">'+b[0]+'</text>'; });
+  var yr=yEnd+30;
+  s+='<rect x="0" y="'+yr+'" width="340" height="22" fill="#DDDCDC"/><text x="210" y="'+(yr+15)+'" font-family="Cormorant Garamond,Georgia,serif" font-style="italic" font-size="13" fill="#6E6D70">East River</text>';
+  [['Clark St','DUMBO · Brooklyn Bridge (15 min walk)',yr+44],['Borough Hall','',yr+76]].forEach(function(b){ s+='<circle cx="64" cy="'+b[2]+'" r="'+(b[1]?6:4)+'" fill="'+(b[1]?'#2A292B':'#fff')+'" stroke="#2A292B" stroke-width="2"/><text x="78" y="'+(b[2]+4)+'" font-family="Work Sans,Arial,sans-serif" font-size="12.5" font-weight="600" fill="#414042">'+b[0]+'</text>'+(b[1]?'<text x="78" y="'+(b[2]+16)+'" font-family="Work Sans,Arial,sans-serif" font-size="10" fill="#6E6D70">'+b[1]+'</text>':''); });
+  s+='<text x="12" y="'+(yr+112)+'" font-family="Cormorant Garamond,Georgia,serif" font-size="13" font-weight="600" letter-spacing="2.5" fill="#6E6D70">BROOKLYN · DOWNTOWN ↓</text>';
+  var H=yr+124;
+  var legend='<div style="display:flex;gap:16px;align-items:center;padding:8px 10px 2px;font-size:12px;color:#6E6D70;flex-wrap:wrap"><span>'+bullet(1)+' local — every stop</span><span>'+bullet(2)+bullet(3)+' express — circled stops</span></div>';
+  return '<div class="subway">'+legend+'<svg viewBox="0 0 340 '+H+'" role="img" aria-label="Simplified map of the 1, 2 and 3 subway lines from 110th Street to South Ferry and Brooklyn">'+s+'</svg></div>';
+}
+
+/* ================= MORE ================= */
+function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
+function renderMore(){
+  var html='<p class="label">Signed in as '+esc(role==='staff'?'staff':role==='family'?'parent / family':'student')+'</p>';
+  html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
+  (T.more||[]).forEach(function(m,i){ html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
+  html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
+  if(isStaff()){
+    var n=P&&P.students?P.students.length:0;
+    html+='<p class="label">Staff only</p>';
+    if(!P) html+='<div class="card"><p class="small">Staff information hasn\'t loaded. <button class="linkbtn" onclick="loadPrivate(true)">Try again</button></p><p class="small muted" id="privMsg"></p></div>';
+    html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
+      tile('ti-first-aid-kit','Medical','Medication & allergies','openMedical()')+tile('ti-salad','Dietary','Needs & allergies','openDietary()')+
+      tile('ti-puzzle','SEND','Support needs','openSEND()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
+      tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
+      tile('ti-send','Send alert','To every phone','openSendAlert()')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
+  }
+  html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
+  html+='<button class="btn line" onclick="signOut()"><i class="ti ti-logout"></i> '+(role==='staff'?'Sign out':'Change who I am')+'</button>';
+  html+='<p class="foot">TCA Tours · Build '+esc(BUILD)+(T.publishedAt?' · Data published '+esc(new Date(T.publishedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})):' · Bundled data')+'</p>';
+  $('s-more').innerHTML=html;
+}
+function openMore(i){
+  var m=(T.more||[])[i]; if(!m)return;
+  openPage('<p class="label">Know before you go</p><h2>'+esc(m.tile)+'</h2>'+m.sections.map(function(s,j){
+    return '<div class="card'+(j===0?' rule':'')+' prose">'+(s.heading?'<h3 style="font-size:20px">'+esc(s.heading)+'</h3>':'')+paras(s.text)+'</div>'; }).join(''));
+}
+function openTeachers(){
+  var staffPh={}; if(P&&P.staff) P.staff.forEach(function(s){staffPh[s.name]=s;});
+  openPage('<p class="label">Who\'s on the trip</p><h2>Teachers &amp; <em>TCA</em></h2><div class="list">'+(T.staff||[]).map(function(s){
+    var ph=staffPh[s.name]&&staffPh[s.name].phone;
+    return '<div class="li"><div class="bd"><b>'+esc(s.name)+'</b><div class="sub">'+esc(s.role)+(s.group?' · '+esc(s.group):'')+(ph&&isStaff()?' · '+esc(ph):'')+'</div></div>'+(ph&&isStaff()&&isPhone(ph)?'<a class="call" href="'+tel(ph)+'" aria-label="Call '+esc(s.name)+'"><i class="ti ti-phone"></i></a>':'')+'</div>'; }).join('')+'</div>'+
+    (isStaff()?'':'<p class="small muted" style="margin-top:10px">Staff phone numbers are on your ID card.</p>'));
+}
+
+/* ================= EMERGENCY ================= */
+function openSOS(){
+  var t=T.tour||{};
+  var html='<p class="label" style="color:var(--alarm)">In an emergency</p><h2>Get <em>help</em></h2>'+
+    '<a class="btn alarm" href="tel:911" style="padding:20px"><i class="ti ti-phone-call"></i> Call 911 — police, fire, ambulance</a>'+
+    '<div class="card rule" style="margin-top:14px"><h3 style="font-size:20px">Lost?</h3><p class="small" style="margin-top:4px">'+esc(t['Lost Student Message']||'Phone one of the contact numbers on your ID card.')+'</p></div>'+
+    '<p class="label">Show this to someone who can help</p><div class="card dark"><p class="small" style="color:#B7B6B9">I am staying at</p><h2 style="font-size:28px;margin-top:4px">'+esc(t['Hostel Name']||'')+'</h2><p style="font-size:18px;margin-top:6px">'+esc(t['Hostel Address']||'')+'</p><p class="small" style="color:#D9D8DA;margin-top:4px">'+esc(t['Hostel Corner']||'')+'</p></div>'+
+    (t['Hostel Phone']?'<a class="btn dark" href="'+tel(t['Hostel Phone'])+'"><i class="ti ti-phone"></i> Call the hostel · '+esc(t['Hostel Phone'])+'</a>':'');
+  if(isStaff()){
+    var c=(P&&P.contacts)||[], d=(P&&P.details)||{};
+    html+='<p class="label">Staff contacts</p><div class="list">';
+    /* Tour Details contacts only if the Emergency Contacts tab doesn't already list them */
+    if(!c.length&&d['Tour Manager Name']) html+=contactRow(d['Tour Manager Name'],'Tour manager',d['Tour Manager Phone']);
+    if(!c.length&&d['UK Office Contact']) html+=contactRow(d['UK Office Contact'],'UK office',d['UK Office Phone']);
+    html+=c.filter(function(x){return !/^emergency services$/i.test(x.name);}).map(function(x){return contactRow(x.name,x.role+(x.where?' · '+x.where:''),x.phone,x.notes);}).join('')+'</div>';
+    if(!P) html+='<p class="small muted" style="margin-top:8px">Staff contacts will appear once staff data has loaded.</p>';
+  }
+  openPage(html);
+}
+function contactRow(name,sub,phone,notes){
+  var ok=isPhone(phone);
+  return '<div class="li"><div class="bd"><b>'+esc(name)+'</b><div class="sub">'+esc(sub||'')+(phone?' · '+esc(phone):' · <span class="flag">number to be confirmed</span>')+(notes?'<br>'+esc(notes):'')+'</div></div>'+
+    (ok?'<a class="call" href="'+tel(phone)+'" aria-label="Call '+esc(name)+'"><i class="ti ti-phone"></i></a>':'')+'</div>';
+}
+
+/* ================= WEATHER (Open-Meteo, no key) ================= */
+var WX=null, WMO={0:['Clear','ti-sun'],1:['Mainly clear','ti-sun'],2:['Partly cloudy','ti-cloud'],3:['Cloudy','ti-cloud'],45:['Fog','ti-mist'],48:['Fog','ti-mist'],51:['Drizzle','ti-cloud-rain'],53:['Drizzle','ti-cloud-rain'],55:['Drizzle','ti-cloud-rain'],61:['Light rain','ti-cloud-rain'],63:['Rain','ti-cloud-rain'],65:['Heavy rain','ti-cloud-storm'],71:['Snow','ti-snowflake'],73:['Snow','ti-snowflake'],75:['Snow','ti-snowflake'],80:['Showers','ti-cloud-rain'],81:['Showers','ti-cloud-rain'],82:['Heavy showers','ti-cloud-storm'],95:['Thunderstorm','ti-cloud-storm'],96:['Thunderstorm','ti-cloud-storm'],99:['Thunderstorm','ti-cloud-storm']};
+function wmo(c){ return WMO[c]||['—','ti-cloud']; }
+function loadWeather(){
+  if(WX){ paintWeather(); return; }
+  var t=T.tour||{}, lat=t['Weather Latitude']||40.7979, lon=t['Weather Longitude']||-73.9667;
+  fetch('https://api.open-meteo.com/v1/forecast?latitude='+lat+'&longitude='+lon+'&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=America%2FNew_York&forecast_days=7')
+    .then(function(r){return r.json();}).then(function(j){ WX=j; paintWeather(); }).catch(function(){ if($('wxRange')) $('wxRange').textContent='Weather unavailable'; });
+}
+function paintWeather(){
+  if(!WX||!WX.current||!$('wxTemp'))return;
+  var w=wmo(WX.current.weather_code);
+  $('wxTemp').textContent=Math.round(WX.current.temperature_2m)+'°C';
+  $('wxLabel').textContent=w[0]+' · '+((T.tour||{})['Weather Town']||'New York');
+  $('wxIcon').className='ti '+w[1]+' wi';
+  if(WX.daily) $('wxRange').textContent=Math.round(WX.daily.temperature_2m_min[0])+'° – '+Math.round(WX.daily.temperature_2m_max[0])+'° · rain '+(WX.daily.precipitation_probability_max[0]||0)+'%';
+}
+function openWeather(){
+  var t=T.tour||{}, html='<p class="label">'+esc(t['Weather Town']||'New York')+'</p><h2>7-day <em>forecast</em></h2>';
+  if(WX&&WX.daily){ html+='<div class="list">'+WX.daily.time.map(function(d,i){ var w=wmo(WX.daily.weather_code[i]);
+    return '<div class="li"><i class="ti '+w[1]+'" style="font-size:24px"></i><div class="bd"><b>'+esc(fmtDay(d))+'</b><div class="sub">'+esc(w[0])+' · rain '+(WX.daily.precipitation_probability_max[i]||0)+'%</div></div><span class="num" style="font-size:20px">'+Math.round(WX.daily.temperature_2m_min[i])+'° / '+Math.round(WX.daily.temperature_2m_max[i])+'°</span></div>'; }).join('')+'</div>';
+  } else html+='<div class="card"><p class="small">Forecast unavailable right now.</p></div>';
+  if(t['Weather Note']) html+='<div class="card rule"><h3 style="font-size:19px">What to pack</h3><p class="small" style="margin-top:4px">'+esc(t['Weather Note'])+'</p></div>';
+  html+='<p class="small muted">Forecast by Open-Meteo.com</p>';
+  openPage(html);
+}
+
+/* ================= ALERTS ================= */
+function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
+function loadAlerts(){
+  fetch(API+'?type=alerts',{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+    if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
+    var fresh=a.filter(function(x){return seen.indexOf(x.id)<0;});
+    $('bellDot').classList.toggle('on',fresh.length>0);
+    if(fresh.length && role && !$('modal').classList.contains('on')){
+      var x=fresh[0];
+      openModal('<p class="label">New alert</p><h2 style="font-size:26px">'+esc(x.title||'Message from staff')+'</h2><div class="prose" style="margin:8px 0 14px">'+paras(x.msg)+'</div><p class="small muted">'+esc(x.by||'Staff')+' · '+esc(new Date(x.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</p><button class="btn gold" style="margin-top:14px" onclick="ackAlert(\''+esc(x.id)+'\')">OK, got it</button>');
+    }
+  }).catch(function(){});
+}
+function ackAlert(id){ var s=seenAlerts(); if(s.indexOf(id)<0)s.push(id); lsSet(LS.seen,JSON.stringify(s.slice(-60))); closeModal(); loadAlerts(); }
+function openAlerts(){
+  var s=seenAlerts(); ALERTS.forEach(function(a){ if(s.indexOf(a.id)<0)s.push(a.id); }); lsSet(LS.seen,JSON.stringify(s.slice(-60))); $('bellDot').classList.remove('on');
+  openPage('<p class="label">From the staff</p><h2>Alerts</h2>'+(ALERTS.length?ALERTS.map(function(a){
+    return '<div class="card rule"><h3 style="font-size:20px">'+esc(a.title||'Message')+'</h3><div class="prose small">'+paras(a.msg)+'</div><p class="small muted">'+esc(a.by||'Staff')+' · '+esc(new Date(a.at).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY time</p></div>'; }).join(''):'<div class="card"><p class="small muted">No alerts yet. Staff messages will appear here and pop up on your phone when the app is open.</p></div>'));
+}
+function openSendAlert(){
+  openPage('<p class="label">Staff</p><h2>Send an <em>alert</em></h2><p class="small muted">Goes to everyone using the app — students, families and staff. It pops up next time their app checks in (about once a minute while open).</p>'+
+    '<input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" style="margin-top:12px" maxlength="80">'+
+    '<textarea class="field" id="alMsg" rows="5" placeholder="Message" style="margin-top:10px;resize:vertical"></textarea>'+
+    '<button class="btn gold" style="margin-top:12px" onclick="sendAlert()"><i class="ti ti-send"></i> Send to everyone</button>'+
+    (ALERTS.length?'<p class="label">Sent</p><div class="list">'+ALERTS.map(function(a){return '<div class="li"><div class="bd"><b>'+esc(a.title)+'</b><div class="sub">'+esc(a.msg)+'</div></div><button class="call" onclick="deleteAlert(\''+esc(a.id)+'\')" aria-label="Delete alert"><i class="ti ti-trash"></i></button></div>';}).join('')+'</div>':''));
+}
+function sendAlert(){
+  var title=$('alTitle').value.trim(), msg=$('alMsg').value.trim(); if(!title&&!msg){toast('Write a message first');return;}
+  var a={id:'a'+Date.now().toString(36), title:title, msg:msg, at:Date.now(), by:'Staff'};
+  postStaff('alerts',[a].concat(ALERTS).slice(0,30)).then(function(ok){ if(ok){ ALERTS=[a].concat(ALERTS); ackAlert(a.id); toast('Alert sent'); openSendAlert(); pageStack.pop(); } });
+}
+function deleteAlert(id){ if(!confirm('Delete this alert for everyone?'))return; var next=ALERTS.filter(function(a){return a.id!==id;}); postStaff('alerts',next).then(function(ok){ if(ok){ ALERTS=next; openSendAlert(); pageStack.pop(); } }); }
+
+/* ================= STAFF DATA ================= */
+function postStaff(type,body){
+  return fetch(API+'?type='+type,{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify(body)})
+    .then(function(r){ if(r.status===401){ toast('Staff password has changed — sign in again'); return false; } if(!r.ok){ toast('Could not save ('+r.status+')'); return false; } return r.json().then(function(j){ return j.ok?(j.data||true):false; }); })
+    .catch(function(){ toast('No signal — not saved. Try again when you have a connection.'); return false; });
+}
+function loadPrivate(manual){
+  if(!isStaff())return Promise.resolve();
+  if(!P){ try{ var c=JSON.parse(lsGet(LS.priv)||'null'); if(c){ P=c.data; LIVE.roomnums=c.roomnums||{}; LIVE.register=c.register||{}; } }catch(e){} }
+  return fetch(API+'?type=private',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){
+    if(r.status===401){ toast('Staff password has changed — sign in again'); signOut(); return; }
+    if(!r.ok){ if(manual)toast('Could not load staff data ('+r.status+')'); return; }
+    return r.json().then(function(j){
+      if(!j.data){ if(manual)toast('No staff data published yet — use the admin page'); if($('privMsg'))$('privMsg').textContent='Nothing has been published yet. Upload the App Database in admin.html and press Publish.'; return; }
+      P=j.data; LIVE.roomnums=j.roomnums||{}; LIVE.register=j.register||{};
+      lsSet(LS.priv,JSON.stringify({data:P,roomnums:LIVE.roomnums,register:LIVE.register}));
+      if(manual)toast('Staff data up to date');
+      if($('s-more').classList.contains('active')) renderMore();
+    });
+  }).catch(function(){ if(manual)toast('No signal — showing the last saved copy'); });
+}
+function needP(){ if(P&&P.students)return true; toast('Staff data not loaded yet'); loadPrivate(true); return false; }
+function students(){ return (P&&P.students)||[]; }
+function groupsList(){ var g=[]; students().forEach(function(s){ if(s.group&&g.indexOf(s.group)<0)g.push(s.group); }); return g.sort(); }
+function teacherOf(g){ var s=students().filter(function(x){return x.group===g&&x.teacher;})[0]; return s?s.teacher:''; }
+function roomOf(s){ return LIVE.roomnums[s.id]!=null?LIVE.roomnums[s.id]:(s.room||''); }
+function byName(a,b){ var sa=a.name.split(' ').pop(), sb=b.name.split(' ').pop(); return sa.localeCompare(sb)||a.name.localeCompare(b.name); }
+
+/* ---------- REGISTER ---------- */
+var REG={roll:null, group:'All', poll:null};
+function rolls(){
+  var r=[]; Object.keys(LIVE.register).forEach(function(k){ if(k.indexOf('roll|')===0){ var v=LIVE.register[k]; if(v&&!v.deleted) r.push(Object.assign({id:k.slice(5)},v)); } });
+  return r.sort(function(a,b){return b.at-a.at;});
+}
+function marked(rollId,sid){ var v=LIVE.register[rollId+'|'+sid]; return !!(v&&v.on); }
+function openRegister(){
+  if(!needP())return;
+  var rs=rolls();
+  var html='<p class="label">Staff · head count</p><h2>Register</h2><p class="small muted">Start a roll call whenever the group moves — leaving the hostel, getting off a train, after free time. Everyone with the staff view sees the same ticks live.</p>'+
+    '<input class="field" id="rollName" placeholder="Label, e.g. Leaving MSG" style="margin-top:12px" maxlength="60">'+
+    '<button class="btn gold" style="margin-top:10px" onclick="newRoll()"><i class="ti ti-plus"></i> Start a new roll call</button>';
+  if(rs.length){ html+='<p class="label">Recent roll calls</p><div class="list">'+rs.slice(0,12).map(function(r){
+      var n=students().filter(function(s){return marked(r.id,s.id);}).length;
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll(\''+esc(r.id)+'\')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+students().length+'</span></span></button>'; }).join('')+'</div>';
+  }
+  openPage(html,openRegister);
+}
+function newRoll(){
+  var id='r'+Date.now().toString(36), label=($('rollName').value||'').trim();
+  var title=label||('Roll call · '+new Date().toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}));
+  var o={}; o['roll|'+id]={title:title,at:Date.now()};
+  LIVE.register['roll|'+id]=o['roll|'+id];
+  postStaff('register',o).then(function(d){ if(d&&d!==true) LIVE.register=d; });
+  openRoll(id);
+}
+function openRoll(id){ REG.roll=id; pageStack.push(openRegister); paintRoll(); clearInterval(REG.poll); REG.poll=setInterval(syncRoll,8000); }
+function syncRoll(){
+  if(!$('regList')){ clearInterval(REG.poll); return; }
+  fetch(API+'?type=register',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){ LIVE.register=j; if($('regList')) paintRoll(true); } }).catch(function(){});
+}
+function paintRoll(keepScroll){
+  var r=LIVE.register['roll|'+REG.roll]||{title:'Roll call'}, gs=groupsList();
+  var list=students().filter(function(s){return REG.group==='All'||s.group===REG.group;}).sort(byName);
+  var here=list.filter(function(s){return marked(REG.roll,s.id);}), missing=list.filter(function(s){return !marked(REG.roll,s.id);});
+  var html='<p class="label">'+esc(r.title)+'</p>'+
+    '<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':g)+'</button>';}).join('')+'</div>'+
+    '<div class="regbar"><span class="big">'+here.length+'</span><span class="of">of '+list.length+' here'+(REG.group!=='All'&&teacherOf(REG.group)?'<br>'+esc(teacherOf(REG.group))+'\'s group':'')+'</span>'+
+    (missing.length?'<span class="tag alarm" style="margin:0 0 0 auto">'+missing.length+' missing</span>':'<span class="tag gold" style="margin:0 0 0 auto">All here</span>')+'</div>'+
+    (missing.length&&missing.length<=8?'<p class="small" style="margin-bottom:8px"><span class="flag">Missing:</span> '+missing.map(function(s){return esc(s.name);}).join(', ')+'</p>':'')+
+    '<div id="regList">'+list.map(function(s){ var on=marked(REG.roll,s.id);
+      return '<button class="pupil'+(on?' on':'')+'" onclick="tick(\''+s.id+'\')"><span class="box"><i class="ti ti-check"></i></span><span class="nm">'+esc(s.name)+'</span><span class="gp">'+esc(s.group)+'</span></button>'; }).join('')+'</div>'+
+    '<div class="btnrow" style="margin-top:14px"><button class="btn line" onclick="markAll(true)">Tick all shown</button><button class="btn line" onclick="markAll(false)">Clear shown</button></div>';
+  if(keepScroll) rerenderPage(html); else { $('s-page').innerHTML='<button class="back" onclick="clearInterval(REG.poll);pageBack()"><i class="ti ti-chevron-left"></i> Back</button>'+html; show('s-page'); }
+}
+function tick(sid){
+  var k=REG.roll+'|'+sid, on=!marked(REG.roll,sid), o={}; o[k]={on:on,at:Date.now()};
+  LIVE.register[k]=o[k]; paintRoll(true);
+  postStaff('register',o).then(function(d){ if(d&&d!==true){ LIVE.register=d; if($('regList'))paintRoll(true); } });
+}
+function markAll(on){
+  var o={}; students().filter(function(s){return REG.group==='All'||s.group===REG.group;}).forEach(function(s){ var k=REG.roll+'|'+s.id; o[k]={on:on,at:Date.now()}; LIVE.register[k]=o[k]; });
+  paintRoll(true); postStaff('register',o);
+}
+
+/* ---------- ROOMS ---------- */
+function openRooms(){
+  if(!needP())return;
+  var html='<p class="label">Staff · rooming</p><h2>Rooms</h2><p class="small muted">Type room numbers as the hostel allocates them — they save for every staff phone. Tap away from the box to save.</p>';
+  groupsList().forEach(function(g){
+    var list=students().filter(function(s){return s.group===g;}).sort(byName);
+    html+='<p class="label">'+esc(g)+' · '+list.length+'</p><p class="small" style="margin:-4px 0 8px">Teacher: <b>'+esc(teacherOf(g)||'—')+'</b> · <button class="linkbtn" onclick="roomForGroup(\''+esc(g)+'\')">Same room for the whole group</button></p><div class="list">'+
+      list.map(function(s){ return '<div class="li"><div class="bd"><b>'+esc(s.name)+'</b></div><input class="roominput" inputmode="numeric" aria-label="Room number for '+esc(s.name)+'" placeholder="Room" value="'+esc(roomOf(s))+'" onchange="saveRoom(\''+s.id+'\',this.value)"></div>'; }).join('')+'</div>';
+  });
+  openPage(html,openRooms);
+}
+function saveRoom(id,v){ var o={}; o[id]=String(v||'').trim(); LIVE.roomnums[id]=o[id]; postStaff('roomnums',o).then(function(d){ if(d){ if(d!==true)LIVE.roomnums=d; toast('Room saved'); } }); }
+function roomForGroup(g){
+  var v=prompt('Room number for everyone in '+g+':'); if(v==null)return; v=v.trim();
+  var o={}; students().filter(function(s){return s.group===g;}).forEach(function(s){ o[s.id]=v; LIVE.roomnums[s.id]=v; });
+  postStaff('roomnums',o).then(function(d){ if(d){ if(d!==true)LIVE.roomnums=d; toast('Rooms saved'); pageStack.pop(); openRooms(); } });
+}
+
+/* ---------- MEDICAL / DIETARY / SEND ---------- */
+var SERIOUS=/epipen|anaphyla|peanut|nut |allerg|999|blood clot|tegretol|seizure|epilep|asthma|inhaler|diabet|insulin/i;
+function personCard(s,fields){
+  var body=fields.map(function(f){ return s[f[0]]?'<dt>'+f[1]+'</dt><dd>'+esc(s[f[0]])+'</dd>':''; }).join('');
+  var serious=fields.some(function(f){return SERIOUS.test(s[f[0]]||'');});
+  return '<div class="card'+(serious?' rule':'')+'"><div class="cardhead"><h3 style="font-size:20px">'+esc(s.name)+'</h3>'+(serious?'<span class="tag alarm">Check</span>':'')+'</div>'+
+    '<p class="small muted">'+esc(s.group)+(roomOf(s)?' · Room '+esc(roomOf(s)):'')+(s.dob?' · DOB '+esc(fmtDay(s.dob,{weekday:undefined,year:'numeric'})):'')+'</p><dl class="kv">'+body+'</dl></div>';
+}
+function listPage(eyb,title,intro,fields,emptyMsg){
+  if(!needP())return;
+  var list=students().filter(function(s){return fields.some(function(f){return s[f[0]];});}).sort(function(a,b){
+    var sa=fields.some(function(f){return SERIOUS.test(a[f[0]]||'');}), sb=fields.some(function(f){return SERIOUS.test(b[f[0]]||'');}); return (sb-sa)||byName(a,b); });
+  openPage('<p class="label">'+eyb+'</p><h2>'+title+'</h2><p class="small muted">'+intro+' '+list.length+' of '+students().length+' students have something recorded. Students not listed had nothing to note (blank, N/A, none).</p>'+
+    (list.length?list.map(function(s){return personCard(s,fields);}).join(''):'<div class="card"><p class="small">'+emptyMsg+'</p></div>'));
+}
+function openMedical(){ listPage('Staff · medical','Medical <em>&amp; medication</em>','From the Students tab. Cards marked Check mention an allergy, EpiPen, inhaler, epilepsy medication or similar — read those first.',[['meds','Medication'],['side','Side effects / action'],['diet','Dietary']],'No medical information recorded.'); }
+function openDietary(){ listPage('Staff · dietary','Dietary <em>needs</em>','Allergies and food requirements.',[['diet','Dietary']],'No dietary requirements recorded.'); }
+function openSEND(){ listPage('Staff · SEND','SEND <em>information</em>','Special educational needs and disabilities.',[['send','SEND'],['notes','Notes']],'No SEND information has been added yet. Add it in the SEND column of the Students tab, then publish again.'); }
+
+/* ---------- MEAL ORDERS ---------- */
+function openMeals(i){
+  if(!needP())return;
+  var meals=P.meals||[]; i=i||0; var m=meals[i];
+  if(!m){ openPage('<h2>Meal orders</h2><div class="card"><p class="small">No meal orders in the App Database.</p></div>'); return; }
+  var dishes={}; m.orders.forEach(function(o){ dishes[o.order]=(dishes[o.order]||0)+1; });
+  var diet={}; students().forEach(function(s){ if(s.diet) diet[s.name.toLowerCase()]=s.diet; });
+  var html='<p class="label">Staff · pre-orders</p><h2>'+esc(m.venue)+'</h2><p class="small muted">'+esc(fmtDay(m.date,{weekday:'long'}))+' · '+m.orders.length+' meals</p>'+
+    (meals.length>1?'<div class="seg">'+meals.map(function(x,j){return '<button class="'+(j===i?'on':'')+'" onclick="pageStack.pop();openMeals('+j+')">'+esc(x.venue)+'</button>';}).join('')+'</div>':'')+
+    '<p class="label">Totals</p><div class="list">'+Object.keys(dishes).sort(function(a,b){return dishes[b]-dishes[a];}).map(function(d){return '<div class="li"><div class="bd">'+esc(d)+'</div><span class="count">'+dishes[d]+'</span></div>';}).join('')+
+    '<div class="li" style="background:var(--stone)"><div class="bd"><b>Total</b><div class="sub">counted from '+m.orders.length+' rows in Meal Orders</div></div><span class="count">'+m.orders.length+'</span></div></div>'+
+    '<p class="label">By person</p><div class="list">'+m.orders.slice().sort(byName).map(function(o){ var d=diet[o.name.toLowerCase()];
+      return '<div class="li"><div class="bd"><b>'+esc(o.name)+'</b><div class="sub">'+esc(o.order)+(o.note?' · <span class="flag">'+esc(o.note)+'</span>':'')+(d?'<br>Dietary: <span class="'+(SERIOUS.test(d)?'flag':'')+'">'+esc(d)+'</span>':'')+'</div></div></div>'; }).join('')+'</div>';
+  openPage(html);
+}
+
+/* ---------- TRANSFERS / CONTACTS ---------- */
+function openTransfers(){
+  if(!needP())return;
+  openPage('<p class="label">Staff · coaches</p><h2>Transfers</h2>'+(P.transfers||[]).map(function(x){
+    var phones=String(x.phones||'').split('·').map(function(p){return p.trim();}).filter(Boolean);
+    return '<div class="card rule"><div class="cardhead"><h3 style="font-size:21px">'+esc(x.type||'Transfer')+'</h3><span class="small muted">'+esc(fmtDay(x.date))+'</span></div>'+
+      '<dl class="kv"><dt>Pick-up</dt><dd><b>'+esc(x.pickup)+'</b></dd><dt>From</dt><dd>'+esc(x.from)+'</dd><dt>To</dt><dd>'+esc(x.to)+'</dd>'+(x.pax?'<dt>People</dt><dd>'+esc(x.pax)+(x.bags?' · '+esc(x.bags)+' bags':'')+'</dd>':'')+
+      '<dt>Ref</dt><dd><span class="num" style="font-size:22px">'+esc(x.ref)+'</span></dd></dl>'+(x.notes?'<div class="prose small" style="margin-top:8px">'+paras(x.notes)+'</div>':'')+
+      (phones.length?'<div style="margin-top:10px">'+phones.map(function(p){ var num=p.replace(/\(.*\)/,'').trim(); return '<a class="btn line" href="'+tel(num)+'"><i class="ti ti-phone"></i> '+esc(p)+'</a>'; }).join('')+'</div>':'')+'</div>';
+  }).join(''));
+}
+function openContacts(){ openSOS(); }
+
+/* ================= ADD TO HOME SCREEN ================= */
+function openA2HS(){
+  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  openModal('<p class="label">Add to your phone</p><h2 style="font-size:28px">One tap to <em>open</em></h2><p class="small muted" style="margin:6px 0 12px">No app store needed. It opens full-screen and keeps the last itinerary it loaded, so you can check it on the subway without signal.</p>'+
+    '<div class="prose small">'+(ios?'<ul><li>Open this page in <b>Safari</b>.</li><li>Tap the <b>Share</b> button <i class="ti ti-share-2"></i>.</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li></ul>':'<ul><li>Open this page in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu, top right.</li><li>Tap <b>Add to Home screen</b> (or <b>Install app</b>).</li></ul>')+'</div>'+
+    '<button class="btn gold" style="margin-top:14px" onclick="closeModal()">Done</button>');
+}
+
+/* ================= DATA LOADING ================= */
+function loadTour(){
+  try{ var c=JSON.parse(lsGet(LS.tour)||'null'); if(c&&c.events&&c.events.length) T=c; }catch(e){}
+  return fetch(API,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){
+    $('offline').classList.remove('on');
+    if(j&&Array.isArray(j.events)&&j.events.length){ T=j; lsSet(LS.tour,JSON.stringify(j)); }
+  }).catch(function(){ $('offline').classList.add('on'); });
+}
+function refresh(){
+  if(!role)return;
+  var top=$('screens').scrollTop;
+  if($('s-today').classList.contains('active')) renderToday();
+  else if($('s-more').classList.contains('active')) renderMore();
+  $('screens').scrollTop=top;
+}
+
+(function init(){
+  if(role==='staff'&&!lsGet(LS.key)) role=null;
+  if(role){ enter(); } else { renderSignin(); }
+  loadTour().then(function(){ if(role) refresh(); else renderSignin(); });
+  if(role==='staff') loadPrivate();
+  loadAlerts();
+  setInterval(loadAlerts,60000);
+  setInterval(function(){ if($('clkNY')){ $('clkNY').textContent=fmtClock(Date.now(),NY); $('clkUK').textContent=fmtClock(Date.now(),UK); } },15000);
+  setInterval(function(){ if(role&&$('s-today').classList.contains('active')) refresh(); },60000);
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden){ loadTour().then(refresh); loadAlerts(); if(isStaff())loadPrivate(); } });
+  window.addEventListener('online',function(){ $('offline').classList.remove('on'); });
+  window.addEventListener('offline',function(){ $('offline').classList.add('on'); });
+})();
+</script>
+</body>
+</html>

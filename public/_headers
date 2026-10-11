@@ -1,0 +1,12 @@
+## TCA Tours — Holmfirth NYC tour app (v1). Never serve the app pages stale.
+/
+  Cache-Control: no-store, max-age=0, must-revalidate
+/index.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+/admin.html
+  Cache-Control: no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow
+/js/*
+  Cache-Control: no-store, max-age=0, must-revalidate
+/sw.js
+  Cache-Control: no-store, max-age=0, must-revalidate
