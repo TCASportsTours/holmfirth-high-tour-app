@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v3  |  11 October 2026 (v3: website links on itinerary events; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v4  |  12 October 2026 (v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v3">
+<meta name="version" content="v4">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -226,8 +226,8 @@
   .dirs .card{margin:0}
 
   /* ---------- tab bar ---------- */
-  .tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(4,1fr);background:var(--white);border-top:1px solid var(--hairline);padding-bottom:env(safe-area-inset-bottom)}
-  .tab{border:0;background:none;padding:9px 4px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;color:var(--slate);cursor:pointer;position:relative;font-weight:500}
+  .tabbar{flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);background:var(--white);border-top:1px solid var(--hairline);padding-bottom:env(safe-area-inset-bottom)}
+  .tab{border:0;background:none;padding:9px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;line-height:1.15;text-align:center;color:var(--slate);cursor:pointer;position:relative;font-weight:500}
   .tab i{font-size:23px}
   .tab.active{color:var(--charcoal);font-weight:600}
   .tab.active::before{content:"";position:absolute;top:-1px;left:28%;right:28%;height:3px;background:var(--gold)}
@@ -259,6 +259,7 @@
     <section class="screen" id="s-today"></section>
     <section class="screen" id="s-trip"></section>
     <section class="screen" id="s-around"></section>
+    <section class="screen" id="s-pack"></section>
     <section class="screen" id="s-more"></section>
     <section class="screen" id="s-page"></section>
   </main>
@@ -266,6 +267,7 @@
   <nav class="tabbar" id="tabbar">
     <button class="tab active" data-tab="today" onclick="go('today')"><i class="ti ti-calendar-event"></i>Today</button>
     <button class="tab" data-tab="trip" onclick="go('trip')"><i class="ti ti-list-details"></i>Itinerary</button>
+    <button class="tab" data-tab="pack" onclick="go('pack')"><i class="ti ti-backpack"></i>What to take</button>
     <button class="tab" data-tab="around" onclick="go('around')"><i class="ti ti-train"></i>Getting around</button>
     <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i>More</button>
   </nav>
@@ -277,7 +279,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v3 · 11 Oct 2026';
+var BUILD = 'v4 · 12 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -340,6 +342,7 @@ function evIcon(e){ var t=String(e.type||'').toLowerCase();
   return ICON[t]||'ti-point'; }
 function allEvents(){
   var evs=(T.events||[]).slice(); if(P&&P.events) evs=evs.concat(P.events.map(function(e){return Object.assign({staffOnly:true},e);}));
+  if(P&&P.tcaEvents) evs=evs.concat(P.tcaEvents.map(function(e){return Object.assign({tcaOnly:true},e);}));
   var byDay={}; evs.forEach(function(e,i){ e._i=i; (byDay[e.day]=byDay[e.day]||[]).push(e); });
   var out=[];
   Object.keys(byDay).map(Number).sort(function(a,b){return a-b;}).forEach(function(d){
@@ -348,13 +351,14 @@ function allEvents(){
       var tz=e.clock==='UK'?UK:NY;
       if(e.time){ e.start=zoned(e.date,e.time,tz); e.endTs=e.end?zoned(e.date,e.end,tz):NaN; last=e.start; e.untimed=false; }
       else { e.start=last!=null?last+1:zoned(e.date,'06:00',tz); e.endTs=NaN; e.untimed=true; e.afterTimed=last!=null; }
-      out.push(e);
     });
+    /* staff/TCA rows are appended after the public ones, so put the day back in time order */
+    out=out.concat(list.slice().sort(function(a,b){ return (a.start-b.start)||(a._i-b._i); }));
   });
   return out;
 }
 function evTimeLabel(e){
-  if(e.untimed) return e.afterTimed?'Then':(/breakfast/i.test(e.title)?'AM':'—');
+  if(e.untimed) return /^info$/i.test(e.type)?'Note':e.afterTimed?'Then':(/breakfast/i.test(e.title)?'AM':'—');
   var d=(T.days||[]).filter(function(x){return x.n===e.day;})[0];
   var nextDay=d&&d.date&&e.date&&e.date!==d.date;
   return esc(e.time)+(e.end?'<small>to '+esc(e.end)+'</small>':'')+(e.clock==='UK'?'<small>UK time</small>':'')+(nextDay?'<small>'+esc(fmtDay(e.date,{month:undefined}))+'</small>':'');
@@ -370,7 +374,7 @@ function go(tab){
   curTab=tab; pageStack=[];
   document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
   show('s-'+tab);
-  ({today:renderToday,trip:renderTrip,around:renderAround,more:renderMore})[tab]();
+  ({today:renderToday,trip:renderTrip,pack:renderPack,around:renderAround,more:renderMore})[tab]();
 }
 function show(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.id===id);});
@@ -469,7 +473,7 @@ function dayRows(list,evs){
     return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
       '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
       '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
-      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.links&&e.links.length?' <span class="tag"><i class="ti ti-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag"><i class="ti ti-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
   }).join('')+'</div>';
 }
 
@@ -498,6 +502,7 @@ function openEvent(id){
   if(e.links&&e.links.length) html+='<p class="label">Links</p>'+e.links.map(function(l,i){ return '<a class="btn '+(i===0?'gold':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>'; }).join('');
   if(q && e.clock!=='UK') html+='<a class="btn dark" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+q+'"><i class="ti ti-map-2"></i> Open in Maps</a>';
   if(e.staffOnly) html+='<p class="tag" style="margin-top:12px">Staff only</p>';
+  if(e.tcaOnly) html+='<p class="tag gold" style="margin-top:12px">TCA only — teachers don\'t see this</p>';
   openPage(html);
 }
 function openFlights(){
@@ -563,7 +568,7 @@ function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'"
 function renderMore(){
   var html='<p class="label">Signed in as '+esc(role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':'teacher'):'student')+'</p>';
   html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
-  (T.more||[]).forEach(function(m,i){ html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
+  (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
   if(isStaff()){
     var n=P&&P.students?P.students.length:0;
@@ -579,6 +584,23 @@ function renderMore(){
   html+='<button class="btn line" onclick="signOut()"><i class="ti ti-logout"></i> '+(role==='staff'?'Sign out':'Change who I am')+'</button>';
   html+='<p class="foot">TCA Tours · Build '+esc(BUILD)+(T.publishedAt?' · Data published '+esc(new Date(T.publishedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})):' · Bundled data')+'</p>';
   $('s-more').innerHTML=html;
+}
+/* ---------- WHAT TO TAKE: the "What to take" tile from More content, as a tick-off list (ticks stay on this phone) ---------- */
+function isPackTile(m){ return /what to take|packing/i.test(m.tile||''); }
+function packTicks(){ try{ return JSON.parse(lsGet('hny_pack')||'{}'); }catch(e){ return {}; } }
+function renderPack(){
+  var m=(T.more||[]).filter(isPackTile)[0], ticks=packTicks();
+  var html='<p class="label">Before you go</p><h2>What to <em>take</em></h2><p class="small muted">Tick things off as you pack. Your ticks are saved on this phone.</p>';
+  if(!m){ html+='<div class="card"><p class="small">The packing list hasn\'t been published yet.</p></div>'; $('s-pack').innerHTML=html; return; }
+  var done=m.sections.filter(function(x){return ticks[x.heading];}).length;
+  html+='<p class="small" style="margin:10px 0"><span class="num" style="font-size:24px">'+done+'</span> of '+m.sections.length+' packed</p>';
+  html+=m.sections.map(function(x,j){ var on=!!ticks[x.heading];
+    return '<button class="pupil'+(on?' on':'')+'" style="align-items:flex-start" onclick="togglePack('+j+')"><span class="box" style="margin-top:2px"><i class="ti ti-check"></i></span><span class="nm"><b style="font-family:var(--display);font-size:20px;font-weight:600">'+esc(x.heading)+'</b><span class="prose small" style="display:block;color:var(--slate)">'+paras(x.text)+'</span></span></button>'; }).join('');
+  $('s-pack').innerHTML=html;
+}
+function togglePack(j){
+  var m=(T.more||[]).filter(isPackTile)[0]; if(!m)return; var h=m.sections[j].heading, t=packTicks();
+  if(t[h]) delete t[h]; else t[h]=1; lsSet('hny_pack',JSON.stringify(t)); var top=$('screens').scrollTop; renderPack(); $('screens').scrollTop=top;
 }
 function openMore(i){
   var m=(T.more||[])[i]; if(!m)return;
@@ -718,22 +740,26 @@ function openRegister(){
   var rs=rolls();
   var html='<p class="label">Staff · head count</p><h2>Register</h2><p class="small muted">Start a roll call whenever the group moves — leaving the hostel, getting off a train, after free time. Everyone with the staff view sees the same ticks live.</p>'+
     '<input class="field" id="rollName" placeholder="Label, e.g. Leaving MSG" style="margin-top:12px" maxlength="60">'+
-    '<button class="btn gold" style="margin-top:10px" onclick="newRoll()"><i class="ti ti-plus"></i> Start a new roll call</button>';
+    '<button class="btn gold" style="margin-top:10px" onclick="newRoll()"><i class="ti ti-plus"></i> Start a new roll call — everyone</button>'+
+    '<p class="label">Staff registers</p><p class="small muted" style="margin:-4px 0 8px">Each teacher\'s own group (the same as the room lists). Tap to start a register for just that group.</p><div class="list">'+
+    groupsList().map(function(g){ var n=students().filter(function(s){return s.group===g;}).length;
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="newRoll(\''+esc(g)+'\')"><div class="bd"><b>'+esc(teacherOf(g)||g)+'</b><div class="sub">'+esc(g)+' · '+n+' students</div></div><i class="ti ti-plus" style="font-size:20px"></i></button>'; }).join('')+'</div>';
   if(rs.length){ html+='<p class="label">Recent roll calls</p><div class="list">'+rs.slice(0,12).map(function(r){
       var n=students().filter(function(s){return marked(r.id,s.id);}).length;
       return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll(\''+esc(r.id)+'\')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+students().length+'</span></span></button>'; }).join('')+'</div>';
   }
   openPage(html,openRegister);
 }
-function newRoll(){
-  var id='r'+Date.now().toString(36), label=($('rollName').value||'').trim();
-  var title=label||('Roll call · '+new Date().toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}));
-  var o={}; o['roll|'+id]={title:title,at:Date.now()};
+function newRoll(group){
+  var id='r'+Date.now().toString(36), label=($('rollName')&&$('rollName').value||'').trim();
+  var who=group?(teacherOf(group)?teacherOf(group)+'\'s register':group):'Roll call';
+  var title=(label?label+' · ':'')+who+' · '+new Date().toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY});
+  var o={}; o['roll|'+id]={title:title,at:Date.now(),group:group||'All'};
   LIVE.register['roll|'+id]=o['roll|'+id];
   postStaff('register',o).then(function(d){ if(d&&d!==true) LIVE.register=d; });
   openRoll(id);
 }
-function openRoll(id){ REG.roll=id; pageStack.push(openRegister); paintRoll(); clearInterval(REG.poll); REG.poll=setInterval(syncRoll,8000); }
+function openRoll(id){ REG.roll=id; var meta=LIVE.register['roll|'+id]; REG.group=(meta&&meta.group)||'All'; pageStack.push(openRegister); paintRoll(); clearInterval(REG.poll); REG.poll=setInterval(syncRoll,8000); }
 function syncRoll(){
   if(!$('regList')){ clearInterval(REG.poll); return; }
   fetch(API+'?type=register',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){ LIVE.register=j; if($('regList')) paintRoll(true); } }).catch(function(){});
@@ -743,7 +769,7 @@ function paintRoll(keepScroll){
   var list=students().filter(function(s){return REG.group==='All'||s.group===REG.group;}).sort(byName);
   var here=list.filter(function(s){return marked(REG.roll,s.id);}), missing=list.filter(function(s){return !marked(REG.roll,s.id);});
   var html='<p class="label">'+esc(r.title)+'</p>'+
-    '<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':g)+'</button>';}).join('')+'</div>'+
+    '<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':(teacherOf(g)||g))+'</button>';}).join('')+'</div>'+
     '<div class="regbar"><span class="big">'+here.length+'</span><span class="of">of '+list.length+' here'+(REG.group!=='All'&&teacherOf(REG.group)?'<br>'+esc(teacherOf(REG.group))+'\'s group':'')+'</span>'+
     (missing.length?'<span class="tag alarm" style="margin:0 0 0 auto">'+missing.length+' missing</span>':'<span class="tag gold" style="margin:0 0 0 auto">All here</span>')+'</div>'+
     (missing.length&&missing.length<=8?'<p class="small" style="margin-bottom:8px"><span class="flag">Missing:</span> '+missing.map(function(s){return esc(s.name);}).join(', ')+'</p>':'')+

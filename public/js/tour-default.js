@@ -152,7 +152,21 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e8-breakfastatthehostel",
+   "id": "e8-travellighttoday",
+   "day": 2,
+   "date": "2026-10-26",
+   "time": "",
+   "end": "",
+   "clock": "NY",
+   "type": "Info",
+   "title": "Travel light today",
+   "where": "",
+   "detail": "Large bags, cameras etc. are not allowed into Madison Square Garden when we go to the ice hockey tonight. Only bring what you can carry in your pockets or a very small bag.",
+   "route": "",
+   "links": []
+  },
+  {
+   "id": "e9-breakfastatthehostel",
    "day": 2,
    "date": "2026-10-26",
    "time": "",
@@ -166,7 +180,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e9-centralparkstrawberryfie",
+   "id": "e10-centralparkstrawberryfie",
    "day": 2,
    "date": "2026-10-26",
    "time": "09:00",
@@ -175,7 +189,7 @@ window.TOUR_DEFAULT = {
    "type": "Activity",
    "title": "Central Park & Strawberry Fields",
    "where": "Central Park",
-   "detail": "Spend some time in Central Park and see the musicians at Strawberry Fields.\nTravel light! There is a bag check at Madison Square Garden tonight — or we head back to the hostel to drop things off first.",
+   "detail": "Spend some time in Central Park and see the musicians at Strawberry Fields.",
    "route": "Walk into the park from the hostel (Central Park West is 3 blocks east). Strawberry Fields is at W 72nd St & Central Park West.",
    "links": [
     {
@@ -185,7 +199,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e10-dumbotimeoutmarketbrookl",
+   "id": "e11-dumbotimeoutmarketbrookl",
    "day": 2,
    "date": "2026-10-26",
    "time": "13:00",
@@ -204,7 +218,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e11-arriveatmadisonsquaregar",
+   "id": "e12-arriveatmadisonsquaregar",
    "day": 2,
    "date": "2026-10-26",
    "time": "18:00",
@@ -213,7 +227,7 @@ window.TOUR_DEFAULT = {
    "type": "Event",
    "title": "Arrive at Madison Square Garden",
    "where": "Madison Square Garden",
-   "detail": "Arrive at the venue for 6pm. Eat at the venue or before/after the game. Erin has the tickets.",
+   "detail": "Arrive at the venue for 6pm. Eat at the venue or before/after the game. Mrs Lees has the tickets.",
    "route": "1, 2 or 3 train to 34 St–Penn Station — MSG is directly above the station.",
    "links": [
     {
@@ -223,7 +237,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e12-nhlnewyorkrangersvlaking",
+   "id": "e14-nhlnewyorkrangersvlaking",
    "day": 2,
    "date": "2026-10-26",
    "time": "19:00",
@@ -246,7 +260,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e13-breakfastatthehostel",
+   "id": "e15-breakfastatthehostel",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -260,7 +274,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e14-subwaytotimessquare",
+   "id": "e16-subwaytotimessquare",
    "day": 3,
    "date": "2026-10-27",
    "time": "09:30",
@@ -274,7 +288,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e15-hersheysbusinesstour",
+   "id": "e17-hersheysbusinesstour",
    "day": 3,
    "date": "2026-10-27",
    "time": "10:00",
@@ -293,7 +307,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e16-ghostbustersfirehouse",
+   "id": "e19-ghostbustersfirehouse",
    "day": 3,
    "date": "2026-10-27",
    "time": "12:00",
@@ -307,7 +321,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e17-lunch",
+   "id": "e20-lunch",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -321,7 +335,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e18-statenislandferrystatueo",
+   "id": "e21-statenislandferrystatueo",
    "day": 3,
    "date": "2026-10-27",
    "time": "13:00",
@@ -340,7 +354,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e19-911memorialthefinanciald",
+   "id": "e22-911memorialthefinanciald",
    "day": 3,
    "date": "2026-10-27",
    "time": "15:00",
@@ -359,7 +373,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e20-flatironbuilding5thavenu",
+   "id": "e23-flatironbuilding5thavenu",
    "day": 3,
    "date": "2026-10-27",
    "time": "17:30",
@@ -373,7 +387,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e21-empirestatebuilding",
+   "id": "e24-empirestatebuilding",
    "day": 3,
    "date": "2026-10-27",
    "time": "19:00",
@@ -392,7 +406,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e22-timessquareatnightfreeti",
+   "id": "e25-timessquareatnightfreeti",
    "day": 3,
    "date": "2026-10-27",
    "time": "21:00",
@@ -411,7 +425,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e23-breakfastatthehostel",
+   "id": "e26-breakfastatthehostel",
    "day": 4,
    "date": "2026-10-28",
    "time": "",
@@ -425,7 +439,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e24-rooseveltislandtram",
+   "id": "e27-rooseveltislandtram",
    "day": 4,
    "date": "2026-10-28",
    "time": "10:00",
@@ -444,7 +458,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e25-hudsonyardsthehighlinech",
+   "id": "e28-hudsonyardsthehighlinech",
    "day": 4,
    "date": "2026-10-28",
    "time": "13:00",
@@ -475,7 +489,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e26-greenwichvillage",
+   "id": "e29-greenwichvillage",
    "day": 4,
    "date": "2026-10-28",
    "time": "17:00",
@@ -494,7 +508,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e27-arriveatgroove",
+   "id": "e30-arriveatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "18:00",
@@ -513,7 +527,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e28-livemusicatgroove",
+   "id": "e31-livemusicatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "19:00",
@@ -532,7 +546,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e29-breakfaststoreluggage",
+   "id": "e32-breakfaststoreluggage",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -546,7 +560,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e30-centralparkzoo",
+   "id": "e33-centralparkzoo",
    "day": 5,
    "date": "2026-10-29",
    "time": "10:00",
@@ -565,7 +579,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e31-5thavenuetherockefellerc",
+   "id": "e34-5thavenuetherockefellerc",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -584,7 +598,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e32-lastminuteshopping",
+   "id": "e35-lastminuteshopping",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -598,7 +612,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e33-ellensstardustdiner",
+   "id": "e36-ellensstardustdiner",
    "day": 5,
    "date": "2026-10-29",
    "time": "16:15",
@@ -617,7 +631,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e34-coachpickupatthehosteljf",
+   "id": "e37-coachpickupatthehosteljf",
    "day": 5,
    "date": "2026-10-29",
    "time": "19:15",
@@ -631,7 +645,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e35-flynewyorkjfklondonheath",
+   "id": "e38-flynewyorkjfklondonheath",
    "day": 5,
    "date": "2026-10-30",
    "time": "00:20",
@@ -645,7 +659,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e36-arrivelondonheathrow",
+   "id": "e39-arrivelondonheathrow",
    "day": 6,
    "date": "2026-10-30",
    "time": "11:10",
@@ -659,7 +673,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e37-flyheathrowmanchesterba1",
+   "id": "e40-flyheathrowmanchesterba1",
    "day": 6,
    "date": "2026-10-30",
    "time": "13:05",
@@ -673,7 +687,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e38-arrivemanchestercoachtos",
+   "id": "e41-arrivemanchestercoachtos",
    "day": 6,
    "date": "2026-10-30",
    "time": "14:20",
@@ -682,7 +696,7 @@ window.TOUR_DEFAULT = {
    "type": "Travel",
    "title": "Arrive Manchester & coach to school",
    "where": "Manchester T2 → Holmfirth High",
-   "detail": "Coach back to school — arranged by Erin.",
+   "detail": "Coach back to school — arranged by Mrs Lees.",
    "route": "",
    "links": []
   }
@@ -757,6 +771,28 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
+   "tile": "What to take",
+   "icon": "ti-backpack",
+   "sections": [
+    {
+     "heading": "Towel",
+     "text": "Although all bedding is provided at the hostel you will need a towel."
+    },
+    {
+     "heading": "Credit / debit card",
+     "text": "This will be needed when using the subway. You need to use the same card every time you use the subway. By doing this you will ensure that the maximum you pay for the whole trip is $34. After this the subway rides will be free."
+    },
+    {
+     "heading": "US adaptor",
+     "text": "For charging phones etc."
+    },
+    {
+     "heading": "Padlock",
+     "text": "In your room you will have a locker. If you want to use the locker for your valuables you may want to take a padlock."
+    }
+   ]
+  },
+  {
    "tile": "Safety tips",
    "icon": "ti-shield-check",
    "sections": [
@@ -770,7 +806,7 @@ window.TOUR_DEFAULT = {
     },
     {
      "heading": "Out and about",
-     "text": "• Try to avoid eye contact with beggars and anyone behaving in a strange manner.\n• DO NOT make fun of anyone who might be acting strangely.\n• Beware of pick-pockets.\n• In crowded areas, keep your valuables in your front pocket rather than the rear.\n• Keep your money, subway card, New York Pass and other valuables safe.\n• If you have a handbag, keep it closed and hold it tightly.\n• DO NOT flaunt jewellery, cameras, your smartphone or cash in public.\n• Use caution if you have to use a cash machine. Inform a teacher before doing so."
+     "text": "• Try to avoid eye contact with beggars and anyone behaving in a strange manner.\n• DO NOT make fun of anyone who might be acting strangely.\n• Beware of pick-pockets.\n• In crowded areas, keep your valuables in your front pocket rather than the rear.\n• Keep your money and other valuables safe.\n• If you have a handbag, keep it closed and hold it tightly.\n• DO NOT flaunt jewellery, cameras, your smartphone or cash in public.\n• When in Times Square avoid having photos taken with Disney characters etc. If you do you will have to deal with demands for money!\n• Use caution if you have to use a cash machine. Inform a teacher before doing so."
     },
     {
      "heading": "If you get lost",
@@ -810,22 +846,22 @@ window.TOUR_DEFAULT = {
  ],
  "staff": [
   {
-   "name": "Erin Lees",
+   "name": "Mrs Lees",
    "role": "Teacher",
    "group": "Room 2 Girls"
   },
   {
-   "name": "Kellie Logan",
+   "name": "Mrs Logan",
    "role": "Teacher",
    "group": "Room 1 Girls"
   },
   {
-   "name": "Mike Parr",
+   "name": "Mr Parr",
    "role": "Teacher",
    "group": "Room 3 Boys"
   },
   {
-   "name": "Tom Earnshaw",
+   "name": "Mr Earnshaw",
    "role": "Teacher",
    "group": "Room 4 Boys"
   },

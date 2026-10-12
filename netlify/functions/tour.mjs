@@ -61,6 +61,7 @@ export default async (req) => {
   const tcaPass = env("TCA_PASSWORD");
   const isStaff = same(given, staffPass) || same(given, adminPass) || (!!tcaPass && same(given, tcaPass));
   const isAdmin = same(given, adminPass);
+  const isTca = isAdmin || (!!tcaPass && same(given, tcaPass));
   const notConfigured = () => reply(headers, 503, { ok: false, error: "STAFF_PASSWORD is not set in Netlify environment variables" });
   const denied = () => reply(headers, 401, { ok: false, error: "staff password required" });
 
@@ -114,10 +115,12 @@ export default async (req) => {
   if (STAFF_READ.has(type)) {
     if (!staffPass) return notConfigured();
     if (!isStaff) return denied();
-    if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin });
+    if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca });
     if (type === "private") {
       const [priv, rooms, reg] = await Promise.all([store.get("private"), store.get("roomnums"), store.get("register")]);
       const out = priv ? JSON.parse(priv) : null;
+      // TCA-only itinerary rows never leave the server for a teacher's phone
+      if (out && !isTca) delete out.tcaEvents;
       return reply(headers, 200, { ok: true, data: out, roomnums: safeObj(rooms), register: safeObj(reg) });
     }
     return new Response((await store.get(key)) || "{}", { headers });

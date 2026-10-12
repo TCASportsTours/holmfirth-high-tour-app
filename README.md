@@ -13,6 +13,7 @@ Version: **v3** · 11 October 2026 (v3: website links on itinerary events; v2: s
 | **Itinerary**: every day, tap for details and how to get there | **Rooms**: room groups and teachers, type in room numbers once allocated |
 | **Getting around**: hostel, which train, subway diagram (110th St → South Ferry → Brooklyn), MTA map links | **Medical**, **Dietary**, **SEND**: urgent cards ("Check") sorted first |
 | **Safety tips**, **Getting to the hostel**, **Flights**, **Teachers** | **Meal orders**: Groove and Ellen's totals plus per-person orders, cross-checked against dietary notes |
+| **What to take**: tick-off packing list (its own tab) | **TCA only** rows: Schedule rows marked *TCA only* reach TCA Tours staff and admin only, never teachers |
 | **Emergency**: call 911, "show this to someone" hostel card, call the hostel | **Transfers**: coach bookings, references and dispatcher numbers |
 | **Alerts**: pop-up messages from staff | **Contacts**: staff emergency list. **Send alert** to every phone |
 

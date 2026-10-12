@@ -15,7 +15,8 @@
   function str(x) { return String(x == null ? '' : x).replace(/\r/g, '').trim(); }
   var EMPTY = /^\s*(n\/?a|na|none|nil|no|nine|nkda|none known|-|)\s*$/i;
   function val(x) { var s = str(x); return EMPTY.test(s) ? '' : s; }
-  function isStaffOnly(x) { return /staff/i.test(str(x)); }
+  function isStaffOnly(x) { return /staff|tca/i.test(str(x)); }
+  function isTcaOnly(x) { return /tca/i.test(str(x)); }
 
   function findSheet(wb, names) {
     var want = names.map(norm);
@@ -73,7 +74,7 @@
   function parse(XLSX, wb) {
     var warnings = [];
     var pub = { parser: PARSER_VERSION, publishedAt: new Date().toISOString(), tour: {}, days: [], events: [], flights: [], more: [], links: [], staff: [] };
-    var priv = { parser: PARSER_VERSION, details: {}, events: [], students: [], staff: [], contacts: [], transfers: [], meals: [] };
+    var priv = { parser: PARSER_VERSION, details: {}, events: [], tcaEvents: [], students: [], staff: [], contacts: [], transfers: [], meals: [] };
 
     // ---- Tour Details (Field / Value / Who sees it)
     table(XLSX, findSheet(wb, ['tour details', 'tour', 'settings']), 'field').forEach(function (r) {
@@ -101,7 +102,7 @@
         where: r.location || '', detail: r.detail || '', route: r.gettingthere || '', links: parseLinks(r.links || r.website)
       };
       if (str(r.time) && !ev.time) warnings.push('Schedule: could not read time "' + r.time + '" for "' + r.title + '"');
-      (isStaffOnly(r.whoseesit) ? priv.events : pub.events).push(ev);
+      (isTcaOnly(r.whoseesit) ? priv.tcaEvents : isStaffOnly(r.whoseesit) ? priv.events : pub.events).push(ev);
     });
     pub.days = Object.keys(dayMap).map(Number).sort(function (a, b) { return a - b; }).map(function (k) { return { n: k, date: dayMap[k] }; });
     if (!pub.events.length) warnings.push('Schedule: no events found — check the header row says Day, Date, Time …');

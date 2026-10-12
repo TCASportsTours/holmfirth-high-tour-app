@@ -177,7 +177,7 @@ function render(){
   var withMed=q.students.filter(function(s){return s.meds||s.side;}).length, withDiet=q.students.filter(function(s){return s.diet;}).length;
   var stats=[[p.days.length,'days','pub'],[p.events.length,'public events','pub'],[p.flights.length,'flights','pub'],[p.more.length,'info pages','pub'],
     [q.students.length,'students','priv'],[withMed,'with medication','priv'],[withDiet,'with dietary needs','priv'],[q.contacts.length,'emergency contacts','priv'],
-    [q.transfers.length,'transfers','priv'],[q.meals.reduce(function(a,m){return a+m.orders.length;},0),'meal pre-orders','priv'],[q.events.length,'staff-only events','priv']];
+    [q.transfers.length,'transfers','priv'],[q.meals.reduce(function(a,m){return a+m.orders.length;},0),'meal pre-orders','priv'],[q.events.length,'staff-only events','priv'],[(q.tcaEvents||[]).length,'TCA-only events','priv']];
   $('stats').innerHTML=stats.map(function(s){return '<div class="stat'+(s[2]==='priv'?' private':'')+'"><b>'+s[0]+'</b><span>'+s[1]+(s[2]==='priv'?' · staff only':'')+'</span></div>';}).join('');
   var rows='<tr><th>Day</th><th>Date</th><th>Time</th><th>Title</th><th>Location</th></tr>';
   p.events.forEach(function(e){ rows+='<tr><td>'+e.day+'</td><td>'+esc(e.date)+'</td><td>'+esc(e.time||'—')+(e.clock==='UK'?' UK':'')+'</td><td>'+esc(e.title)+'</td><td>'+esc(e.where)+'</td></tr>'; });
