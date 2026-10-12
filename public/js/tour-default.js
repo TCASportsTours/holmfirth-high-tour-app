@@ -218,7 +218,26 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e12-arriveatmadisonsquaregar",
+   "id": "e12-anyboxingfans",
+   "day": 2,
+   "date": "2026-10-26",
+   "time": "",
+   "end": "",
+   "clock": "NY",
+   "type": "Info",
+   "title": "Any boxing fans?",
+   "where": "Gleason's Gym, 130 Water St, DUMBO",
+   "detail": "Any boxing fans? If so, see Tony, who will point you in the direction of the world-famous Gleason's Gym — just around the corner in DUMBO. Free entry.",
+   "route": "",
+   "links": [
+    {
+     "label": "Gleason's Gym",
+     "url": "https://www.gleasonsgym.com"
+    }
+   ]
+  },
+  {
+   "id": "e13-arriveatmadisonsquaregar",
    "day": 2,
    "date": "2026-10-26",
    "time": "18:00",
@@ -237,7 +256,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e14-bagsearchbeforethegame",
+   "id": "e15-bagsearchbeforethegame",
    "day": 2,
    "date": "2026-10-26",
    "time": "",
@@ -251,7 +270,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e15-nhlnewyorkrangersvlaking",
+   "id": "e16-nhlnewyorkrangersvlaking",
    "day": 2,
    "date": "2026-10-26",
    "time": "19:00",
@@ -274,7 +293,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e16-breakfastatthehostel",
+   "id": "e17-breakfastatthehostel",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -288,7 +307,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e17-subwaytotimessquare",
+   "id": "e18-subwaytotimessquare",
    "day": 3,
    "date": "2026-10-27",
    "time": "09:30",
@@ -302,7 +321,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e18-hersheysbusinesstour",
+   "id": "e19-hersheysbusinesstour",
    "day": 3,
    "date": "2026-10-27",
    "time": "10:00",
@@ -321,7 +340,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e20-ghostbustersfirehouse",
+   "id": "e21-ghostbustersfirehouse",
    "day": 3,
    "date": "2026-10-27",
    "time": "12:00",
@@ -335,7 +354,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e21-lunch",
+   "id": "e22-lunch",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -349,7 +368,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e22-statenislandferrystatueo",
+   "id": "e23-statenislandferrystatueo",
    "day": 3,
    "date": "2026-10-27",
    "time": "13:00",
@@ -368,7 +387,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e23-911memorialthefinanciald",
+   "id": "e24-911memorialthefinanciald",
    "day": 3,
    "date": "2026-10-27",
    "time": "15:00",
@@ -387,7 +406,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e24-flatironbuilding5thavenu",
+   "id": "e25-flatironbuilding5thavenu",
    "day": 3,
    "date": "2026-10-27",
    "time": "17:30",
@@ -401,7 +420,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e25-empirestatebuilding",
+   "id": "e26-empirestatebuilding",
    "day": 3,
    "date": "2026-10-27",
    "time": "19:00",
@@ -420,7 +439,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e26-timessquareatnightfreeti",
+   "id": "e27-timessquareatnightfreeti",
    "day": 3,
    "date": "2026-10-27",
    "time": "21:00",
@@ -439,7 +458,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e27-breakfastatthehostel",
+   "id": "e28-breakfastatthehostel",
    "day": 4,
    "date": "2026-10-28",
    "time": "",
@@ -453,7 +472,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e28-rooseveltislandtram",
+   "id": "e29-rooseveltislandtram",
    "day": 4,
    "date": "2026-10-28",
    "time": "10:00",
@@ -472,7 +491,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e29-hudsonyardsthehighlinech",
+   "id": "e30-hudsonyardsthehighlinech",
    "day": 4,
    "date": "2026-10-28",
    "time": "13:00",
@@ -503,7 +522,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e30-greenwichvillage",
+   "id": "e31-greenwichvillage",
    "day": 4,
    "date": "2026-10-28",
    "time": "17:00",
@@ -522,7 +541,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e31-arriveatgroove",
+   "id": "e32-arriveatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "18:00",
@@ -541,7 +560,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e32-livemusicatgroove",
+   "id": "e33-livemusicatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "19:00",
@@ -560,7 +579,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e33-breakfaststoreluggage",
+   "id": "e34-breakfaststoreluggage",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -574,7 +593,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e34-centralparkzoo",
+   "id": "e35-centralparkzoo",
    "day": 5,
    "date": "2026-10-29",
    "time": "10:00",
@@ -593,7 +612,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e35-5thavenuetherockefellerc",
+   "id": "e36-5thavenuetherockefellerc",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -612,7 +631,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e36-lastminuteshopping",
+   "id": "e37-lastminuteshopping",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -626,7 +645,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e37-ellensstardustdiner",
+   "id": "e38-ellensstardustdiner",
    "day": 5,
    "date": "2026-10-29",
    "time": "16:15",
@@ -645,7 +664,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e38-coachpickupatthehosteljf",
+   "id": "e39-coachpickupatthehosteljf",
    "day": 5,
    "date": "2026-10-29",
    "time": "19:15",
@@ -659,7 +678,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e39-flynewyorkjfklondonheath",
+   "id": "e40-flynewyorkjfklondonheath",
    "day": 5,
    "date": "2026-10-30",
    "time": "00:20",
@@ -673,7 +692,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e40-arrivelondonheathrow",
+   "id": "e41-arrivelondonheathrow",
    "day": 6,
    "date": "2026-10-30",
    "time": "11:10",
@@ -687,7 +706,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e41-flyheathrowmanchesterba1",
+   "id": "e42-flyheathrowmanchesterba1",
    "day": 6,
    "date": "2026-10-30",
    "time": "13:05",
@@ -701,7 +720,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e42-arrivemanchestercoachtos",
+   "id": "e43-arrivemanchestercoachtos",
    "day": 6,
    "date": "2026-10-30",
    "time": "14:20",
@@ -806,7 +825,7 @@ window.TOUR_DEFAULT = {
     },
     {
      "heading": "Documents & money",
-     "text": "• Passport — valid for the whole trip\n• ESTA approval — school will confirm this is done\n• School ID card with the contact numbers\n• A little US cash in small notes ($1, $5, $10) for snacks and tips\n• Copy of your travel insurance details (school will advise)"
+     "text": "• Passport — valid for the whole trip\n• ESTA approval — school will confirm this is done\n• School ID card with the contact numbers\n• A little US cash in small notes ($1, $5, $10) for snacks and tips"
     },
     {
      "heading": "Clothes — New York in late October",
@@ -814,7 +833,7 @@ window.TOUR_DEFAULT = {
     },
     {
      "heading": "Washbag",
-     "text": "• Toothbrush and toothpaste\n• Shower gel and shampoo\n• Deodorant (roll-on is easier for flights)\n• Hairbrush / comb and hair ties\n• Flip-flops for the hostel showers\n• Lip balm and hand cream — the wind can be cold\n• Hand sanitiser and tissues\n• Period products if needed"
+     "text": "• Toothbrush and toothpaste\n• Shower gel and shampoo\n• Deodorant (roll-on is easier for flights)\n• Hairbrush / comb and hair ties\n• Flip-flops for the hostel showers\n• Lip balm and hand cream — the wind can be cold\n• Hand sanitiser and tissues\n• Sanitary products if needed"
     },
     {
      "heading": "Medication",
@@ -826,7 +845,7 @@ window.TOUR_DEFAULT = {
     },
     {
      "heading": "Day bag & flights",
-     "text": "• A SMALL day bag or bum bag — big bags are not allowed into Madison Square Garden\n• Refillable water bottle (empty it before airport security)\n• Snacks for the flights (no peanuts — we have a peanut allergy in the group)\n• Travel pillow and a warm layer for the overnight flight home\n• Something to do on the flight: book, downloaded films or music"
+     "text": "• A SMALL day bag or bum bag — big bags are not allowed into Madison Square Garden\n• Refillable water bottle (empty it before airport security)\n• Snacks for the flights (no peanuts — we have a peanut allergy in the group)\n• Travel pillow and a warm layer for the overnight flight home\n• A book if you like to read — the flights have in-flight entertainment (bring your headphones)"
     },
     {
      "heading": "Room & bags",
