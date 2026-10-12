@@ -161,7 +161,7 @@ window.TOUR_DEFAULT = {
    "type": "Info",
    "title": "Travel light today",
    "where": "",
-   "detail": "Large bags, cameras etc. are not allowed into Madison Square Garden when we go to the ice hockey tonight. Only bring what you can carry in your pockets or a very small bag.",
+   "detail": "Large bags, cameras etc. are not allowed into Madison Square Garden when we go to the ice hockey tonight — and we may not get back to the hostel before the game, so whatever you take out this morning may have to come with you all day.\nWhy? Madison Square Garden only lets in small bags — no bigger than about 22 × 14 × 9 inches (56 × 36 × 23 cm), small enough to fit under your seat.\n• Every bag is X-rayed and searched at the door, so big bags slow the whole group down.\n• There is nowhere at the arena to leave a bag that is too big — no lockers and no bag check — so you could be refused entry.\n• Leave cameras and anything valuable you don't need at the hostel, in your locker.\nTake: phone, card, a little cash, a warm layer and a small bag at most.",
    "route": "",
    "links": []
   },
@@ -237,7 +237,21 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e14-nhlnewyorkrangersvlaking",
+   "id": "e14-bagsearchbeforethegame",
+   "day": 2,
+   "date": "2026-10-26",
+   "time": "",
+   "end": "",
+   "clock": "NY",
+   "type": "Info",
+   "title": "Bag search before the game",
+   "where": "Madison Square Garden",
+   "detail": "Reminder: only small bags (about 22 × 14 × 9 inches / 56 × 36 × 23 cm, must fit under your seat) and no cameras etc. are allowed in. Every bag is X-rayed and searched at the door and there is no bag check, so have your bag open and ready, keep together and wait for your teacher once you are through security.",
+   "route": "",
+   "links": []
+  },
+  {
+   "id": "e15-nhlnewyorkrangersvlaking",
    "day": 2,
    "date": "2026-10-26",
    "time": "19:00",
@@ -260,7 +274,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e15-breakfastatthehostel",
+   "id": "e16-breakfastatthehostel",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -274,7 +288,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e16-subwaytotimessquare",
+   "id": "e17-subwaytotimessquare",
    "day": 3,
    "date": "2026-10-27",
    "time": "09:30",
@@ -288,7 +302,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e17-hersheysbusinesstour",
+   "id": "e18-hersheysbusinesstour",
    "day": 3,
    "date": "2026-10-27",
    "time": "10:00",
@@ -307,7 +321,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e19-ghostbustersfirehouse",
+   "id": "e20-ghostbustersfirehouse",
    "day": 3,
    "date": "2026-10-27",
    "time": "12:00",
@@ -321,7 +335,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e20-lunch",
+   "id": "e21-lunch",
    "day": 3,
    "date": "2026-10-27",
    "time": "",
@@ -335,7 +349,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e21-statenislandferrystatueo",
+   "id": "e22-statenislandferrystatueo",
    "day": 3,
    "date": "2026-10-27",
    "time": "13:00",
@@ -354,7 +368,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e22-911memorialthefinanciald",
+   "id": "e23-911memorialthefinanciald",
    "day": 3,
    "date": "2026-10-27",
    "time": "15:00",
@@ -373,7 +387,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e23-flatironbuilding5thavenu",
+   "id": "e24-flatironbuilding5thavenu",
    "day": 3,
    "date": "2026-10-27",
    "time": "17:30",
@@ -387,7 +401,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e24-empirestatebuilding",
+   "id": "e25-empirestatebuilding",
    "day": 3,
    "date": "2026-10-27",
    "time": "19:00",
@@ -406,7 +420,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e25-timessquareatnightfreeti",
+   "id": "e26-timessquareatnightfreeti",
    "day": 3,
    "date": "2026-10-27",
    "time": "21:00",
@@ -425,7 +439,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e26-breakfastatthehostel",
+   "id": "e27-breakfastatthehostel",
    "day": 4,
    "date": "2026-10-28",
    "time": "",
@@ -439,7 +453,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e27-rooseveltislandtram",
+   "id": "e28-rooseveltislandtram",
    "day": 4,
    "date": "2026-10-28",
    "time": "10:00",
@@ -458,7 +472,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e28-hudsonyardsthehighlinech",
+   "id": "e29-hudsonyardsthehighlinech",
    "day": 4,
    "date": "2026-10-28",
    "time": "13:00",
@@ -489,7 +503,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e29-greenwichvillage",
+   "id": "e30-greenwichvillage",
    "day": 4,
    "date": "2026-10-28",
    "time": "17:00",
@@ -508,7 +522,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e30-arriveatgroove",
+   "id": "e31-arriveatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "18:00",
@@ -527,7 +541,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e31-livemusicatgroove",
+   "id": "e32-livemusicatgroove",
    "day": 4,
    "date": "2026-10-28",
    "time": "19:00",
@@ -546,7 +560,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e32-breakfaststoreluggage",
+   "id": "e33-breakfaststoreluggage",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -560,7 +574,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e33-centralparkzoo",
+   "id": "e34-centralparkzoo",
    "day": 5,
    "date": "2026-10-29",
    "time": "10:00",
@@ -579,7 +593,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e34-5thavenuetherockefellerc",
+   "id": "e35-5thavenuetherockefellerc",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -598,7 +612,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e35-lastminuteshopping",
+   "id": "e36-lastminuteshopping",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -612,7 +626,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e36-ellensstardustdiner",
+   "id": "e37-ellensstardustdiner",
    "day": 5,
    "date": "2026-10-29",
    "time": "16:15",
@@ -631,7 +645,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e37-coachpickupatthehosteljf",
+   "id": "e38-coachpickupatthehosteljf",
    "day": 5,
    "date": "2026-10-29",
    "time": "19:15",
@@ -645,7 +659,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e38-flynewyorkjfklondonheath",
+   "id": "e39-flynewyorkjfklondonheath",
    "day": 5,
    "date": "2026-10-30",
    "time": "00:20",
@@ -659,7 +673,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e39-arrivelondonheathrow",
+   "id": "e40-arrivelondonheathrow",
    "day": 6,
    "date": "2026-10-30",
    "time": "11:10",
@@ -673,7 +687,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e40-flyheathrowmanchesterba1",
+   "id": "e41-flyheathrowmanchesterba1",
    "day": 6,
    "date": "2026-10-30",
    "time": "13:05",
@@ -687,7 +701,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e41-arrivemanchestercoachtos",
+   "id": "e42-arrivemanchestercoachtos",
    "day": 6,
    "date": "2026-10-30",
    "time": "14:20",
@@ -789,6 +803,38 @@ window.TOUR_DEFAULT = {
     {
      "heading": "Padlock",
      "text": "In your room you will have a locker. If you want to use the locker for your valuables you may want to take a padlock."
+    },
+    {
+     "heading": "Documents & money",
+     "text": "• Passport — valid for the whole trip\n• ESTA approval — school will confirm this is done\n• School ID card with the contact numbers\n• A little US cash in small notes ($1, $5, $10) for snacks and tips\n• Copy of your travel insurance details (school will advise)"
+    },
+    {
+     "heading": "Clothes — New York in late October",
+     "text": "• Warm, waterproof coat with a hood — typically around 8–16°C, colder at night and on the ferry, tram and by the rivers\n• 2 warm jumpers or hoodies for layering\n• 5 T-shirts / tops\n• 3 pairs of trousers or jeans\n• Underwear and socks for 6 days, plus spares in case your feet get wet\n• Pyjamas\n• Hat, gloves and scarf for evenings\n• Comfortable trainers that are already worn in — we walk a lot every day\n• A second pair of shoes in case one pair gets wet"
+    },
+    {
+     "heading": "Washbag",
+     "text": "• Toothbrush and toothpaste\n• Shower gel and shampoo\n• Deodorant (roll-on is easier for flights)\n• Hairbrush / comb and hair ties\n• Flip-flops for the hostel showers\n• Lip balm and hand cream — the wind can be cold\n• Hand sanitiser and tissues\n• Period products if needed"
+    },
+    {
+     "heading": "Medication",
+     "text": "• Any medication you take, in its original packaging with your name on it\n• Hand it to staff as agreed with school\n• Carry inhalers / EpiPens with you, in your hand luggage — never in the hold"
+    },
+    {
+     "heading": "Tech",
+     "text": "• Phone and charger\n• Power bank, fully charged — in hand luggage only (not allowed in the hold)\n• Headphones\n• US adaptor (above)"
+    },
+    {
+     "heading": "Day bag & flights",
+     "text": "• A SMALL day bag or bum bag — big bags are not allowed into Madison Square Garden\n• Refillable water bottle (empty it before airport security)\n• Snacks for the flights (no peanuts — we have a peanut allergy in the group)\n• Travel pillow and a warm layer for the overnight flight home\n• Something to do on the flight: book, downloaded films or music"
+    },
+    {
+     "heading": "Room & bags",
+     "text": "• Laundry bag for dirty clothes\n• Name and school label on your suitcase\n• Leave space for shopping — and check the luggage allowance with school before you pack"
+    },
+    {
+     "heading": "Leave at home",
+     "text": "• Valuable jewellery and expensive watches\n• Large amounts of cash\n• Big cameras — they won't be allowed into Madison Square Garden\n• Anything you would be upset to lose"
     }
    ]
   },
@@ -868,6 +914,11 @@ window.TOUR_DEFAULT = {
   {
    "name": "Tony",
    "role": "TCA Tours — New York",
+   "group": ""
+  },
+  {
+   "name": "Liz Jackson",
+   "role": "TCA Tours — point of contact in England",
    "group": ""
   }
  ]

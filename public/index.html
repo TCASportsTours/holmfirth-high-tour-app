@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v4  |  12 October 2026 (v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v5  |  12 October 2026 (v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v4">
+<meta name="version" content="v5">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -279,7 +279,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v4 · 12 Oct 2026';
+var BUILD = 'v5 · 12 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -588,19 +588,38 @@ function renderMore(){
 /* ---------- WHAT TO TAKE: the "What to take" tile from More content, as a tick-off list (ticks stay on this phone) ---------- */
 function isPackTile(m){ return /what to take|packing/i.test(m.tile||''); }
 function packTicks(){ try{ return JSON.parse(lsGet('hny_pack')||'{}'); }catch(e){ return {}; } }
+/* A section whose text is a bullet list = a category of items; a section with plain text = one item.
+   "Leave at home" (or "don't bring") shows as a reminder card, not tick boxes. */
+function packItems(m){
+  var items=[];
+  m.sections.forEach(function(x){
+    var lines=String(x.text||'').split(/\n+/).map(function(l){return l.trim();}).filter(Boolean);
+    var bullets=lines.filter(function(l){return /^[•\-]/.test(l);});
+    if(bullets.length){ bullets.forEach(function(b){ var t=b.replace(/^[•\-]\s*/,''), k=t.split(' — '); items.push({key:x.heading+'|'+k[0], title:k[0], note:k.slice(1).join(' — '), cat:x.heading}); }); }
+    else items.push({key:x.heading, title:x.heading, note:x.text, cat:'Essentials'});
+  });
+  return items;
+}
+function isLeaveCat(c){ return /leave at home|don.?t bring/i.test(c); }
 function renderPack(){
   var m=(T.more||[]).filter(isPackTile)[0], ticks=packTicks();
-  var html='<p class="label">Before you go</p><h2>What to <em>take</em></h2><p class="small muted">Tick things off as you pack. Your ticks are saved on this phone.</p>';
+  var html='<p class="label">Before you go</p><h2>What to <em>take</em></h2><p class="small muted">New York in late October: cool and changeable, and we walk a lot. Tick things off as you pack — your ticks are saved on this phone.</p>';
   if(!m){ html+='<div class="card"><p class="small">The packing list hasn\'t been published yet.</p></div>'; $('s-pack').innerHTML=html; return; }
-  var done=m.sections.filter(function(x){return ticks[x.heading];}).length;
-  html+='<p class="small" style="margin:10px 0"><span class="num" style="font-size:24px">'+done+'</span> of '+m.sections.length+' packed</p>';
-  html+=m.sections.map(function(x,j){ var on=!!ticks[x.heading];
-    return '<button class="pupil'+(on?' on':'')+'" style="align-items:flex-start" onclick="togglePack('+j+')"><span class="box" style="margin-top:2px"><i class="ti ti-check"></i></span><span class="nm"><b style="font-family:var(--display);font-size:20px;font-weight:600">'+esc(x.heading)+'</b><span class="prose small" style="display:block;color:var(--slate)">'+paras(x.text)+'</span></span></button>'; }).join('');
+  var items=packItems(m), tickable=items.filter(function(x){return !isLeaveCat(x.cat);});
+  var done=tickable.filter(function(x){return ticks[x.key];}).length;
+  html+='<div class="regbar"><span class="big">'+done+'</span><span class="of">of '+tickable.length+' packed</span>'+(done===tickable.length?'<span class="tag gold" style="margin:0 0 0 auto">All packed</span>':'')+'</div>';
+  var cats=[]; items.forEach(function(x){ if(cats.indexOf(x.cat)<0)cats.push(x.cat); });
+  cats.forEach(function(c){
+    var list=items.filter(function(x){return x.cat===c;});
+    if(isLeaveCat(c)){ html+='<p class="label">'+esc(c)+'</p><div class="card rule prose"><ul>'+list.map(function(x){return '<li>'+esc(x.title)+(x.note?' — '+esc(x.note):'')+'</li>';}).join('')+'</ul></div>'; return; }
+    html+='<p class="label">'+esc(c)+'</p><div>'+list.map(function(x){ var on=!!ticks[x.key], idx=items.indexOf(x);
+      return '<button class="pupil'+(on?' on':'')+'" style="align-items:flex-start" onclick="togglePack('+idx+')"><span class="box" style="margin-top:2px"><i class="ti ti-check"></i></span><span class="nm"><b style="font-weight:600">'+esc(x.title)+'</b>'+(x.note?'<span class="small" style="display:block;color:var(--slate);margin-top:2px">'+esc(x.note)+'</span>':'')+'</span></button>'; }).join('')+'</div>';
+  });
   $('s-pack').innerHTML=html;
 }
-function togglePack(j){
-  var m=(T.more||[]).filter(isPackTile)[0]; if(!m)return; var h=m.sections[j].heading, t=packTicks();
-  if(t[h]) delete t[h]; else t[h]=1; lsSet('hny_pack',JSON.stringify(t)); var top=$('screens').scrollTop; renderPack(); $('screens').scrollTop=top;
+function togglePack(idx){
+  var m=(T.more||[]).filter(isPackTile)[0]; if(!m)return; var it=packItems(m)[idx]; if(!it)return; var t=packTicks();
+  if(t[it.key]) delete t[it.key]; else t[it.key]=1; lsSet('hny_pack',JSON.stringify(t)); var top=$('screens').scrollTop; renderPack(); $('screens').scrollTop=top;
 }
 function openMore(i){
   var m=(T.more||[])[i]; if(!m)return;
