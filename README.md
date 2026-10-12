@@ -84,3 +84,11 @@ STAFF_PASSWORD=test ADMIN_PASSWORD=admin node dev/dev-server.mjs
 - **Push alerts**: students and staff tap **Turn on alerts**; staff alerts then arrive as phone notifications even with the app closed. On iPhone the app must be added to the home screen first (iOS 16.4+). Needs the Netlify variables `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`.
 - **Live subway status**: the 1/2/3 lines (plus A, C, E, 7, R, W) from the MTA's free service-alerts feed, refreshed every 2 minutes, on Getting around and Today.
 - **Registers**: delete a roll call; **Export registers (CSV)** for the school's records, with who was present, when they were ticked and by whom.
+
+## v8 additions
+
+- **Student accounts**: Student → find your name (first name + surname initial, e.g. "Lucy A.") → "You are logging in as Lucy A. Is this you?" → Yes / No. Students stay signed in and can't sign out; a teacher can reset the phone with the staff password (More → Wrong name? Ask a teacher). The name list only comes from a Publish: it is never in this repo, and full surnames are never shown publicly.
+- **Alerts to one or more students**: Send alert → Choose students (tick individuals or a whole group). Only those students' phones get it, by notification and in the app; staff see who it went to.
+- **Add to home screen prompt** the first time the link is opened (then at most once a day). On Android it is a one-tap button; iPhones only allow it from Safari's Share menu, so the prompt shows those steps.
+- **Turn on alerts prompt**: when the app is opened from the home screen and alerts aren't on, it asks straight away. After that one tap, alerts arrive on the lock screen without opening the app.
+

@@ -940,5 +940,6 @@ window.TOUR_DEFAULT = {
    "role": "TCA Tours — point of contact in England",
    "group": ""
   }
- ]
+ ],
+ "students": []
 };

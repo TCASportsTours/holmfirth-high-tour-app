@@ -60,6 +60,7 @@
     return '';
   }
   function slug(s) { return norm(s).slice(0, 24) || 'x'; }
+  function hash(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
   /* Links cell: one per line, either a bare URL or "Label | URL". */
   function parseLinks(cell) {
     return str(cell).split(/\n+/).map(function (line) {
@@ -73,7 +74,7 @@
 
   function parse(XLSX, wb) {
     var warnings = [];
-    var pub = { parser: PARSER_VERSION, publishedAt: new Date().toISOString(), tour: {}, days: [], events: [], flights: [], more: [], links: [], staff: [] };
+    var pub = { parser: PARSER_VERSION, publishedAt: new Date().toISOString(), tour: {}, days: [], events: [], flights: [], more: [], links: [], staff: [], students: [] };
     var priv = { parser: PARSER_VERSION, details: {}, events: [], tcaEvents: [], students: [], staff: [], contacts: [], transfers: [], meals: [] };
 
     // ---- Tour Details (Field / Value / Who sees it)
@@ -140,7 +141,8 @@
     var ids = {};
     table(XLSX, findSheet(wb, ['students', 'pupils']), 'knownas').forEach(function (r) {
       if (!r.knownas) return;
-      var id = slug(r.knownas), k = 1; while (ids[id]) id = slug(r.knownas) + (++k); ids[id] = 1;
+      /* Opaque id: the public student list must not spell out full names */
+      var id = 's' + hash(r.knownas.toLowerCase()), k = 1; while (ids[id]) id = 's' + hash(r.knownas.toLowerCase() + (++k)); ids[id] = 1;
       priv.students.push({
         id: id, name: r.knownas, surname: r.surname || '', forenames: r.forenames || '', dob: parseDate(r.dateofbirth),
         group: r.group || '', teacher: r.teacher || '', room: r.roomnumber || '',
@@ -170,6 +172,16 @@
     });
 
     if (!priv.students.length) warnings.push('Students: no students found');
+
+    // Public sign-in list: first name + just enough of the surname to tell people apart ("Lucy A.", "Ruby Ea." / "Ruby Ev.")
+    var split = function (n) { var w = n.trim().split(/\s+/); return { first: w.slice(0, -1).join(' ') || w[0], last: w.length > 1 ? w[w.length - 1] : '' }; };
+    priv.students.forEach(function (st) {
+      var me = split(st.name), same = priv.students.filter(function (o) { return o !== st && split(o.name).first.toLowerCase() === me.first.toLowerCase(); });
+      var n = 1;
+      while (n < me.last.length && same.some(function (o) { return split(o.name).last.slice(0, n).toLowerCase() === me.last.slice(0, n).toLowerCase(); })) n++;
+      pub.students.push({ id: st.id, label: me.first + (me.last ? ' ' + me.last.slice(0, n) + '.' : '') });
+    });
+    pub.students.sort(function (a, b) { return a.label.localeCompare(b.label); });
     return { public: pub, private: priv, warnings: warnings };
   }
 

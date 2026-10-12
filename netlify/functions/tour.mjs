@@ -6,7 +6,7 @@ import { getStore } from "@netlify/blobs";
 //
 //   PUBLIC (anyone with the link can read)
 //   GET  /tour                     -> published itinerary (public half of the App Database)
-//   GET  /tour?type=alerts         -> alerts list
+//   GET  /tour?type=alerts[&sid=]  -> alerts for everyone, plus any sent just to this student (staff get all)
 //   GET  /tour?type=subway         -> live MTA service alerts for the lines on our itinerary (cached ~2 min)
 //   GET  /tour?type=pushkey        -> public VAPID key for push notifications
 //   POST /tour?type=pushsub        -> save this phone's push subscription { sub, role }
@@ -96,7 +96,7 @@ export default async (req) => {
       let subs = {};
       try { subs = JSON.parse((await store.get("pushsubs")) || "{}"); } catch { subs = {}; }
       if (parsed.remove) delete subs[sub.endpoint];
-      else subs[sub.endpoint] = { sub: { endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } }, role: String(parsed.role || "").slice(0, 20), at: Date.now() };
+      else subs[sub.endpoint] = { sub: { endpoint: sub.endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } }, role: String(parsed.role || "").slice(0, 20), sid: String(parsed.sid || "").slice(0, 20), at: Date.now() };
       const keys = Object.keys(subs);
       if (keys.length > 1000) keys.sort((a, b) => subs[a].at - subs[b].at).slice(0, keys.length - 1000).forEach((k) => delete subs[k]);
       await store.set("pushsubs", JSON.stringify(subs));
@@ -159,6 +159,12 @@ export default async (req) => {
   if (type === "subway") return reply(headers, 200, await subwayStatus(store));
   if (type && type !== "alerts") return reply(headers, 400, { ok: false, error: "unknown slot" });
   const data = await store.get(key);
+  // Alerts sent to particular students only go to those students' phones (and to staff)
+  if (type === "alerts" && data != null && !isStaff) {
+    const sid = url.searchParams.get("sid") || "";
+    let list = []; try { list = JSON.parse(data); } catch {}
+    return new Response(JSON.stringify((Array.isArray(list) ? list : []).filter((a) => !a || !Array.isArray(a.to) || !a.to.length || (sid && a.to.includes(sid)))), { headers });
+  }
   if (data != null) return new Response(data, { headers });
   return new Response(type === "alerts" ? "[]" : "null", { headers });
 };
@@ -173,8 +179,9 @@ async function sendPush(store, alert) {
   let subs = {};
   try { subs = JSON.parse((await store.get("pushsubs")) || "{}"); } catch { subs = {}; }
   const payload = JSON.stringify({ id: alert.id, title: alert.title || "Message from staff", body: String(alert.msg || "").slice(0, 300) });
+  const to = Array.isArray(alert.to) && alert.to.length ? new Set(alert.to) : null;
   let sent = 0, gone = 0;
-  await Promise.allSettled(Object.keys(subs).map(async (k) => {
+  await Promise.allSettled(Object.keys(subs).filter((k) => !to || to.has(subs[k].sid)).map(async (k) => {
     try { await webpush.sendNotification(subs[k].sub, payload, { TTL: 6 * 3600, urgency: "high" }); sent++; }
     catch (e) { if (e && (e.statusCode === 404 || e.statusCode === 410)) { delete subs[k]; gone++; } }
   }));

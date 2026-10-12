@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v7  |  12 October 2026 (v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v8  |  12 October 2026 (v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v7">
+<meta name="version" content="v8">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -272,17 +272,17 @@
     <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i>More</button>
   </nav>
 
-  <div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="modalBody"></div></div>
+  <div class="modal" id="modal" onclick="if(event.target===this&&this.dataset.locked!=='1')closeModal()"><div class="sheet" id="modalBody"></div></div>
   <div class="toast" id="toast"></div>
 </div>
 
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v7 · 12 Oct 2026';
+var BUILD = 'v8 · 12 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
-var LS = { me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
+var LS = { sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
 
 var T = window.TOUR_DEFAULT || {tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]};
 var P = null;            // staff-only data (only after staff sign-in)
@@ -388,7 +388,7 @@ function openPage(html,fn){
 function rerenderPage(html){ var top=$('screens').scrollTop; $('s-page').innerHTML='<button class="back" onclick="pageBack()"><i class="ti ti-chevron-left"></i> Back</button>'+html; $('screens').scrollTop=top; }
 function pageBack(){ pageStack.pop(); var fn=pageStack.pop(); if(fn){ fn(); } else go(curTab); }
 function openModal(html){ $('modalBody').innerHTML=html; $('modal').classList.add('on'); }
-function closeModal(){ $('modal').classList.remove('on'); }
+function closeModal(){ $('modal').classList.remove('on'); $('modal').dataset.locked=''; }
 
 /* ================= sign-in ================= */
 function renderSignin(){
@@ -410,9 +410,43 @@ function renderSignin(){
     '<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>'+
     '<p class="foot">TCA Tours · Build '+esc(BUILD)+'</p></div>';
 }
-function pickRole(r){ role=r; lsSet(LS.role,r); enter(); }
+function pickRole(r){ if(r==='student'&&studentList().length){ studentPicker(false); return; } role=r; lsSet(LS.role,r); enter(); }
+/* ---------- STUDENT ACCOUNTS: pick your name once, confirm, and stay signed in (no log-out; a teacher can reset) ---------- */
+function studentList(){ return (T.students||[]).slice(); }
+function mySid(){ return role==='student'?lsGet(LS.sid):null; }
+function studentPicker(forced){
+  var list=studentList();
+  var html='<p class="label">Student sign-in</p><h2 style="font-size:28px">Find your <em>name</em></h2><p class="small muted" style="margin:4px 0 10px">Tap your name. You stay signed in on this phone for the whole trip.</p>'+
+    '<input class="field search" id="stuSearch" placeholder="Type your first name" oninput="filterStudents(this.value)" autocomplete="off">'+
+    '<div class="list" id="stuList">'+list.map(function(x){ return '<button class="li stu" data-n="'+esc(x.label.toLowerCase())+'" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer;font-size:16px" onclick="confirmStudent(\''+esc(x.id)+'\')"><div class="bd"><b>'+esc(x.label)+'</b></div><i class="ti ti-chevron-right"></i></button>'; }).join('')+'</div>'+
+    (forced?'':'<button class="btn ghost" style="margin-top:10px" onclick="closeModal()">Cancel</button>');
+  openModal(html); $('modal').dataset.locked=forced?'1':'';
+}
+function filterStudents(q){ q=String(q||'').toLowerCase().trim(); document.querySelectorAll('#stuList .stu').forEach(function(b){ b.style.display=!q||b.dataset.n.indexOf(q)===0||b.dataset.n.indexOf(' '+q)>=0?'':'none'; }); }
+function confirmStudent(id){
+  var x=studentList().filter(function(s){return s.id===id;})[0]; if(!x)return;
+  var forced=$('modal').dataset.locked==='1';
+  openModal('<p class="label">Check before you continue</p><h2 style="font-size:28px">You are logging in as <em>'+esc(x.label)+'</em></h2><p style="margin:10px 0 4px">Is this you?</p><p class="small muted">Once you\'re signed in you can\'t sign out on this phone — only a teacher can change it.</p>'+
+    '<button class="btn gold" style="margin-top:16px" onclick="studentYes(\''+esc(x.id)+'\')"><i class="ti ti-check"></i> Yes, that\'s me</button>'+
+    '<button class="btn line" onclick="studentPicker('+(forced?'true':'false')+')"><i class="ti ti-x"></i> No, go back</button>');
+  $('modal').dataset.locked=forced?'1':'';
+}
+function studentYes(id){
+  var x=studentList().filter(function(s){return s.id===id;})[0]; if(!x)return;
+  lsSet(LS.sid,x.id); lsSet(LS.sname,x.label); role='student'; lsSet(LS.role,'student'); $('modal').dataset.locked=''; closeModal(); enter();
+  if(lsGet('hny_push')==='on') enablePush(true);
+}
+function teacherReset(){
+  openModal('<p class="label">Teacher only</p><h2 style="font-size:26px">Change the <em>student</em></h2><p class="small muted" style="margin:6px 0 10px">A teacher enters the staff password to sign this phone out.</p><input class="field" id="resetPass" type="password" placeholder="Teacher or TCA password"><div class="err" id="resetErr">That password isn\'t right.</div>'+
+    '<button class="btn dark" style="margin-top:10px" onclick="teacherResetCheck()">Sign this phone out</button><button class="btn ghost" onclick="closeModal()">Cancel</button>');
+}
+function teacherResetCheck(){
+  fetch(API+'?type=auth',{headers:{'x-staff-key':$('resetPass').value},cache:'no-store'}).then(function(r){
+    if(r.status===200){ closeModal(); lsSet(LS.sid,null); lsSet(LS.sname,null); signOut(); toast('Signed out — pick the right name'); }
+    else $('resetErr').classList.add('on'); }).catch(function(){ toast('Needs signal to check the password'); });
+}
 var staffKind='teacher';
-function staffPrompt(k){ staffKind=k||'teacher'; $('staffBox').style.display='block'; $('staffPass').placeholder=(staffKind==='tca'?'TCA Tours':'Teacher')+' password'; setTimeout(function(){$('staffPass').focus();},50); }
+function staffPrompt(k){ staffKind=k||'teacher'; $('staffBox').style.display='block'; $('staffPass').placeholder=(staffKind==='tca'?'TCA Tours':'Teacher')+' password'; setTimeout(function(){ if($('staffPass')) $('staffPass').focus(); },50); }
 function staffCheck(){
   var pw=$('staffPass').value, err=$('staffErr'); err.classList.remove('on');
   if(!pw){ err.textContent='Enter the staff password.'; err.classList.add('on'); return; }
@@ -424,10 +458,10 @@ function staffCheck(){
   }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
 }
 function signOut(){
-  lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
+  lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); }
+function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -602,7 +636,7 @@ function subwaySVG(){
 /* ================= MORE ================= */
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
-  var html='<p class="label">Signed in as '+esc(role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
+  var html='<p class="label">Signed in as '+esc(mySid()?lsGet(LS.sname):role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
   html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
@@ -617,7 +651,9 @@ function renderMore(){
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
   html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
-  html+='<button class="btn line" onclick="signOut()"><i class="ti ti-logout"></i> '+(role==='staff'?'Sign out':'Change who I am')+'</button>';
+  if(role==='staff') html+='<button class="btn line" onclick="signOut()"><i class="ti ti-logout"></i> Sign out</button>';
+  else if(mySid()) html+='<button class="btn ghost" onclick="teacherReset()"><i class="ti ti-lock"></i> Wrong name? Ask a teacher</button>';
+  else html+='<button class="btn line" onclick="signOut()"><i class="ti ti-logout"></i> Change who I am</button>';
   html+='<p class="foot">TCA Tours · Build '+esc(BUILD)+(T.publishedAt?' · Data published '+esc(new Date(T.publishedAt).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})):' · Bundled data')+'</p>';
   $('s-more').innerHTML=html;
 }
@@ -725,13 +761,14 @@ function openWeather(){
 /* ================= ALERTS ================= */
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
-  fetch(API+'?type=alerts',{cache:'no-store'}).then(function(r){return r.ok?r.json():[];}).then(function(a){
+  var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||'';
+  fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
     var fresh=a.filter(function(x){return seen.indexOf(x.id)<0;});
     $('bellDot').classList.toggle('on',fresh.length>0);
     if(fresh.length && role && !$('modal').classList.contains('on')){
       var x=fresh[0];
-      openModal('<p class="label">New alert</p><h2 style="font-size:26px">'+esc(x.title||'Message from staff')+'</h2><div class="prose" style="margin:8px 0 14px">'+paras(x.msg)+'</div><p class="small muted">'+esc(x.by||'Staff')+' · '+esc(new Date(x.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</p><button class="btn gold" style="margin-top:14px" onclick="ackAlert(\''+esc(x.id)+'\')">OK, got it</button>');
+      openModal('<p class="label">'+(x.to&&x.to.length&&!isStaff()?'Just for you':'New alert')+'</p><h2 style="font-size:26px">'+esc(x.title||'Message from staff')+'</h2><div class="prose" style="margin:8px 0 14px">'+paras(x.msg)+'</div><p class="small muted">'+esc(x.by||'Staff')+' · '+esc(new Date(x.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</p><button class="btn gold" style="margin-top:14px" onclick="ackAlert(\''+esc(x.id)+'\')">OK, got it</button>');
     }
   }).catch(function(){});
 }
@@ -739,21 +776,44 @@ function ackAlert(id){ var s=seenAlerts(); if(s.indexOf(id)<0)s.push(id); lsSet(
 function openAlerts(){
   var s=seenAlerts(); ALERTS.forEach(function(a){ if(s.indexOf(a.id)<0)s.push(a.id); }); lsSet(LS.seen,JSON.stringify(s.slice(-60))); $('bellDot').classList.remove('on');
   openPage('<p class="label">From the staff</p><h2>Alerts</h2>'+(ALERTS.length?ALERTS.map(function(a){
-    return '<div class="card rule"><h3 style="font-size:20px">'+esc(a.title||'Message')+'</h3><div class="prose small">'+paras(a.msg)+'</div><p class="small muted">'+esc(a.by||'Staff')+' · '+esc(new Date(a.at).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY time</p></div>'; }).join(''):'<div class="card"><p class="small muted">No alerts yet. Staff messages will appear here and pop up on your phone when the app is open.</p></div>'));
+    return '<div class="card rule"><h3 style="font-size:20px">'+esc(a.title||'Message')+'</h3>'+(a.to&&a.to.length?'<p class="tag gold" style="margin:4px 0 6px">'+(isStaff()?'To: '+esc(recipNames(a.to)):'Just for you')+'</p>':'')+'<div class="prose small">'+paras(a.msg)+'</div><p class="small muted">'+esc(a.by||'Staff')+' · '+esc(new Date(a.at).toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY time</p></div>'; }).join(''):'<div class="card"><p class="small muted">No alerts yet. Staff messages will appear here and pop up on your phone when the app is open.</p></div>'));
 }
-function openSendAlert(){
-  openPage('<p class="label">Staff</p><h2>Send an <em>alert</em></h2><p class="small muted">Goes to everyone using the app — students and staff. Phones with alerts turned on get a notification straight away, even with the app closed; everyone else sees it next time they open the app.</p>'+
-    '<input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" style="margin-top:12px" maxlength="80">'+
-    '<textarea class="field" id="alMsg" rows="5" placeholder="Message" style="margin-top:10px;resize:vertical"></textarea>'+
-    '<button class="btn gold" style="margin-top:12px" onclick="sendAlert()"><i class="ti ti-send"></i> Send to everyone</button>'+
-    (ALERTS.length?'<p class="label">Sent</p><div class="list">'+ALERTS.map(function(a){return '<div class="li"><div class="bd"><b>'+esc(a.title)+'</b><div class="sub">'+esc(a.msg)+'</div></div><button class="call" onclick="deleteAlert(\''+esc(a.id)+'\')" aria-label="Delete alert"><i class="ti ti-trash"></i></button></div>';}).join('')+'</div>':''));
+var AL={mode:'all',to:{}};
+function recipNames(ids){ var m={}; students().forEach(function(x){m[x.id]=x.name;}); (T.students||[]).forEach(function(x){ if(!m[x.id]) m[x.id]=x.label; }); var n=ids.map(function(i){return m[i]||'?';}); return n.length>4?n.slice(0,4).join(', ')+' + '+(n.length-4)+' more':n.join(', '); }
+function openSendAlert(){ AL={mode:'all',to:{}}; paintSendAlert(false); }
+function paintSendAlert(keep){
+  var t=$('alTitle')?$('alTitle').value:'', m=$('alMsg')?$('alMsg').value:'';
+  var chosen=Object.keys(AL.to).filter(function(k){return AL.to[k];});
+  var html='<p class="label">Staff</p><h2>Send an <em>alert</em></h2>'+
+    '<div class="seg"><button class="'+(AL.mode==='all'?'on':'')+'" onclick="AL.mode=\'all\';paintSendAlert(true)">Everyone</button><button class="'+(AL.mode==='pick'?'on':'')+'" onclick="AL.mode=\'pick\';paintSendAlert(true)">Choose students</button></div>'+
+    '<p class="small muted">'+(AL.mode==='all'?'Goes to everyone using the app — students and staff.':'Only the students you tick get it (staff can see it too).')+' Phones with alerts turned on get a notification straight away, even with the app closed; everyone else sees it next time they open the app.</p>';
+  if(AL.mode==='pick'){
+    if(!P||!P.students){ html+='<div class="card"><p class="small">Staff data needs to load first. <button class="linkbtn" onclick="loadPrivate(true)">Try again</button></p></div>'; }
+    else {
+      var gs=groupsList(); if(myGroup()) gs=[myGroup()].concat(gs.filter(function(g){return g!==myGroup();}));
+      html+='<p class="small" style="margin:8px 0"><b>'+chosen.length+'</b> selected'+(chosen.length?' · <button class="linkbtn" onclick="AL.to={};paintSendAlert(true)">Clear</button>':'')+'</p>';
+      gs.forEach(function(g){
+        var list=students().filter(function(x){return x.group===g;}).sort(byName), all=list.every(function(x){return AL.to[x.id];});
+        html+='<p class="label" style="margin-top:14px">'+esc(g===myGroup()?'My group':(teacherOf(g)||g))+' · '+esc(g)+'</p><button class="linkbtn" style="margin:-4px 0 8px" onclick="alGroup(\''+esc(g)+'\','+(!all)+')">'+(all?'Untick whole group':'Tick whole group')+'</button><div>'+
+          list.map(function(x){ var on=!!AL.to[x.id]; return '<button class="pupil'+(on?' on':'')+'" onclick="AL.to[\''+x.id+'\']=!AL.to[\''+x.id+'\'];paintSendAlert(true)"><span class="box"><i class="ti ti-check"></i></span><span class="nm">'+esc(x.name)+'</span></button>'; }).join('')+'</div>';
+      });
+    }
+  }
+  html+='<p class="label">Message</p><input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" maxlength="80" value="'+esc(t)+'">'+
+    '<textarea class="field" id="alMsg" rows="4" placeholder="Message" style="margin-top:10px;resize:vertical">'+esc(m)+'</textarea>'+
+    '<button class="btn gold" style="margin-top:12px" onclick="sendAlert()"><i class="ti ti-send"></i> '+(AL.mode==='all'?'Send to everyone':'Send to '+chosen.length+' student'+(chosen.length===1?'':'s'))+'</button>'+
+    (ALERTS.length?'<p class="label">Sent</p><div class="list">'+ALERTS.map(function(a){return '<div class="li"><div class="bd"><b>'+esc(a.title)+'</b><div class="sub">'+(a.to&&a.to.length?'To: '+esc(recipNames(a.to))+' · ':'Everyone · ')+esc(a.msg)+'</div></div><button class="call" onclick="deleteAlert(\''+esc(a.id)+'\')" aria-label="Delete alert"><i class="ti ti-trash"></i></button></div>';}).join('')+'</div>':'');
+  if(keep) rerenderPage(html); else openPage(html);
 }
+function alGroup(g,on){ students().filter(function(x){return x.group===g;}).forEach(function(x){ AL.to[x.id]=on; }); paintSendAlert(true); }
 function sendAlert(){
   var title=$('alTitle').value.trim(), msg=$('alMsg').value.trim(); if(!title&&!msg){toast('Write a message first');return;}
-  var a={id:'a'+Date.now().toString(36), title:title, msg:msg, at:Date.now(), by:'Staff'};
-  postStaff('alerts',[a].concat(ALERTS).slice(0,30)).then(function(ok){ if(ok){ ALERTS=[a].concat(ALERTS); ackAlert(a.id); toast('Alert sent'+(ok&&ok.sent!=null?' · '+ok.sent+' notification'+(ok.sent===1?'':'s'):'')); openSendAlert(); pageStack.pop(); } });
+  var to=AL.mode==='pick'?Object.keys(AL.to).filter(function(k){return AL.to[k];}):null;
+  if(to&&!to.length){ toast('Tick at least one student'); return; }
+  var a={id:'a'+Date.now().toString(36), title:title, msg:msg, at:Date.now(), by:me()||(lsGet(LS.kind)==='tca'?'TCA Tours':'Staff')}; if(to) a.to=to;
+  postStaff('alerts',[a].concat(ALERTS).slice(0,30)).then(function(ok){ if(ok){ ALERTS=[a].concat(ALERTS); ackAlert(a.id); toast('Alert sent'+(to?' to '+to.length+' student'+(to.length===1?'':'s'):'')+(ok&&ok.sent!=null?' · '+ok.sent+' notification'+(ok.sent===1?'':'s'):'')); AL={mode:'all',to:{}}; paintSendAlert(true); } });
 }
-function deleteAlert(id){ if(!confirm('Delete this alert for everyone?'))return; var next=ALERTS.filter(function(a){return a.id!==id;}); postStaff('alerts',next).then(function(ok){ if(ok){ ALERTS=next; openSendAlert(); pageStack.pop(); } }); }
+function deleteAlert(id){ if(!confirm('Delete this alert?'))return; var next=ALERTS.filter(function(a){return a.id!==id;}); postStaff('alerts',next).then(function(ok){ if(ok){ ALERTS=next; paintSendAlert(true); } }); }
 
 /* ================= STAFF DATA ================= */
 var QUEUEABLE={register:1,roomnums:1};
@@ -985,8 +1045,8 @@ function pushCard(){
   return '<div class="card rule"><h3 style="font-size:19px">Get alerts on your lock screen</h3><p class="small muted" style="margin-top:4px">Staff messages like "meet at reception 9.15" will pop up even when the app is closed.</p><button class="btn gold" style="margin-top:10px" onclick="enablePush()"><i class="ti ti-bell-ringing"></i> Turn on alerts</button></div>';
 }
 function b64ToBytes(b){ var p='='.repeat((4-b.length%4)%4), s=atob((b+p).replace(/-/g,'+').replace(/_/g,'/')), a=new Uint8Array(s.length); for(var i=0;i<s.length;i++)a[i]=s.charCodeAt(i); return a; }
-function enablePush(){
-  if(!pushSupported()){ toast('This phone or browser can\'t do notifications'); return; }
+function enablePush(quiet){
+  if(!pushSupported()){ if(!quiet)toast('This phone or browser can\'t do notifications'); return; }
   fetch(API+'?type=pushkey',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     if(!j||!j.key){ toast('Alerts aren\'t set up on the server yet'); return; }
     return Notification.requestPermission().then(function(perm){
@@ -994,17 +1054,41 @@ function enablePush(){
       return navigator.serviceWorker.ready.then(function(reg){
         return reg.pushManager.getSubscription().then(function(old){ return old||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(j.key)}); });
       }).then(function(sub){
-        return fetch(API+'?type=pushsub',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sub:sub.toJSON(),role:role==='staff'?(lsGet(LS.kind)||'staff'):'student'})});
+        return fetch(API+'?type=pushsub',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sub:sub.toJSON(),role:role==='staff'?(lsGet(LS.kind)||'staff'):'student',sid:mySid()||''})});
       }).then(function(r){ if(r&&r.ok){ lsSet('hny_push','on'); toast('Alerts turned on'); } else toast('Could not turn alerts on — try again'); refresh(); })
         .catch(function(){ toast(navigator.onLine===false?'No signal — try again when you have a connection':'This phone couldn\'t sign up for alerts — try again, or check notifications are allowed'); });
     });
   }).catch(function(){ toast('No signal — try again when you have a connection'); });
 }
-function openA2HS(){
-  var ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
-  openModal('<p class="label">Add to your phone</p><h2 style="font-size:28px">One tap to <em>open</em></h2><p class="small muted" style="margin:6px 0 12px">No app store needed. It opens full-screen and keeps the last itinerary it loaded, so you can check it on the subway without signal.</p>'+
+var installEvt=null;
+window.addEventListener('beforeinstallprompt',function(e){ e.preventDefault(); installEvt=e; });
+window.addEventListener('appinstalled',function(){ installEvt=null; lsSet('hny_installed','1'); closeModal(); toast('Added to your home screen'); });
+function installNow(){ if(!installEvt){ openA2HS(true); return; } installEvt.prompt(); installEvt.userChoice.then(function(c){ if(c&&c.outcome==='accepted'){ lsSet('hny_installed','1'); closeModal(); } installEvt=null; }).catch(function(){}); }
+function maybeAskAlerts(){
+  if(!role||!isStandalone()||pushState()!=='off') return;
+  var last=+(lsGet('hny_alerts_asked')||0); if(Date.now()-last<20*3600e3) return;
+  if($('modal').classList.contains('on')) return;
+  lsSet('hny_alerts_asked',String(Date.now()));
+  openModal('<p class="label">One last step</p><h2 style="font-size:28px">Turn on <em>alerts</em></h2><p class="small muted" style="margin:6px 0 12px">So staff messages pop up on your phone straight away — even when the app is closed and your phone is locked. Your phone will ask you to allow notifications: tap <b>Allow</b>.</p>'+
+    '<button class="btn gold" onclick="closeModal();enablePush()"><i class="ti ti-bell-ringing"></i> Turn on alerts</button><button class="btn ghost" onclick="closeModal()">Not now</button>');
+}
+function maybeA2HS(){
+  if(isStandalone()){ maybeAskAlerts(); return; }
+  if(lsGet('hny_installed')) return;
+  var last=+(lsGet('hny_a2hs_seen')||0); if(Date.now()-last<20*3600e3) return;
+  if($('modal').classList.contains('on')) return;
+  lsSet('hny_a2hs_seen',String(Date.now())); openA2HS();
+}
+function openA2HS(manualSteps){
+  var ios=isIOS();
+  if(installEvt&&!manualSteps){
+    openModal('<p class="label">Before you start</p><h2 style="font-size:28px">Add this app to your <em>home screen</em></h2><p class="small muted" style="margin:6px 0 12px">It opens in one tap, full-screen, and works on the subway with no signal. No app store needed.</p>'+
+      '<button class="btn gold" onclick="installNow()"><i class="ti ti-device-mobile-down"></i> Add to home screen</button><button class="btn ghost" onclick="closeModal()">Not now</button>');
+    return;
+  }
+  openModal('<p class="label">Before you start</p><h2 style="font-size:28px">Add this app to your <em>home screen</em></h2><p class="small muted" style="margin:6px 0 12px">No app store needed. It opens full-screen and keeps the last itinerary it loaded, so you can check it on the subway without signal.</p>'+
     '<div class="prose small">'+(ios?'<ul><li>Open this page in <b>Safari</b>.</li><li>Tap the <b>Share</b> button <i class="ti ti-share-2"></i>.</li><li>Scroll down and tap <b>Add to Home Screen</b>.</li></ul>':'<ul><li>Open this page in <b>Chrome</b>.</li><li>Tap the <b>⋮</b> menu, top right.</li><li>Tap <b>Add to Home screen</b> (or <b>Install app</b>).</li></ul>')+'</div>'+
-    '<button class="btn gold" style="margin-top:14px" onclick="closeModal()">Done</button>');
+    '<button class="btn gold" style="margin-top:14px" onclick="closeModal()">Done</button>'+(ios?'<p class="small muted" style="margin-top:10px">iPhones don\'t allow a one-tap button for this — it has to be done from Safari\'s Share menu.</p>':''));
 }
 
 /* ================= DATA LOADING ================= */
@@ -1026,8 +1110,8 @@ function refresh(){
 
 (function init(){
   if((role==='staff'&&!lsGet(LS.key))||(role&&role!=='staff'&&role!=='student')){ role=null; lsSet(LS.role,null); }
-  if(role){ enter(); if(isTeacher()&&!me()&&teacherList().length) openModal('<p class="label">One more thing</p><h2 style="font-size:26px">Which teacher <em>are you?</em></h2>'+teacherButtons()); } else { renderSignin(); }
-  loadTour().then(function(){ if(role) refresh(); else renderSignin(); });
+  if(role){ enter(); if(role==='student'&&!mySid()&&studentList().length) studentPicker(true); else if(isTeacher()&&!me()&&teacherList().length) openModal('<p class="label">One more thing</p><h2 style="font-size:26px">Which teacher <em>are you?</em></h2>'+teacherButtons()); } else { renderSignin(); }
+  loadTour().then(function(){ if(role) refresh(); else renderSignin(); if(role==='student'&&!mySid()&&studentList().length&&!$('modal').classList.contains('on')) studentPicker(true); });
   if(role==='staff') loadPrivate();
   loadAlerts();
   setInterval(loadAlerts,60000);
@@ -1037,6 +1121,7 @@ function refresh(){
   window.addEventListener('online',function(){ $('offline').classList.remove('on'); flushQueue(); paintQueue(); });
   window.addEventListener('offline',function(){ $('offline').classList.add('on'); });
   setInterval(flushQueue,30000); paintQueue();
+  setTimeout(maybeA2HS,1500);
   if(navigator.onLine===false) $('offline').classList.add('on');
 })();
 </script>
