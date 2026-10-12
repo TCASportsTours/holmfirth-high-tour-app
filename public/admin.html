@@ -40,7 +40,20 @@
   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
   input[type=password],input[type=text]{border:1px solid var(--charcoal);padding:12px 13px;font:16px var(--body);min-width:260px;border-radius:0;background:#fff}
   input:focus{outline:2px solid var(--gold)}
-  .drop{border:2px dashed var(--hairline);background:#fff;padding:34px 20px;text-align:center;cursor:pointer}
+  .drop{display:block;border:2px dashed var(--hairline);background:#fff;padding:34px 20px;text-align:center;cursor:pointer}
+  .drop:hover{border-color:var(--gold)}
+  .drop span{display:block;margin-top:6px}
+  .day{margin-top:14px;background:#fff;border:1px solid var(--hairline)}
+  .day summary{cursor:pointer;padding:12px 14px;font-family:var(--display);font-size:20px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:10px}
+  .day summary::-webkit-details-marker{display:none}
+  .day summary span{font-family:var(--body);font-size:13px;font-weight:400;color:var(--slate);white-space:nowrap}
+  .ev{display:grid;grid-template-columns:64px 1fr;gap:10px;padding:9px 14px;border-top:1px solid var(--hairline);font-size:14px}
+  .ev .t{font-family:var(--display);font-weight:600;font-size:17px;white-space:nowrap}
+  .ev .t small{display:block;font-family:var(--body);font-size:10.5px;color:var(--slate);letter-spacing:.06em}
+  .ev .w{color:var(--slate);font-size:12.5px}
+  .pill{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;background:var(--stone);margin-left:6px}
+  .pill.gold{background:var(--gold)}
+  @media (max-width:560px){ h1{font-size:32px} input[type=password],input[type=text]{min-width:0;width:100%} .row .btn{width:100%} .stat b{font-size:28px} }
   .drop.over{border-color:var(--gold)}
   .drop b{font-family:var(--display);font-size:24px;font-weight:600;display:block}
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
@@ -60,7 +73,7 @@
 </style>
 </head>
 <body>
-<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v1</span></div></header>
+<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v6</span></div></header>
 <main><div class="wrap">
   <p class="label">Publish</p>
   <h1>Update the <em>app</em></h1>
@@ -74,7 +87,7 @@
   </div>
 
   <p class="label">2 · Load the App Database</p>
-  <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls" hidden><b>Choose the App Database (.xlsx)</b><span class="small muted">or drag it here · e.g. Holmfirth_NYC_App_Database_v1.xlsx</span></label>
+  <label class="drop" id="drop"><input type="file" id="file" accept=".xlsx,.xls" hidden><b>Choose the App Database (.xlsx)</b><span class="small muted">or drag it here · e.g. Holmfirth_NYC_App_Database_v4.xlsx</span></label>
   <p class="msg" id="fileMsg"></p>
 
   <div id="summary" style="display:none">
@@ -82,8 +95,8 @@
     <div id="checks"></div>
     <div class="stats" id="stats"></div>
     <h2 style="margin-top:24px">Itinerary preview</h2>
-    <p class="small muted">Public — what students and families see.</p>
-    <div class="tableWrap" style="margin-top:8px"><table id="evTable"></table></div>
+    <p class="small muted">Tap a day to open it. Rows marked Staff only or TCA only are hidden from students.</p>
+    <div id="evTable"></div>
 
     <p class="label">4 · Publish</p>
     <div class="card rule">
@@ -179,9 +192,16 @@ function render(){
     [q.students.length,'students','priv'],[withMed,'with medication','priv'],[withDiet,'with dietary needs','priv'],[q.contacts.length,'emergency contacts','priv'],
     [q.transfers.length,'transfers','priv'],[q.meals.reduce(function(a,m){return a+m.orders.length;},0),'meal pre-orders','priv'],[q.events.length,'staff-only events','priv'],[(q.tcaEvents||[]).length,'TCA-only events','priv']];
   $('stats').innerHTML=stats.map(function(s){return '<div class="stat'+(s[2]==='priv'?' private':'')+'"><b>'+s[0]+'</b><span>'+s[1]+(s[2]==='priv'?' · staff only':'')+'</span></div>';}).join('');
-  var rows='<tr><th>Day</th><th>Date</th><th>Time</th><th>Title</th><th>Location</th></tr>';
-  p.events.forEach(function(e){ rows+='<tr><td>'+e.day+'</td><td>'+esc(e.date)+'</td><td>'+esc(e.time||'—')+(e.clock==='UK'?' UK':'')+'</td><td>'+esc(e.title)+'</td><td>'+esc(e.where)+'</td></tr>'; });
-  $('evTable').innerHTML=rows;
+  /* Preview grouped by day; staff-only and TCA-only rows included and labelled */
+  var all=p.events.map(function(e){return {e:e,tag:''};}).concat((q.events||[]).map(function(e){return {e:e,tag:'Staff only'};}),(q.tcaEvents||[]).map(function(e){return {e:e,tag:'TCA only'};}));
+  var html='';
+  p.days.forEach(function(d,di){
+    var list=all.filter(function(x){return x.e.day===d.n;}).sort(function(a,b){ return (a.e.time&&b.e.time&&a.e.date===b.e.date)?a.e.time.localeCompare(b.e.time):0; });
+    var dt=new Date(d.date+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'});
+    html+='<details class="day"'+(di===0?' open':'')+'><summary>Day '+d.n+' · '+esc(dt)+'<span>'+list.length+' items</span></summary>'+list.map(function(x){ var e=x.e;
+      return '<div class="ev"><div class="t">'+esc(e.time||'—')+(e.clock==='UK'?'<small>UK TIME</small>':'')+(e.date!==d.date?'<small>NEXT DAY</small>':'')+'</div><div><b>'+esc(e.title)+'</b>'+(x.tag?'<span class="pill'+(x.tag==='TCA only'?' gold':'')+'">'+x.tag+'</span>':'')+(e.links&&e.links.length?'<span class="pill">'+e.links.length+' link'+(e.links.length>1?'s':'')+'</span>':'')+(e.where?'<div class="w">'+esc(e.where)+'</div>':'')+'</div></div>'; }).join('')+'</details>';
+  });
+  $('evTable').innerHTML=html;
   $('pubBtn').disabled=leaks.length>0;
   say('pubMsg','');
 }

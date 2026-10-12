@@ -9,9 +9,9 @@ Version: **v3** · 11 October 2026 (v3: website links on itinerary events; v2: s
 
 | Students and staff | Staff only (teacher or TCA Tours password) |
 |---|---|
-| **Today**: live New York and UK clocks, weather, "Up next" countdown | **Register**: live head-count roll calls, shared across staff phones |
+| **Today**: live New York and UK clocks, weather, "Up next" countdown | **Register**: live roll calls shared across staff phones. Each teacher picks their name once; they can start their own group's register or a roll call for everyone. TCA staff can start any group's |
 | **Itinerary**: every day, tap for details and how to get there | **Rooms**: room groups and teachers, type in room numbers once allocated |
-| **Getting around**: hostel, which train, subway diagram (110th St → South Ferry → Brooklyn), MTA map links | **Medical**, **Dietary**, **SEND**: urgent cards ("Check") sorted first |
+| **Getting around**: hostel, which train, subway diagram (110th St → South Ferry → Brooklyn), MTA map links | **Medical, dietary & SEND** in one place: filter by type and by teacher's group, urgent cards ("Check") first |
 | **Safety tips**, **Getting to the hostel**, **Flights**, **Teachers** | **Meal orders**: Groove and Ellen's totals plus per-person orders, cross-checked against dietary notes |
 | **What to take**: tick-off packing list (its own tab) | **TCA only** rows: Schedule rows marked *TCA only* reach TCA Tours staff and admin only, never teachers |
 | **Emergency**: call 911, "show this to someone" hostel card, call the hostel | **Transfers**: coach bookings, references and dispatcher numbers |

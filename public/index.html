@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v5  |  12 October 2026 (v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v6  |  12 October 2026 (v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v5">
+<meta name="version" content="v6">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -279,10 +279,10 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v5 · 12 Oct 2026';
+var BUILD = 'v6 · 12 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
-var LS = { kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
+var LS = { me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
 
 var T = window.TOUR_DEFAULT || {tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]};
 var P = null;            // staff-only data (only after staff sign-in)
@@ -417,17 +417,26 @@ function staffCheck(){
   var pw=$('staffPass').value, err=$('staffErr'); err.classList.remove('on');
   if(!pw){ err.textContent='Enter the staff password.'; err.classList.add('on'); return; }
   fetch(API+'?type=auth',{headers:{'x-staff-key':pw},cache:'no-store'}).then(function(r){
-    if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); lsSet(LS.kind,staffKind); enter(); loadPrivate(); return; }
+    if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); lsSet(LS.kind,staffKind); lsSet(LS.me,null); loadPrivate(); if(staffKind==='teacher'&&teacherList().length){ pickTeacherScreen(); return; } enter(); return; }
     return r.json().catch(function(){return {};}).then(function(j){
       err.textContent = r.status===503 ? 'Staff area not set up yet: the STAFF_PASSWORD hasn\'t been added in Netlify.' : (r.status===401 ? 'That password isn\'t right. Try again.' : 'Could not check the password ('+r.status+').');
       err.classList.add('on'); });
   }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
 }
 function signOut(){
-  lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
+  lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
 function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); }
+/* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
+function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
+function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
+function me(){ return isTeacher()?lsGet(LS.me):null; }
+function myGroup(){ var n=me(); if(!n)return null; var t=teacherList().filter(function(x){return x.name===n;})[0]; return t?t.group:null; }
+function teacherButtons(){ return teacherList().map(function(t){
+    return '<button class="who" onclick="pickTeacher(\''+esc(t.name)+'\')"><span class="ic"><i class="ti ti-user"></i></span><span><b>'+esc(t.name)+'</b><span>'+esc(t.group)+'</span></span><i class="ti ti-chevron-right arr"></i></button>'; }).join(''); }
+function pickTeacherScreen(){ $('staffBox').innerHTML='<p class="label">Which teacher are you?</p>'+teacherButtons(); }
+function pickTeacher(n){ lsSet(LS.me,n); closeModal(); enter(); }
 
 /* ================= TODAY ================= */
 function renderToday(){
@@ -473,7 +482,7 @@ function dayRows(list,evs){
     return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
       '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
       '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
-      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag"><i class="ti ti-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag gold"'+(e.links.length===1?' role="link" onclick="event.stopPropagation();window.open(\''+esc(e.links[0].url)+'\',\'_blank\',\'noopener\')"':'')+'><i class="ti ti-external-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
   }).join('')+'</div>';
 }
 
@@ -566,7 +575,7 @@ function subwaySVG(){
 /* ================= MORE ================= */
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
-  var html='<p class="label">Signed in as '+esc(role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':'teacher'):'student')+'</p>';
+  var html='<p class="label">Signed in as '+esc(role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
   html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
@@ -575,8 +584,7 @@ function renderMore(){
     html+='<p class="label">Staff only</p>';
     if(!P) html+='<div class="card"><p class="small">Staff information hasn\'t loaded. <button class="linkbtn" onclick="loadPrivate(true)">Try again</button></p><p class="small muted" id="privMsg"></p></div>';
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
-      tile('ti-first-aid-kit','Medical','Medication & allergies','openMedical()')+tile('ti-salad','Dietary','Needs & allergies','openDietary()')+
-      tile('ti-puzzle','SEND','Support needs','openSEND()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
+      tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
       tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
       tile('ti-send','Send alert','To every phone','openSendAlert()')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
@@ -759,13 +767,16 @@ function openRegister(){
   var rs=rolls();
   var html='<p class="label">Staff · head count</p><h2>Register</h2><p class="small muted">Start a roll call whenever the group moves — leaving the hostel, getting off a train, after free time. Everyone with the staff view sees the same ticks live.</p>'+
     '<input class="field" id="rollName" placeholder="Label, e.g. Leaving MSG" style="margin-top:12px" maxlength="60">'+
+    (myGroup()?'<button class="btn gold" style="margin-top:10px" onclick="newRoll(\''+esc(myGroup())+'\')"><i class="ti ti-plus"></i> Start my register — '+esc(myGroup())+'</button>'+
+      '<button class="btn line" onclick="newRoll()"><i class="ti ti-users"></i> New roll call — everyone</button>':
     '<button class="btn gold" style="margin-top:10px" onclick="newRoll()"><i class="ti ti-plus"></i> Start a new roll call — everyone</button>'+
     '<p class="label">Staff registers</p><p class="small muted" style="margin:-4px 0 8px">Each teacher\'s own group (the same as the room lists). Tap to start a register for just that group.</p><div class="list">'+
     groupsList().map(function(g){ var n=students().filter(function(s){return s.group===g;}).length;
-      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="newRoll(\''+esc(g)+'\')"><div class="bd"><b>'+esc(teacherOf(g)||g)+'</b><div class="sub">'+esc(g)+' · '+n+' students</div></div><i class="ti ti-plus" style="font-size:20px"></i></button>'; }).join('')+'</div>';
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="newRoll(\''+esc(g)+'\')"><div class="bd"><b>'+esc(teacherOf(g)||g)+'</b><div class="sub">'+esc(g)+' · '+n+' students</div></div><i class="ti ti-plus" style="font-size:20px"></i></button>'; }).join('')+'</div>');
+  if(myGroup()) rs=rs.filter(function(r){ return !r.group||r.group==='All'||r.group===myGroup(); });
   if(rs.length){ html+='<p class="label">Recent roll calls</p><div class="list">'+rs.slice(0,12).map(function(r){
-      var n=students().filter(function(s){return marked(r.id,s.id);}).length;
-      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll(\''+esc(r.id)+'\')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+students().length+'</span></span></button>'; }).join('')+'</div>';
+      var inRoll=students().filter(function(s){return !r.group||r.group==='All'||s.group===r.group;}), n=inRoll.filter(function(s){return marked(r.id,s.id);}).length;
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll(\''+esc(r.id)+'\')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+inRoll.length+'</span></span></button>'; }).join('')+'</div>';
   }
   openPage(html,openRegister);
 }
@@ -784,11 +795,13 @@ function syncRoll(){
   fetch(API+'?type=register',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(j){ if(j){ LIVE.register=j; if($('regList')) paintRoll(true); } }).catch(function(){});
 }
 function paintRoll(keepScroll){
-  var r=LIVE.register['roll|'+REG.roll]||{title:'Roll call'}, gs=groupsList();
+  var r=LIVE.register['roll|'+REG.roll]||{title:'Roll call'}, rg=r.group||'All';
+  if(rg!=='All') REG.group=rg;
+  var gs=rg!=='All'?[]:(myGroup()?[myGroup()]:groupsList());
   var list=students().filter(function(s){return REG.group==='All'||s.group===REG.group;}).sort(byName);
   var here=list.filter(function(s){return marked(REG.roll,s.id);}), missing=list.filter(function(s){return !marked(REG.roll,s.id);});
   var html='<p class="label">'+esc(r.title)+'</p>'+
-    '<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':(teacherOf(g)||g))+'</button>';}).join('')+'</div>'+
+    (rg!=='All'?'':'<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>';}).join('')+'</div>')+
     '<div class="regbar"><span class="big">'+here.length+'</span><span class="of">of '+list.length+' here'+(REG.group!=='All'&&teacherOf(REG.group)?'<br>'+esc(teacherOf(REG.group))+'\'s group':'')+'</span>'+
     (missing.length?'<span class="tag alarm" style="margin:0 0 0 auto">'+missing.length+' missing</span>':'<span class="tag gold" style="margin:0 0 0 auto">All here</span>')+'</div>'+
     (missing.length&&missing.length<=8?'<p class="small" style="margin-bottom:8px"><span class="flag">Missing:</span> '+missing.map(function(s){return esc(s.name);}).join(', ')+'</p>':'')+
@@ -833,16 +846,20 @@ function personCard(s,fields){
   return '<div class="card'+(serious?' rule':'')+'"><div class="cardhead"><h3 style="font-size:20px">'+esc(s.name)+'</h3>'+(serious?'<span class="tag alarm">Check</span>':'')+'</div>'+
     '<p class="small muted">'+esc(s.group)+(roomOf(s)?' · Room '+esc(roomOf(s)):'')+(s.dob?' · DOB '+esc(fmtDay(s.dob,{weekday:undefined,year:'numeric'})):'')+'</p><dl class="kv">'+body+'</dl></div>';
 }
-function listPage(eyb,title,intro,fields,emptyMsg){
-  if(!needP())return;
-  var list=students().filter(function(s){return fields.some(function(f){return s[f[0]];});}).sort(function(a,b){
-    var sa=fields.some(function(f){return SERIOUS.test(a[f[0]]||'');}), sb=fields.some(function(f){return SERIOUS.test(b[f[0]]||'');}); return (sb-sa)||byName(a,b); });
-  openPage('<p class="label">'+eyb+'</p><h2>'+title+'</h2><p class="small muted">'+intro+' '+list.length+' of '+students().length+' students have something recorded. Students not listed had nothing to note (blank, N/A, none).</p>'+
-    (list.length?list.map(function(s){return personCard(s,fields);}).join(''):'<div class="card"><p class="small">'+emptyMsg+'</p></div>'));
+var WF={type:'all',group:null};
+var WF_FIELDS=[['meds','Medication'],['side','Side effects / action'],['diet','Dietary'],['send','SEND'],['notes','Notes']];
+var WF_TYPES={all:{label:'All',f:['meds','side','diet','send','notes']},medical:{label:'Medical',f:['meds','side']},dietary:{label:'Dietary',f:['diet']},send:{label:'SEND',f:['send','notes']}};
+function openWelfare(){ if(!needP())return; if(WF.group===null) WF.group=myGroup()||'All'; paintWelfare(false); }
+function paintWelfare(keep){
+  var t=WF_TYPES[WF.type], pool=students().filter(function(s){return WF.group==='All'||s.group===WF.group;});
+  var list=pool.filter(function(s){ return t.f.some(function(f){return s[f];}); }).sort(function(a,b){ var sa=WF_FIELDS.some(function(f){return SERIOUS.test(a[f[0]]||'');}), sb=WF_FIELDS.some(function(f){return SERIOUS.test(b[f[0]]||'');}); return (sb-sa)||byName(a,b); });
+  var html='<p class="label">Staff · welfare</p><h2>Medical, dietary <em>&amp; SEND</em></h2>'+
+    '<div class="seg">'+Object.keys(WF_TYPES).map(function(k){ var n=pool.filter(function(s){return WF_TYPES[k].f.some(function(f){return s[f];});}).length; return '<button class="'+(WF.type===k?'on':'')+'" onclick="WF.type=\''+k+'\';paintWelfare(true)">'+WF_TYPES[k].label+' · '+n+'</button>'; }).join('')+'</div>'+
+    '<div class="seg">'+['All'].concat(groupsList()).map(function(g){ return '<button class="'+(WF.group===g?'on':'')+'" onclick="WF.group=\''+esc(g)+'\';paintWelfare(true)">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>'; }).join('')+'</div>'+
+    '<p class="small muted">'+list.length+' of '+pool.length+' students have something recorded. Cards marked Check mention an allergy, EpiPen, inhaler, epilepsy medication or similar — read those first. Students not listed had nothing to note.</p>'+
+    (list.length?list.map(function(s){return personCard(s,WF_FIELDS);}).join(''):'<div class="card"><p class="small">'+(WF.type==='send'?'No SEND information has been added yet. Add it in the SEND column of the Students tab, then publish again.':'Nothing recorded for this selection.')+'</p></div>');
+  if(keep) rerenderPage(html); else openPage(html);
 }
-function openMedical(){ listPage('Staff · medical','Medical <em>&amp; medication</em>','From the Students tab. Cards marked Check mention an allergy, EpiPen, inhaler, epilepsy medication or similar — read those first.',[['meds','Medication'],['side','Side effects / action'],['diet','Dietary']],'No medical information recorded.'); }
-function openDietary(){ listPage('Staff · dietary','Dietary <em>needs</em>','Allergies and food requirements.',[['diet','Dietary']],'No dietary requirements recorded.'); }
-function openSEND(){ listPage('Staff · SEND','SEND <em>information</em>','Special educational needs and disabilities.',[['send','SEND'],['notes','Notes']],'No SEND information has been added yet. Add it in the SEND column of the Students tab, then publish again.'); }
 
 /* ---------- MEAL ORDERS ---------- */
 function openMeals(i){
@@ -900,7 +917,7 @@ function refresh(){
 
 (function init(){
   if((role==='staff'&&!lsGet(LS.key))||(role&&role!=='staff'&&role!=='student')){ role=null; lsSet(LS.role,null); }
-  if(role){ enter(); } else { renderSignin(); }
+  if(role){ enter(); if(isTeacher()&&!me()&&teacherList().length) openModal('<p class="label">One more thing</p><h2 style="font-size:26px">Which teacher <em>are you?</em></h2>'+teacherButtons()); } else { renderSignin(); }
   loadTour().then(function(){ if(role) refresh(); else renderSignin(); });
   if(role==='staff') loadPrivate();
   loadAlerts();
