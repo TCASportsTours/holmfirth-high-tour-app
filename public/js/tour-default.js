@@ -841,11 +841,11 @@ window.TOUR_DEFAULT = {
     },
     {
      "heading": "Tech",
-     "text": "• Phone and charger\n• Power bank, fully charged — in hand luggage only (not allowed in the hold)\n• Headphones\n• US adaptor (above)"
+     "text": "• Phone and charger\n• Power bank, fully charged — in hand luggage only (not allowed in the hold)\n• Headphones (optional — they may be provided on the flight)\n• US adaptor (above)"
     },
     {
      "heading": "Day bag & flights",
-     "text": "• A SMALL day bag or bum bag — big bags are not allowed into Madison Square Garden\n• Refillable water bottle (empty it before airport security)\n• Snacks for the flights (no peanuts — we have a peanut allergy in the group)\n• Travel pillow and a warm layer for the overnight flight home\n• A book if you like to read — the flights have in-flight entertainment (bring your headphones)"
+     "text": "• A SMALL day bag or bum bag — big bags are not allowed into Madison Square Garden\n• Refillable water bottle (empty it before airport security)\n• Snacks for the flights (no peanuts — we have a peanut allergy in the group)\n• Travel pillow and a warm layer for the overnight flight home\n• A book if you like to read — the flights have in-flight entertainment, and headphones may be provided"
     },
     {
      "heading": "Room & bags",
