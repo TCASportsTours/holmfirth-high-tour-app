@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v8  |  12 October 2026 (v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v9  |  12 October 2026 (v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v8">
+<meta name="version" content="v9">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -279,10 +279,10 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v8 · 12 Oct 2026';
+var BUILD = 'v9 · 12 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
-var LS = { sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
+var LS = { dev:'hny_dev', sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
 
 var T = window.TOUR_DEFAULT || {tour:{},days:[],events:[],flights:[],more:[],links:[],staff:[]};
 var P = null;            // staff-only data (only after staff sign-in)
@@ -294,6 +294,8 @@ var curTab = 'today', pageStack = [];
 /* ================= helpers ================= */
 function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function lsSet(k,v){ try{ if(v==null) localStorage.removeItem(k); else localStorage.setItem(k,v); }catch(e){} }
+/* Safe value for inside an onclick="…": a JSON string literal, then HTML-escaped (handles O'Neill, quotes, etc.) */
+function jsArg(v){ return esc(JSON.stringify(String(v==null?'':v))); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function $(id){ return document.getElementById(id); }
 function tel(p){ return 'tel:'+String(p||'').replace(/[^\d+]/g,''); }
@@ -418,7 +420,7 @@ function studentPicker(forced){
   var list=studentList();
   var html='<p class="label">Student sign-in</p><h2 style="font-size:28px">Find your <em>name</em></h2><p class="small muted" style="margin:4px 0 10px">Tap your name. You stay signed in on this phone for the whole trip.</p>'+
     '<input class="field search" id="stuSearch" placeholder="Type your first name" oninput="filterStudents(this.value)" autocomplete="off">'+
-    '<div class="list" id="stuList">'+list.map(function(x){ return '<button class="li stu" data-n="'+esc(x.label.toLowerCase())+'" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer;font-size:16px" onclick="confirmStudent(\''+esc(x.id)+'\')"><div class="bd"><b>'+esc(x.label)+'</b></div><i class="ti ti-chevron-right"></i></button>'; }).join('')+'</div>'+
+    '<div class="list" id="stuList">'+list.map(function(x){ return '<button class="li stu" data-n="'+esc(x.label.toLowerCase())+'" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer;font-size:16px" onclick="confirmStudent('+jsArg(x.id)+')"><div class="bd"><b>'+esc(x.label)+'</b></div><i class="ti ti-chevron-right"></i></button>'; }).join('')+'</div>'+
     (forced?'':'<button class="btn ghost" style="margin-top:10px" onclick="closeModal()">Cancel</button>');
   openModal(html); $('modal').dataset.locked=forced?'1':'';
 }
@@ -427,14 +429,23 @@ function confirmStudent(id){
   var x=studentList().filter(function(s){return s.id===id;})[0]; if(!x)return;
   var forced=$('modal').dataset.locked==='1';
   openModal('<p class="label">Check before you continue</p><h2 style="font-size:28px">You are logging in as <em>'+esc(x.label)+'</em></h2><p style="margin:10px 0 4px">Is this you?</p><p class="small muted">Once you\'re signed in you can\'t sign out on this phone — only a teacher can change it.</p>'+
-    '<button class="btn gold" style="margin-top:16px" onclick="studentYes(\''+esc(x.id)+'\')"><i class="ti ti-check"></i> Yes, that\'s me</button>'+
+    '<button class="btn gold" style="margin-top:16px" onclick="studentYes('+jsArg(x.id)+')"><i class="ti ti-check"></i> Yes, that\'s me</button>'+
     '<button class="btn line" onclick="studentPicker('+(forced?'true':'false')+')"><i class="ti ti-x"></i> No, go back</button>');
   $('modal').dataset.locked=forced?'1':'';
 }
+function deviceToken(){ var t=lsGet(LS.dev); if(!t){ var a=new Uint8Array(18); crypto.getRandomValues(a); t=Array.from(a).map(function(b){return ('0'+b.toString(16)).slice(-2);}).join(''); lsSet(LS.dev,t); } return t; }
+/* Tell the server this phone is the one signed in as this student, so private alerts only reach this phone */
+function claimStudent(sid){
+  return fetch(API+'?type=claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:sid,token:deviceToken()})})
+    .then(function(r){ if(r.ok){ lsSet('hny_claimed',sid); return 'ok'; } return r.status===409?'full':'err'; }).catch(function(){ return 'offline'; });
+}
 function studentYes(id){
   var x=studentList().filter(function(s){return s.id===id;})[0]; if(!x)return;
-  lsSet(LS.sid,x.id); lsSet(LS.sname,x.label); role='student'; lsSet(LS.role,'student'); $('modal').dataset.locked=''; closeModal(); enter();
-  if(lsGet('hny_push')==='on') enablePush(true);
+  claimStudent(x.id).then(function(res){
+    if(res==='full'){ openModal('<p class="label">Already signed in</p><h2 style="font-size:26px">'+esc(x.label)+' is already signed in on other phones</h2><p class="small muted" style="margin:8px 0 14px">If this is really you, ask a teacher to reset your sign-in.</p><button class="btn line" onclick="studentPicker(true)">Back to the list</button>'); $('modal').dataset.locked='1'; return; }
+    lsSet(LS.sid,x.id); lsSet(LS.sname,x.label); role='student'; lsSet(LS.role,'student'); $('modal').dataset.locked=''; closeModal(); enter();
+    if(lsGet('hny_push')==='on') enablePush(true);
+  });
 }
 function teacherReset(){
   openModal('<p class="label">Teacher only</p><h2 style="font-size:26px">Change the <em>student</em></h2><p class="small muted" style="margin:6px 0 10px">A teacher enters the staff password to sign this phone out.</p><input class="field" id="resetPass" type="password" placeholder="Teacher or TCA password"><div class="err" id="resetErr">That password isn\'t right.</div>'+
@@ -442,7 +453,8 @@ function teacherReset(){
 }
 function teacherResetCheck(){
   fetch(API+'?type=auth',{headers:{'x-staff-key':$('resetPass').value},cache:'no-store'}).then(function(r){
-    if(r.status===200){ closeModal(); lsSet(LS.sid,null); lsSet(LS.sname,null); signOut(); toast('Signed out — pick the right name'); }
+    if(r.status===200){ var sid=lsGet(LS.sid); fetch(API+'?type=unclaim',{method:'POST',headers:{'content-type':'application/json','x-staff-key':$('resetPass').value},body:JSON.stringify({sid:sid})}).catch(function(){}); closeModal(); lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet('hny_claimed',null); signOut(); toast('Signed out — pick the right name'); }
+    else if(r.status===429) { $('resetErr').textContent='Too many wrong tries — wait 15 minutes.'; $('resetErr').classList.add('on'); }
     else $('resetErr').classList.add('on'); }).catch(function(){ toast('Needs signal to check the password'); });
 }
 var staffKind='teacher';
@@ -453,7 +465,7 @@ function staffCheck(){
   fetch(API+'?type=auth',{headers:{'x-staff-key':pw},cache:'no-store'}).then(function(r){
     if(r.status===200){ lsSet(LS.key,pw); role='staff'; lsSet(LS.role,'staff'); lsSet(LS.kind,staffKind); lsSet(LS.me,null); loadPrivate(); if(staffKind==='teacher'&&teacherList().length){ pickTeacherScreen(); return; } enter(); return; }
     return r.json().catch(function(){return {};}).then(function(j){
-      err.textContent = r.status===503 ? 'Staff area not set up yet: the STAFF_PASSWORD hasn\'t been added in Netlify.' : (r.status===401 ? 'That password isn\'t right. Try again.' : 'Could not check the password ('+r.status+').');
+      err.textContent = r.status===429 ? 'Too many wrong tries on this phone — wait 15 minutes, then try again.' : r.status===503 ? 'Staff area not set up yet: the STAFF_PASSWORD hasn\'t been added in Netlify.' : (r.status===401 ? 'That password isn\'t right. Try again.' : 'Could not check the password ('+r.status+').');
       err.classList.add('on'); });
   }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
 }
@@ -468,7 +480,7 @@ function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher
 function me(){ return isTeacher()?lsGet(LS.me):null; }
 function myGroup(){ var n=me(); if(!n)return null; var t=teacherList().filter(function(x){return x.name===n;})[0]; return t?t.group:null; }
 function teacherButtons(){ return teacherList().map(function(t){
-    return '<button class="who" onclick="pickTeacher(\''+esc(t.name)+'\')"><span class="ic"><i class="ti ti-user"></i></span><span><b>'+esc(t.name)+'</b><span>'+esc(t.group)+'</span></span><i class="ti ti-chevron-right arr"></i></button>'; }).join(''); }
+    return '<button class="who" onclick="pickTeacher('+jsArg(t.name)+')"><span class="ic"><i class="ti ti-user"></i></span><span><b>'+esc(t.name)+'</b><span>'+esc(t.group)+'</span></span><i class="ti ti-chevron-right arr"></i></button>'; }).join(''); }
 function pickTeacherScreen(){ $('staffBox').innerHTML='<p class="label">Which teacher are you?</p>'+teacherButtons(); }
 function pickTeacher(n){ lsSet(LS.me,n); closeModal(); enter(); }
 
@@ -517,7 +529,7 @@ function dayRows(list,evs){
     return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
       '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
       '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
-      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag gold"'+(e.links.length===1?' role="link" onclick="event.stopPropagation();window.open(\''+esc(e.links[0].url)+'\',\'_blank\',\'noopener\')"':'')+'><i class="ti ti-external-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag gold"'+(e.links.length===1?' role="link" onclick="event.stopPropagation();window.open('+jsArg(e.links[0].url)+',\'_blank\',\'noopener\')"':'')+'><i class="ti ti-external-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
   }).join('')+'</div>';
 }
 
@@ -761,14 +773,15 @@ function openWeather(){
 /* ================= ALERTS ================= */
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
-  var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||'';
+  var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||''; else if(mySid()) h['x-device']=deviceToken();
+  if(mySid()&&!window._claimedThisLoad){ window._claimedThisLoad=true; claimStudent(mySid()); }
   fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
     var fresh=a.filter(function(x){return seen.indexOf(x.id)<0;});
     $('bellDot').classList.toggle('on',fresh.length>0);
     if(fresh.length && role && !$('modal').classList.contains('on')){
       var x=fresh[0];
-      openModal('<p class="label">'+(x.to&&x.to.length&&!isStaff()?'Just for you':'New alert')+'</p><h2 style="font-size:26px">'+esc(x.title||'Message from staff')+'</h2><div class="prose" style="margin:8px 0 14px">'+paras(x.msg)+'</div><p class="small muted">'+esc(x.by||'Staff')+' · '+esc(new Date(x.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</p><button class="btn gold" style="margin-top:14px" onclick="ackAlert(\''+esc(x.id)+'\')">OK, got it</button>');
+      openModal('<p class="label">'+(x.to&&x.to.length&&!isStaff()?'Just for you':'New alert')+'</p><h2 style="font-size:26px">'+esc(x.title||'Message from staff')+'</h2><div class="prose" style="margin:8px 0 14px">'+paras(x.msg)+'</div><p class="small muted">'+esc(x.by||'Staff')+' · '+esc(new Date(x.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</p><button class="btn gold" style="margin-top:14px" onclick="ackAlert('+jsArg(x.id)+')">OK, got it</button>');
     }
   }).catch(function(){});
 }
@@ -794,15 +807,15 @@ function paintSendAlert(keep){
       html+='<p class="small" style="margin:8px 0"><b>'+chosen.length+'</b> selected'+(chosen.length?' · <button class="linkbtn" onclick="AL.to={};paintSendAlert(true)">Clear</button>':'')+'</p>';
       gs.forEach(function(g){
         var list=students().filter(function(x){return x.group===g;}).sort(byName), all=list.every(function(x){return AL.to[x.id];});
-        html+='<p class="label" style="margin-top:14px">'+esc(g===myGroup()?'My group':(teacherOf(g)||g))+' · '+esc(g)+'</p><button class="linkbtn" style="margin:-4px 0 8px" onclick="alGroup(\''+esc(g)+'\','+(!all)+')">'+(all?'Untick whole group':'Tick whole group')+'</button><div>'+
+        html+='<p class="label" style="margin-top:14px">'+esc(g===myGroup()?'My group':(teacherOf(g)||g))+' · '+esc(g)+'</p><button class="linkbtn" style="margin:-4px 0 8px" onclick="alGroup('+jsArg(g)+','+(!all)+')">'+(all?'Untick whole group':'Tick whole group')+'</button><div>'+
           list.map(function(x){ var on=!!AL.to[x.id]; return '<button class="pupil'+(on?' on':'')+'" onclick="AL.to[\''+x.id+'\']=!AL.to[\''+x.id+'\'];paintSendAlert(true)"><span class="box"><i class="ti ti-check"></i></span><span class="nm">'+esc(x.name)+'</span></button>'; }).join('')+'</div>';
       });
     }
   }
-  html+='<p class="label">Message</p><input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" maxlength="80" value="'+esc(t)+'">'+
-    '<textarea class="field" id="alMsg" rows="4" placeholder="Message" style="margin-top:10px;resize:vertical">'+esc(m)+'</textarea>'+
+  html+='<p class="label">Message</p><input class="field" id="alTitle" placeholder="Headline, e.g. Meet at reception 9.15" maxlength="120" value="'+esc(t)+'">'+
+    '<textarea class="field" id="alMsg" rows="4" maxlength="2000" placeholder="Message" style="margin-top:10px;resize:vertical">'+esc(m)+'</textarea>'+
     '<button class="btn gold" style="margin-top:12px" onclick="sendAlert()"><i class="ti ti-send"></i> '+(AL.mode==='all'?'Send to everyone':'Send to '+chosen.length+' student'+(chosen.length===1?'':'s'))+'</button>'+
-    (ALERTS.length?'<p class="label">Sent</p><div class="list">'+ALERTS.map(function(a){return '<div class="li"><div class="bd"><b>'+esc(a.title)+'</b><div class="sub">'+(a.to&&a.to.length?'To: '+esc(recipNames(a.to))+' · ':'Everyone · ')+esc(a.msg)+'</div></div><button class="call" onclick="deleteAlert(\''+esc(a.id)+'\')" aria-label="Delete alert"><i class="ti ti-trash"></i></button></div>';}).join('')+'</div>':'');
+    (ALERTS.length?'<p class="label">Sent</p><div class="list">'+ALERTS.map(function(a){return '<div class="li"><div class="bd"><b>'+esc(a.title)+'</b><div class="sub">'+(a.to&&a.to.length?'To: '+esc(recipNames(a.to))+' · ':'Everyone · ')+esc(a.msg)+'</div></div><button class="call" onclick="deleteAlert('+jsArg(a.id)+')" aria-label="Delete alert"><i class="ti ti-trash"></i></button></div>';}).join('')+'</div>':'');
   if(keep) rerenderPage(html); else openPage(html);
 }
 function alGroup(g,on){ students().filter(function(x){return x.group===g;}).forEach(function(x){ AL.to[x.id]=on; }); paintSendAlert(true); }
@@ -811,9 +824,9 @@ function sendAlert(){
   var to=AL.mode==='pick'?Object.keys(AL.to).filter(function(k){return AL.to[k];}):null;
   if(to&&!to.length){ toast('Tick at least one student'); return; }
   var a={id:'a'+Date.now().toString(36), title:title, msg:msg, at:Date.now(), by:me()||(lsGet(LS.kind)==='tca'?'TCA Tours':'Staff')}; if(to) a.to=to;
-  postStaff('alerts',[a].concat(ALERTS).slice(0,30)).then(function(ok){ if(ok){ ALERTS=[a].concat(ALERTS); ackAlert(a.id); toast('Alert sent'+(to?' to '+to.length+' student'+(to.length===1?'':'s'):'')+(ok&&ok.sent!=null?' · '+ok.sent+' notification'+(ok.sent===1?'':'s'):'')); AL={mode:'all',to:{}}; paintSendAlert(true); } });
+  postStaff('alerts',{add:a}).then(function(ok){ if(ok){ ALERTS=[a].concat(ALERTS); ackAlert(a.id); toast('Alert sent'+(to?' to '+to.length+' student'+(to.length===1?'':'s'):'')+(ok&&ok.sent!=null?' · '+ok.sent+' notification'+(ok.sent===1?'':'s'):'')); AL={mode:'all',to:{}}; paintSendAlert(true); } });
 }
-function deleteAlert(id){ if(!confirm('Delete this alert?'))return; var next=ALERTS.filter(function(a){return a.id!==id;}); postStaff('alerts',next).then(function(ok){ if(ok){ ALERTS=next; paintSendAlert(true); } }); }
+function deleteAlert(id){ if(!confirm('Delete this alert?'))return; var next=ALERTS.filter(function(a){return a.id!==id;}); postStaff('alerts',{remove:id}).then(function(ok){ if(ok){ ALERTS=next; paintSendAlert(true); } }); }
 
 /* ================= STAFF DATA ================= */
 var QUEUEABLE={register:1,roomnums:1};
@@ -885,11 +898,11 @@ function openRegister(){
     '<button class="btn gold" style="margin-top:10px" onclick="newRoll()"><i class="ti ti-plus"></i> Start a new roll call — everyone</button>'+
     '<p class="label">Staff registers</p><p class="small muted" style="margin:-4px 0 8px">Each teacher\'s own group (the same as the room lists). Tap to start a register for just that group.</p><div class="list">'+
     groupsList().map(function(g){ var n=students().filter(function(s){return s.group===g;}).length;
-      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="newRoll(\''+esc(g)+'\')"><div class="bd"><b>'+esc(teacherOf(g)||g)+'</b><div class="sub">'+esc(g)+' · '+n+' students</div></div><i class="ti ti-plus" style="font-size:20px"></i></button>'; }).join('')+'</div>');
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="newRoll('+jsArg(g)+')"><div class="bd"><b>'+esc(teacherOf(g)||g)+'</b><div class="sub">'+esc(g)+' · '+n+' students</div></div><i class="ti ti-plus" style="font-size:20px"></i></button>'; }).join('')+'</div>');
   if(myGroup()) rs=rs.filter(function(r){ return !r.group||r.group==='All'||r.group===myGroup(); });
   if(rs.length){ html+='<p class="label">Recent roll calls</p><div class="list">'+rs.slice(0,12).map(function(r){
       var inRoll=students().filter(function(s){return !r.group||r.group==='All'||s.group===r.group;}), n=inRoll.filter(function(s){return marked(r.id,s.id);}).length;
-      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll(\''+esc(r.id)+'\')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+inRoll.length+'</span></span></button>'; }).join('')+'</div>';
+      return '<button class="li" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer" onclick="openRoll('+jsArg(r.id)+')"><div class="bd"><b>'+esc(r.title)+'</b><div class="sub">'+esc(new Date(r.at).toLocaleString('en-GB',{weekday:'short',hour:'2-digit',minute:'2-digit',timeZone:NY}))+' NY</div></div><span class="count">'+n+'<span class="small muted">/'+inRoll.length+'</span></span></button>'; }).join('')+'</div>';
   }
   html+='<button class="btn line" style="margin-top:16px" onclick="exportRegisters()"><i class="ti ti-file-spreadsheet"></i> Export registers (CSV)</button><p class="small muted" style="margin-top:6px">A spreadsheet of every roll call'+(myGroup()?' you can see':'')+': who was present, when they were ticked and by whom. Opens in Excel.</p>';
   openPage(html,openRegister);
@@ -915,7 +928,7 @@ function paintRoll(keepScroll){
   var list=students().filter(function(s){return REG.group==='All'||s.group===REG.group;}).sort(byName);
   var here=list.filter(function(s){return marked(REG.roll,s.id);}), missing=list.filter(function(s){return !marked(REG.roll,s.id);});
   var html='<p class="label">'+esc(r.title)+'</p>'+
-    (rg!=='All'?'':'<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group=\''+esc(g)+'\';paintRoll()">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>';}).join('')+'</div>')+
+    (rg!=='All'?'':'<div class="seg">'+['All'].concat(gs).map(function(g){return '<button class="'+(REG.group===g?'on':'')+'" onclick="REG.group='+jsArg(g)+';paintRoll()">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>';}).join('')+'</div>')+
     '<div class="regbar"><span class="big">'+here.length+'</span><span class="of">of '+list.length+' here'+(REG.group!=='All'&&teacherOf(REG.group)?'<br>'+esc(teacherOf(REG.group))+'\'s group':'')+'</span>'+
     (missing.length?'<span class="tag alarm" style="margin:0 0 0 auto">'+missing.length+' missing</span>':'<span class="tag gold" style="margin:0 0 0 auto">All here</span>')+'</div>'+
     (missing.length&&missing.length<=8?'<p class="small" style="margin-bottom:8px"><span class="flag">Missing:</span> '+missing.map(function(s){return esc(s.name);}).join(', ')+'</p>':'')+
@@ -964,8 +977,8 @@ function openRooms(){
   var html='<p class="label">Staff · rooming</p><h2>Rooms</h2><p class="small muted">Type room numbers as the hostel allocates them — they save for every staff phone. Tap away from the box to save.</p>';
   groupsList().forEach(function(g){
     var list=students().filter(function(s){return s.group===g;}).sort(byName);
-    html+='<p class="label">'+esc(g)+' · '+list.length+'</p><p class="small" style="margin:-4px 0 8px">Teacher: <b>'+esc(teacherOf(g)||'—')+'</b> · <button class="linkbtn" onclick="roomForGroup(\''+esc(g)+'\')">Same room for the whole group</button></p><div class="list">'+
-      list.map(function(s){ return '<div class="li"><div class="bd"><b>'+esc(s.name)+'</b></div><input class="roominput" inputmode="numeric" aria-label="Room number for '+esc(s.name)+'" placeholder="Room" value="'+esc(roomOf(s))+'" onchange="saveRoom(\''+s.id+'\',this.value)"></div>'; }).join('')+'</div>';
+    html+='<p class="label">'+esc(g)+' · '+list.length+'</p><p class="small" style="margin:-4px 0 8px">Teacher: <b>'+esc(teacherOf(g)||'—')+'</b> · <button class="linkbtn" onclick="roomForGroup('+jsArg(g)+')">Same room for the whole group</button></p><div class="list">'+
+      list.map(function(s){ return '<div class="li"><div class="bd"><b>'+esc(s.name)+'</b></div><input class="roominput" maxlength="12" inputmode="numeric" aria-label="Room number for '+esc(s.name)+'" placeholder="Room" value="'+esc(roomOf(s))+'" onchange="saveRoom(\''+s.id+'\',this.value)"></div>'; }).join('')+'</div>';
   });
   openPage(html,openRooms);
 }
@@ -993,7 +1006,7 @@ function paintWelfare(keep){
   var list=pool.filter(function(s){ return t.f.some(function(f){return s[f];}); }).sort(function(a,b){ var sa=WF_FIELDS.some(function(f){return SERIOUS.test(a[f[0]]||'');}), sb=WF_FIELDS.some(function(f){return SERIOUS.test(b[f[0]]||'');}); return (sb-sa)||byName(a,b); });
   var html='<p class="label">Staff · welfare</p><h2>Medical, dietary <em>&amp; SEND</em></h2>'+
     '<div class="seg">'+Object.keys(WF_TYPES).map(function(k){ var n=pool.filter(function(s){return WF_TYPES[k].f.some(function(f){return s[f];});}).length; return '<button class="'+(WF.type===k?'on':'')+'" onclick="WF.type=\''+k+'\';paintWelfare(true)">'+WF_TYPES[k].label+' · '+n+'</button>'; }).join('')+'</div>'+
-    '<div class="seg">'+['All'].concat(groupsList()).map(function(g){ return '<button class="'+(WF.group===g?'on':'')+'" onclick="WF.group=\''+esc(g)+'\';paintWelfare(true)">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>'; }).join('')+'</div>'+
+    '<div class="seg">'+['All'].concat(groupsList()).map(function(g){ return '<button class="'+(WF.group===g?'on':'')+'" onclick="WF.group='+jsArg(g)+';paintWelfare(true)">'+esc(g==='All'?'Everyone':(g===myGroup()?'My group':(teacherOf(g)||g)))+'</button>'; }).join('')+'</div>'+
     '<p class="small muted">'+list.length+' of '+pool.length+' students have something recorded. Cards marked Check mention an allergy, EpiPen, inhaler, epilepsy medication or similar — read those first. Students not listed had nothing to note.</p>'+
     (list.length?list.map(function(s){return personCard(s,WF_FIELDS);}).join(''):'<div class="card"><p class="small">'+(WF.type==='send'?'No SEND information has been added yet. Add it in the SEND column of the Students tab, then publish again.':'Nothing recorded for this selection.')+'</p></div>');
   if(keep) rerenderPage(html); else openPage(html);
@@ -1054,7 +1067,7 @@ function enablePush(quiet){
       return navigator.serviceWorker.ready.then(function(reg){
         return reg.pushManager.getSubscription().then(function(old){ return old||reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToBytes(j.key)}); });
       }).then(function(sub){
-        return fetch(API+'?type=pushsub',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sub:sub.toJSON(),role:role==='staff'?(lsGet(LS.kind)||'staff'):'student',sid:mySid()||''})});
+        return fetch(API+'?type=pushsub',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sub:sub.toJSON(),role:role==='staff'?(lsGet(LS.kind)||'staff'):'student',sid:mySid()||'',token:mySid()?deviceToken():''})});
       }).then(function(r){ if(r&&r.ok){ lsSet('hny_push','on'); toast('Alerts turned on'); } else toast('Could not turn alerts on — try again'); refresh(); })
         .catch(function(){ toast(navigator.onLine===false?'No signal — try again when you have a connection':'This phone couldn\'t sign up for alerts — try again, or check notifications are allowed'); });
     });

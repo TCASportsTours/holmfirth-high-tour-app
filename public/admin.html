@@ -115,6 +115,7 @@
       <button class="btn line" onclick="clearSlot('register')">Clear register</button>
       <button class="btn line" onclick="clearSlot('roomnums')">Clear room numbers</button>
       <button class="btn line" onclick="clearSlot('alerts')">Clear alerts</button>
+      <button class="btn line" onclick="clearSlot('claims')">Clear student sign-ins</button>
     </div>
     <p class="msg" id="clearMsg"></p>
   </div>
@@ -141,7 +142,7 @@ function checkPw(){
   fetch(API+'?type=auth',{headers:{'x-staff-key':pw()},cache:'no-store'}).then(function(r){
     if(r.status===200) return r.json().then(function(j){ sessionStorage.setItem('hny_admin',pw()); say('pwMsg',j.admin?'Password accepted — you can publish.':'That is the staff password. Publishing needs the ADMIN_PASSWORD.',!j.admin); });
     if(r.status===503) return say('pwMsg','STAFF_PASSWORD has not been set in Netlify yet (then redeploy).',true);
-    say('pwMsg','Password not recognised.',true);
+    say('pwMsg',r.status===429?'Too many wrong passwords — wait 15 minutes.':'Password not recognised.',true);
   }).catch(function(){ say('pwMsg','Could not reach the server.',true); });
 }
 

@@ -92,3 +92,17 @@ STAFF_PASSWORD=test ADMIN_PASSWORD=admin node dev/dev-server.mjs
 - **Add to home screen prompt** the first time the link is opened (then at most once a day). On Android it is a one-tap button; iPhones only allow it from Safari's Share menu, so the prompt shows those steps.
 - **Turn on alerts prompt**: when the app is opened from the home screen and alerts aren't on, it asks straight away. After that one tap, alerts arrive on the lock screen without opening the app.
 
+## v9: hardened after break-it testing
+
+| Attack | Before | Now |
+|---|---|---|
+| Guessing staff passwords | Unlimited | Locked for 15 minutes after 8 wrong tries, per connection and device (so one student on hostel wifi can't lock teachers out) |
+| Reading another student's private alert from the public name list | Possible | Each student's phone makes a secret token at sign-in; private alerts only go to phones holding it (max 3 phones per name; a teacher or admin can reset) |
+| Push subscriptions pointing at any web address | Accepted | Only real push services (Google, Apple, Mozilla, Microsoft) |
+| Huge alerts / junk data | Accepted | Size limits; titles 120 characters, messages 2,000; register and room keys validated |
+| Two staff sending alerts at once | One lost | Each alert is added or removed individually on the server |
+| A late offline sync overwriting a newer register tick | Overwrote | Newest tick wins |
+| A name with an apostrophe (Mrs O'Neill) | Button broke | Safe in every button |
+
+Known limits (by design): students sign in without a password, so someone could pick a classmate's name first (the real student then sees "already signed in" and a teacher resets it); the four teachers share one password; alerts to everyone are readable by anyone with the link. Don't put sensitive details in alerts.
+
