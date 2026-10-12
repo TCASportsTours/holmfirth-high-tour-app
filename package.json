@@ -9,7 +9,9 @@
     "build:defaults": "node dev/build-defaults.mjs"
   },
   "dependencies": {
-    "@netlify/blobs": "^10.7.9"
+    "@netlify/blobs": "^10.7.9",
+    "gtfs-realtime-bindings": "^2.2.0",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "xlsx": "0.18.5"

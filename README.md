@@ -77,3 +77,10 @@ STAFF_PASSWORD=test ADMIN_PASSWORD=admin node dev/dev-server.mjs
 - Two deliberate exceptions to the two-colour rule, both functional:
   - **Emergency red** #B03A2E: the SOS button and "Check" / "missing" flags. This red is taken from the brand book's own "don't" marks.
   - **Official MTA red** #EE352E on the 1/2/3 subway bullets, so they match the station signs.
+
+## v7 additions
+
+- **Offline mode**: `public/sw.js` keeps a copy of the app, itinerary, fonts and icons, so the app opens with no signal. It is network-first, so with signal you always get the latest. Staff-only data is never stored in the service worker. Register ticks and room numbers made with no signal are saved on the phone and sync automatically when signal returns.
+- **Push alerts**: students and staff tap **Turn on alerts**; staff alerts then arrive as phone notifications even with the app closed. On iPhone the app must be added to the home screen first (iOS 16.4+). Needs the Netlify variables `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT`.
+- **Live subway status**: the 1/2/3 lines (plus A, C, E, 7, R, W) from the MTA's free service-alerts feed, refreshed every 2 minutes, on Getting around and Today.
+- **Registers**: delete a roll call; **Export registers (CSV)** for the school's records, with who was present, when they were ticked and by whom.
