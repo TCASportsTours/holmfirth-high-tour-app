@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v10  |  13 October 2026 (v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v11  |  13 October 2026 (v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v10">
+<meta name="version" content="v11">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -235,7 +235,11 @@
   /* ---------- modal / toast ---------- */
   .modal{position:absolute;inset:0;background:rgba(42,41,43,.72);display:none;align-items:flex-end;justify-content:center;z-index:20}
   .modal.on{display:flex}
-  .sheet{background:var(--white);width:100%;max-height:88%;overflow:auto;padding:22px 18px calc(18px + env(safe-area-inset-bottom));position:relative}
+  .sheetwrap{position:relative;width:100%;max-height:88%;display:flex}
+  .sheet{background:var(--white);width:100%;max-height:100%;overflow:auto;padding:22px 18px calc(18px + env(safe-area-inset-bottom));position:relative}
+  .sheetx{position:absolute;top:12px;right:12px;width:40px;height:40px;border:0;background:var(--stone);color:var(--charcoal);font-size:22px;display:grid;place-items:center;cursor:pointer;z-index:3}
+  .modal[data-locked="1"] .sheetx{display:none}
+  .pickhead{position:sticky;top:-22px;background:var(--white);margin:-22px -18px 0;padding:22px 18px 8px;z-index:2;border-bottom:1px solid var(--hairline)}
   .sheet::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--gold)}
   .toast{position:absolute;left:16px;right:16px;bottom:82px;background:var(--ink);color:#fff;padding:12px 14px;font-size:14px;z-index:30;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
   .toast.on{opacity:1;transform:none}
@@ -272,14 +276,14 @@
     <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i>More</button>
   </nav>
 
-  <div class="modal" id="modal" onclick="if(event.target===this&&this.dataset.locked!=='1')closeModal()"><div class="sheet" id="modalBody"></div></div>
+  <div class="modal" id="modal" onclick="if(event.target===this&&this.dataset.locked!=='1')closeModal()"><div class="sheetwrap"><button class="sheetx" onclick="closeModal()" aria-label="Close"><i class="ti ti-x"></i></button><div class="sheet" id="modalBody"></div></div></div>
   <div class="toast" id="toast"></div>
 </div>
 
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v10 · 13 Oct 2026';
+var BUILD = 'v11 · 13 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { dev:'hny_dev', sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -389,7 +393,7 @@ function openPage(html,fn){
 }
 function rerenderPage(html){ var top=$('screens').scrollTop; $('s-page').innerHTML='<button class="back" onclick="pageBack()"><i class="ti ti-chevron-left"></i> Back</button>'+html; $('screens').scrollTop=top; }
 function pageBack(){ pageStack.pop(); var fn=pageStack.pop(); if(fn){ fn(); } else go(curTab); }
-function openModal(html){ $('modalBody').innerHTML=html; $('modal').classList.add('on'); }
+function openModal(html){ $('modalBody').innerHTML=html; $('modalBody').scrollTop=0; $('modal').classList.add('on'); }
 function closeModal(){ $('modal').classList.remove('on'); $('modal').dataset.locked=''; }
 
 /* ================= sign-in ================= */
@@ -418,10 +422,10 @@ function studentList(){ return (T.students||[]).slice(); }
 function mySid(){ return role==='student'?lsGet(LS.sid):null; }
 function studentPicker(forced){
   var list=studentList();
-  var html='<p class="label">Student sign-in</p><h2 style="font-size:28px">Find your <em>name</em></h2><p class="small muted" style="margin:4px 0 10px">Tap your name. You stay signed in on this phone for the whole trip.</p>'+
-    '<input class="field search" id="stuSearch" placeholder="Type your first name" oninput="filterStudents(this.value)" autocomplete="off">'+
+  var html='<div class="pickhead"><p class="label">Student sign-in</p><h2 style="font-size:28px;padding-right:44px">Find your <em>name</em></h2><p class="small muted" style="margin:4px 0 10px">Tap your name. You stay signed in on this phone for the whole trip.</p>'+
+    '<input class="field search" id="stuSearch" placeholder="Type your first name" oninput="filterStudents(this.value)" autocomplete="off" style="margin-bottom:0"></div>'+
     '<div class="list" id="stuList">'+list.map(function(x){ return '<button class="li stu" data-n="'+esc(x.label.toLowerCase())+'" style="width:100%;text-align:left;border-left:0;border-right:0;border-bottom:0;background:none;cursor:pointer;font-size:16px" onclick="confirmStudent('+jsArg(x.id)+')"><div class="bd"><b>'+esc(x.label)+'</b></div><i class="ti ti-chevron-right"></i></button>'; }).join('')+'</div>'+
-    (forced?'':'<button class="btn ghost" style="margin-top:10px" onclick="closeModal()">Cancel</button>');
+    '';
   openModal(html); $('modal').dataset.locked=forced?'1':'';
 }
 function filterStudents(q){ q=String(q||'').toLowerCase().trim(); document.querySelectorAll('#stuList .stu').forEach(function(b){ b.style.display=!q||b.dataset.n.indexOf(q)===0||b.dataset.n.indexOf(' '+q)>=0?'':'none'; }); }
