@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v11  |  13 October 2026 (v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v12  |  13 October 2026 (v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v11">
+<meta name="version" content="v12">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -283,7 +283,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v11 · 13 Oct 2026';
+var BUILD = 'v12 · 13 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { dev:'hny_dev', sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -585,7 +585,7 @@ function dayRows(list,evs){
     return '<button class="row'+(past?' past':'')+(isNow?' now':'')+'" onclick="openEvent(\''+e.id+'\')">'+
       '<span class="t">'+evTimeLabel(e)+'</span><span class="ic"><i class="ti '+evIcon(e)+'"></i></span>'+
       '<span class="bd"><span class="tt">'+esc(e.title)+'</span>'+(e.where?'<div class="wh">'+esc(e.where)+'</div>':'')+
-      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(e.links&&e.links.length?' <span class="tag gold"'+(e.links.length===1?' role="link" onclick="event.stopPropagation();window.open('+jsArg(e.links[0].url)+',\'_blank\',\'noopener\')"':'')+'><i class="ti ti-external-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
+      (e.staffOnly?'<span class="tag">Staff only</span>':'')+(e.tcaOnly?'<span class="tag gold">TCA only</span>':'')+(ticketsFor(e).length?' <span class="tag"><i class="ti ti-ticket"></i> Tickets</span>':'')+(e.links&&e.links.length?' <span class="tag gold"'+(e.links.length===1?' role="link" onclick="event.stopPropagation();window.open('+jsArg(e.links[0].url)+',\'_blank\',\'noopener\')"':'')+'><i class="ti ti-external-link"></i> '+(e.links.length===1?'Website':e.links.length+' links')+'</span>':'')+'</span><i class="ti ti-chevron-right chev"></i></button>';
   }).join('')+'</div>';
 }
 
@@ -610,6 +610,7 @@ function openEvent(id){
     '<dl class="kv"><dt>When</dt><dd>'+(e.time?esc(e.time)+(e.end?' – '+esc(e.end):'')+(e.clock==='UK'?' (UK time)':' (New York time)'):'See the day plan')+'</dd>'+
     (e.where?'<dt>Where</dt><dd>'+esc(e.where)+'</dd>':'')+'</dl>';
   if(e.detail) html+='<div class="card rule prose">'+paras(e.detail)+'</div>';
+  var tk=ticketsFor(e); if(tk.length) html+='<p class="label">Tickets &amp; entry · staff only</p>'+tk.map(ticketCard).join('');
   if(e.route) html+='<p class="label">How to get there</p><div class="card prose">'+paras(e.route)+'<p class="small muted" style="margin-top:8px">Stay with your group and teacher on the subway.</p></div>';
   if(e.links&&e.links.length) html+='<p class="label">Links</p>'+e.links.map(function(l,i){ return '<a class="btn '+(i===0?'gold':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>'; }).join('');
   if(q && e.clock!=='UK') html+='<a class="btn dark" style="margin-top:14px" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query='+q+'"><i class="ti ti-map-2"></i> Open in Maps</a>';
@@ -714,7 +715,7 @@ function renderMore(){
     if(!P) html+='<div class="card"><p class="small">Staff information hasn\'t loaded. <button class="linkbtn" onclick="loadPrivate(true)">Try again</button></p><p class="small muted" id="privMsg"></p></div>';
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
       tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
-      tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
+      tile('ti-ticket','Tickets & entry','Who has them, where to go','openTickets()')+tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
       tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
@@ -1086,6 +1087,25 @@ function openMeals(i){
 }
 
 /* ---------- TRANSFERS / CONTACTS ---------- */
+/* ---------- TICKETS & ENTRY (staff only) ---------- */
+function ticketsFor(e){ return isStaff()&&P&&P.tickets?P.tickets.filter(function(t){ return t.events.indexOf(e.title)>=0; }):[]; }
+function ticketCard(t){
+  return '<div class="card rule"><h3 style="font-size:21px">'+esc(t.title)+'</h3>'+
+    '<dl class="kv">'+(t.where?'<dt>Where</dt><dd>'+esc(t.where)+'</dd>':'')+(t.holder?'<dt>Tickets</dt><dd><span class="tag gold" style="margin:0">'+esc(t.holder)+'</span></dd>':'')+'</dl>'+
+    (t.detail?'<div class="prose small" style="margin-top:8px">'+paras(t.detail)+'</div>':'')+'</div>';
+}
+function openTickets(){
+  if(!needP())return;
+  var list=(P.tickets||[]), days={};
+  list.forEach(function(t){ (days[t.day]=days[t.day]||[]).push(t); });
+  var html='<p class="label">Staff only</p><h2>Tickets &amp; <em>entry</em></h2><p class="small muted">Who has the tickets, where to go in, and what to say at the door. Each note also shows on its event in the itinerary for staff.</p>';
+  if(!list.length) html+='<div class="card"><p class="small">No tickets or entry notes published yet. Add them on the Tickets &amp; Entry tab of the App Database.</p></div>';
+  Object.keys(days).map(Number).sort(function(a,b){return a-b;}).forEach(function(d){
+    var dd=(T.days||[]).filter(function(x){return x.n===d;})[0];
+    html+='<p class="label">Day '+d+(dd?' · '+esc(fmtDay(dd.date,{weekday:'long'})):'')+'</p>'+days[d].map(ticketCard).join('');
+  });
+  openPage(html);
+}
 function openTransfers(){
   if(!needP())return;
   openPage('<p class="label">Staff · coaches</p><h2>Transfers</h2>'+(P.transfers||[]).map(function(x){

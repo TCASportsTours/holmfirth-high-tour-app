@@ -68,16 +68,16 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e2-tonymeetsthegroupattheai",
+   "id": "e2-tonymeetsthegroupatmanch",
    "day": 1,
    "date": "2026-10-25",
    "time": "",
    "end": "",
    "clock": "UK",
    "type": "Travel",
-   "title": "Tony meets the group at the airport",
-   "where": "",
-   "detail": "Tony from TCA Tours meets the group.",
+   "title": "Tony meets the group at Manchester Airport",
+   "where": "Manchester Airport, Terminal 2",
+   "detail": "Tony from TCA Tours meets the group at Manchester Airport Terminal 2.",
    "route": "",
    "links": []
   },

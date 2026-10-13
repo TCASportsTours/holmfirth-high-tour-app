@@ -75,7 +75,7 @@
   function parse(XLSX, wb) {
     var warnings = [];
     var pub = { parser: PARSER_VERSION, publishedAt: new Date().toISOString(), tour: {}, days: [], events: [], flights: [], more: [], links: [], staff: [], students: [] };
-    var priv = { parser: PARSER_VERSION, details: {}, events: [], tcaEvents: [], students: [], staff: [], contacts: [], transfers: [], meals: [] };
+    var priv = { parser: PARSER_VERSION, details: {}, events: [], tcaEvents: [], tickets: [], students: [], staff: [], contacts: [], transfers: [], meals: [] };
 
     // ---- Tour Details (Field / Value / Who sees it)
     table(XLSX, findSheet(wb, ['tour details', 'tour', 'settings']), 'field').forEach(function (r) {
@@ -161,6 +161,13 @@
       if (!r.from && !r.to) return;
       priv.transfers.push({ date: parseDate(r.date, year), pickup: r.pickup || '', type: r.type || '', from: r.from || '', to: r.to || '',
         pax: r.pax || '', bags: r.bags || '', ref: r.confirmation || '', phones: r.phones || '', notes: r.notes || '' });
+    });
+
+    // ---- Tickets & entry (private): linked to schedule events by title
+    table(XLSX, findSheet(wb, ['tickets & entry', 'tickets and entry', 'tickets', 'entry']), 'day').forEach(function (r) {
+      if (!r.attraction && !r.details) return;
+      priv.tickets.push({ day: parseInt(r.day, 10) || 0, date: parseDate(r.date, year), events: str(r.event).split(/\n+/).map(function (x) { return x.trim(); }).filter(Boolean),
+        title: r.attraction || '', where: r.whereentrance || r.where || '', holder: r.ticketsheldby || '', detail: r.details || '' });
     });
 
     // ---- Meal orders (private): long format -> grouped by venue
