@@ -106,3 +106,9 @@ STAFF_PASSWORD=test ADMIN_PASSWORD=admin node dev/dev-server.mjs
 
 Known limits (by design): students sign in without a password, so someone could pick a classmate's name first (the real student then sees "already signed in" and a teacher resets it); the four teachers share one password; alerts to everyone are readable by anyone with the link. Don't put sensitive details in alerts.
 
+## v10: who's signed in, and signing students out
+
+- **Who's signed in** (TCA Tours staff in the app: More → Who's signed in; and admin.html → Who's signed in): every student, signed in or not, how many phones, first sign-in, last seen, iPhone/Android, alerts on/off; plus staff sign-ins.
+- **Sign out** a student (TCA Tours and admin passwords only — teachers can't): their phones are signed out within about a minute and see "TCA Tours has signed you out"; they can sign in again with the right name.
+- Admin → Clear test data now also has **Clear sign-in history**.
+

@@ -10,6 +10,10 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour?type=subway         -> live MTA service alerts for the lines on our itinerary (cached ~2 min)
 //   GET  /tour?type=pushkey        -> public VAPID key for push notifications
 //   POST /tour?type=pushsub        -> save this phone's push subscription { sub, role }
+//   GET  /tour?type=me&sid=        -> has this student been signed out by TCA? { kickedAt }
+//   POST /tour?type=hello          -> "this phone is using the app" (student with token, or staff with key)
+//   GET  /tour?type=sessions       -> TCA/admin: who has signed in, when last seen
+//   POST /tour?type=kick {sid}     -> TCA/admin: sign a student's phones out
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -69,7 +73,8 @@ async function deviceOk(store, sid, token) {
 }
 
 const MERGE = new Set(["roomnums", "register"]);
-const STAFF_READ = new Set(["private", "auth", "roomnums", "register"]);
+const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions"]);
+const SEEN_EVERY_MS = 5 * 60000;   // only write "last seen" every 5 minutes per person
 
 function env(name) {
   try { if (typeof Netlify !== "undefined" && Netlify.env) return Netlify.env.get(name) || ""; } catch {}
@@ -127,7 +132,7 @@ export default async (req) => {
   if (req.method === "DELETE") {
     if (!staffPass) return notConfigured();
     if (!isAdmin) return denied();
-    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}" };
+    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}" };
     if (!(type in CLEARABLE)) return reply(headers, 400, { ok: false, error: "refused: that slot can't be cleared" });
     await store.set(key, CLEARABLE[type]);
     return reply(headers, 200, { ok: true, cleared: type });
@@ -151,7 +156,35 @@ export default async (req) => {
         list.push(h); claims[sid] = list.slice(-MAX_DEVICES_PER_STUDENT);
         await store.set("claims", JSON.stringify(claims));
       }
+      return reply(headers, 200, { ok: true, at: Date.now() });
+    }
+    // A phone says it is in use: students prove it with their token, staff with their password
+    if (type === "hello") {
+      let who = null;
+      const sid = String((parsed && parsed.sid) || "");
+      if (sid && (await deviceOk(store, sid, parsed.token))) who = "student:" + sid;
+      else if (isStaff) who = "staff:" + (isAdmin ? "admin" : isTca ? "tca" : "teacher") + ":" + String((parsed && parsed.name) || "").slice(0, 40);
+      if (!who) return reply(headers, 200, { ok: false });
+      let ses = {}; try { ses = JSON.parse((await store.get("sessions")) || "{}"); } catch {}
+      const now = Date.now(), cur = ses[who] || { first: now, last: 0, opens: 0 };
+      if (now - cur.last > SEEN_EVERY_MS) {
+        cur.last = now; cur.opens = (cur.opens || 0) + 1;
+        const ua = String(req.headers.get("user-agent") || "");
+        cur.device = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? "Android" : /Macintosh/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows PC" : "Other";
+        ses[who] = cur; await store.set("sessions", JSON.stringify(ses));
+      }
       return reply(headers, 200, { ok: true });
+    }
+    if (type === "kick") {              // TCA Tours / admin signs a student's phones out
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      const sid = String((parsed && parsed.sid) || "");
+      if (!/^s[a-z0-9]{1,20}$/.test(sid)) return reply(headers, 400, { ok: false, error: "bad student" });
+      const [c, k, se, ps] = await Promise.all(["claims", "kicked", "sessions", "pushsubs"].map((x) => store.get(x)));
+      const claims = safeObj(c), kicked = safeObj(k), ses = safeObj(se), subs = safeObj(ps);
+      delete claims[sid]; kicked[sid] = Date.now(); delete ses["student:" + sid];
+      for (const e of Object.keys(subs)) if (subs[e].sid === sid) delete subs[e];
+      await Promise.all([store.set("claims", JSON.stringify(claims)), store.set("kicked", JSON.stringify(kicked)), store.set("sessions", JSON.stringify(ses)), store.set("pushsubs", JSON.stringify(subs))]);
+      return reply(headers, 200, { ok: true, kickedAt: kicked[sid] });
     }
     if (type === "unclaim") {           // teacher resets a student's phones
       if (!isStaff) return denied();
@@ -237,6 +270,24 @@ export default async (req) => {
     if (!staffPass) return notConfigured();
     if (!isStaff) return denied();
     if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca });
+    if (type === "sessions") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      const [pub, priv, se, c, k, ps] = await Promise.all(["current", "private", "sessions", "claims", "kicked", "pushsubs"].map((x) => store.get(x)));
+      let P = null, U = null; try { P = JSON.parse(priv || "null"); } catch {} try { U = JSON.parse(pub || "null"); } catch {}
+      const ses = safeObj(se), claims = safeObj(c), kicked = safeObj(k), subs = safeObj(ps);
+      const labels = {}; ((U && U.students) || []).forEach((x) => (labels[x.id] = x.label));
+      const alertsOn = {}; Object.values(subs).forEach((x) => { if (x.sid) alertsOn[x.sid] = true; });
+      const students = ((P && P.students) || []).map((x) => {
+        const s1 = ses["student:" + x.id] || null;
+        return { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group, teacher: x.teacher,
+          phones: Array.isArray(claims[x.id]) ? claims[x.id].length : 0, first: s1 && s1.first, last: s1 && s1.last, opens: s1 && s1.opens,
+          device: s1 && s1.device, alerts: !!alertsOn[x.id], kickedAt: kicked[x.id] || null };
+      });
+      const staff = Object.keys(ses).filter((x) => x.startsWith("staff:")).map((x) => {
+        const [, kind, name] = x.split(":"); return Object.assign({ kind, name: name || "" }, ses[x]); })
+        .sort((a, b) => b.last - a.last);
+      return reply(headers, 200, { ok: true, at: Date.now(), students, staff, pushPhones: Object.keys(subs).length });
+    }
     if (type === "private") {
       const [priv, rooms, reg] = await Promise.all([store.get("private"), store.get("roomnums"), store.get("register")]);
       const out = priv ? JSON.parse(priv) : null;
@@ -245,6 +296,11 @@ export default async (req) => {
       return reply(headers, 200, { ok: true, data: out, roomnums: safeObj(rooms), register: safeObj(reg) });
     }
     return new Response((await store.get(key)) || "{}", { headers });
+  }
+  if (type === "me") {
+    const sid = url.searchParams.get("sid") || "";
+    const kicked = safeObj(await store.get("kicked"));
+    return reply(headers, 200, { ok: true, kickedAt: kicked[sid] || null });
   }
   if (type === "pushkey") return reply(headers, 200, { ok: true, key: env("VAPID_PUBLIC_KEY") || null });
   if (type === "subway") return reply(headers, 200, await subwayStatus(store));

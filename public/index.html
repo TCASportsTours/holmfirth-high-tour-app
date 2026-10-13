@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v9  |  12 October 2026 (v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v10  |  13 October 2026 (v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v9">
+<meta name="version" content="v10">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -279,7 +279,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v9 · 12 Oct 2026';
+var BUILD = 'v10 · 13 Oct 2026';
 var API = '/.netlify/functions/tour';
 var NY = 'America/New_York', UK = 'Europe/London';
 var LS = { dev:'hny_dev', sid:'hny_sid', sname:'hny_sname', me:'hny_teacher', kind:'hny_staffkind', role:'hny_role', key:'hny_staffkey', tour:'hny_tour_v1', priv:'hny_priv_v1', seen:'hny_seen_alerts', reg:'hny_reg_last' };
@@ -437,7 +437,7 @@ function deviceToken(){ var t=lsGet(LS.dev); if(!t){ var a=new Uint8Array(18); c
 /* Tell the server this phone is the one signed in as this student, so private alerts only reach this phone */
 function claimStudent(sid){
   return fetch(API+'?type=claim',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sid:sid,token:deviceToken()})})
-    .then(function(r){ if(r.ok){ lsSet('hny_claimed',sid); return 'ok'; } return r.status===409?'full':'err'; }).catch(function(){ return 'offline'; });
+    .then(function(r){ if(r.ok) return r.json().then(function(j){ lsSet('hny_claimed',sid); if(lsGet('hny_claimed_sid')!==sid||!lsGet('hny_claimed_at')){ lsSet('hny_claimed_sid',sid); lsSet('hny_claimed_at',String(j.at||Date.now())); } return 'ok'; }); return r.status===409?'full':'err'; }).catch(function(){ return 'offline'; });
 }
 function studentYes(id){
   var x=studentList().filter(function(s){return s.id===id;})[0]; if(!x)return;
@@ -446,6 +446,58 @@ function studentYes(id){
     lsSet(LS.sid,x.id); lsSet(LS.sname,x.label); role='student'; lsSet(LS.role,'student'); $('modal').dataset.locked=''; closeModal(); enter();
     if(lsGet('hny_push')==='on') enablePush(true);
   });
+}
+/* ---------- TCA can sign a student out remotely; the phone notices within a minute ---------- */
+function checkKicked(){
+  var sid=mySid(); if(!sid)return;
+  fetch(API+'?type=me&sid='+encodeURIComponent(sid),{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.kickedAt&&j.kickedAt>+(lsGet('hny_claimed_at')||0)){ kickedOut(); return; }
+    if(!window._claimedThisLoad){ window._claimedThisLoad=true; claimStudent(sid); }
+  }).catch(function(){});
+}
+function kickedOut(){
+  lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet('hny_claimed',null); lsSet('hny_claimed_at',null); lsSet('hny_claimed_sid',null); lsSet('hny_push',null);
+  role=null; lsSet(LS.role,null); show('s-signin'); renderSignin();
+  openModal('<p class="label">Signed out</p><h2 style="font-size:26px">TCA Tours has signed you out</h2><p class="small muted" style="margin:8px 0 14px">Please sign in again with your own name. If you think this is a mistake, speak to a teacher.</p><button class="btn gold" onclick="closeModal();pickRole(\'student\')">Sign in again</button>');
+}
+function sayHello(){
+  var last=+(window._helloAt||0); if(Date.now()-last<10*60000)return; window._helloAt=Date.now();
+  var body=null, h={'content-type':'application/json'};
+  if(isStaff()){ h['x-staff-key']=lsGet(LS.key)||''; body={name:me()||''}; }
+  else if(mySid()) body={sid:mySid(),token:deviceToken()};
+  if(body) fetch(API+'?type=hello',{method:'POST',headers:h,body:JSON.stringify(body)}).catch(function(){});
+}
+function isTcaStaff(){ return isStaff()&&lsGet(LS.kind)==='tca'; }
+function ago(ts){ if(!ts)return '—'; var m=Math.round((Date.now()-ts)/60000); if(m<1)return 'just now'; if(m<60)return m+' min ago'; var h=Math.round(m/60); if(h<48)return h+' h ago'; return Math.round(h/24)+' days ago'; }
+var WHO={f:'all'};
+function openWho(){ paintWho(false); loadWho(); }
+function loadWho(){
+  fetch(API+'?type=sessions',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ window._who=j; if($('whoBox')) paintWho(true); })
+    .catch(function(){ toast('Needs signal to load who is signed in'); });
+}
+function paintWho(keep){
+  var j=window._who, html='<p class="label">TCA Tours · admin</p><h2>Who\'s <em>signed in</em></h2><div id="whoBox">';
+  if(!j){ html+='<div class="card"><p class="small muted">Loading…</p></div>'; }
+  else if(!j.ok){ html+='<div class="card"><p class="small">'+esc(j.error||'Not allowed')+'</p></div>'; }
+  else {
+    var st=j.students||[], on=st.filter(function(x){return x.phones>0;}), off=st.filter(function(x){return !x.phones;});
+    html+='<div class="tiles" style="grid-template-columns:1fr 1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+on.length+'</b><span>students signed in</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+off.length+'</b><span>not yet</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+st.filter(function(x){return x.alerts;}).length+'</b><span>alerts on</span></div></div>';
+    html+='<div class="seg" style="margin-top:12px">'+[['all','Everyone'],['on','Signed in'],['off','Not signed in']].map(function(f){return '<button class="'+(WHO.f===f[0]?'on':'')+'" onclick="WHO.f=\''+f[0]+'\';paintWho(true)">'+f[1]+'</button>';}).join('')+'</div>';
+    var list=WHO.f==='on'?on:WHO.f==='off'?off:st;
+    html+='<div class="list">'+list.slice().sort(function(a,b){return (b.phones>0)-(a.phones>0)||a.name.localeCompare(b.name);}).map(function(x){
+      return '<div class="li" style="align-items:flex-start"><div class="bd"><b>'+esc(x.name)+'</b> <span class="small muted">('+esc(x.label)+')</span><div class="sub">'+esc(x.group||'')+' · '+
+        (x.phones?'<b style="color:var(--charcoal)">Signed in</b> on '+x.phones+' phone'+(x.phones>1?'s':'')+' · last seen '+esc(ago(x.last))+(x.device?' · '+esc(x.device):'')+(x.alerts?' · alerts on':''):'Not signed in'+(x.kickedAt?' · signed out by TCA '+esc(ago(x.kickedAt)):''))+'</div></div>'+
+        (x.phones?'<button class="btn line" style="width:auto;padding:9px 12px;font-size:12px;flex:none" onclick="kickStudent('+jsArg(x.id)+','+jsArg(x.name)+')">Sign out</button>':'')+'</div>'; }).join('')+'</div>';
+    if((j.staff||[]).length) html+='<p class="label">Staff</p><div class="list">'+j.staff.map(function(x){ return '<div class="li"><div class="bd"><b>'+esc(x.name||({tca:'TCA Tours staff',admin:'Admin',teacher:'Teacher'}[x.kind]||x.kind))+'</b><div class="sub">'+esc({tca:'TCA Tours',admin:'Admin',teacher:'Teacher'}[x.kind]||x.kind)+' · last seen '+esc(ago(x.last))+(x.device?' · '+esc(x.device):'')+'</div></div></div>'; }).join('')+'</div>';
+    html+='<p class="small muted" style="margin-top:10px">"Last seen" updates when the app is opened (at most every few minutes). Signing a student out takes effect on their phone within about a minute; they can then sign in again with the right name. <button class="linkbtn" onclick="loadWho()">Refresh</button></p>';
+  }
+  html+='</div>';
+  if(keep) rerenderPage(html); else openPage(html);
+}
+function kickStudent(id,name){
+  if(!confirm('Sign '+name+' out of the app on every phone they are using?'))return;
+  fetch(API+'?type=kick',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({sid:id})})
+    .then(function(r){ if(r.ok){ toast(name+' signed out'); loadWho(); } else toast('Could not sign out ('+r.status+')'); }).catch(function(){ toast('Needs signal'); });
 }
 function teacherReset(){
   openModal('<p class="label">Teacher only</p><h2 style="font-size:26px">Change the <em>student</em></h2><p class="small muted" style="margin:6px 0 10px">A teacher enters the staff password to sign this phone out.</p><input class="field" id="resetPass" type="password" placeholder="Teacher or TCA password"><div class="err" id="resetErr">That password isn\'t right.</div>'+
@@ -473,7 +525,7 @@ function signOut(){
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); go('today'); loadAlerts(); setTimeout(maybeAskAlerts,1200); }
+function enter(){ $('app').classList.remove('locked'); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -659,7 +711,7 @@ function renderMore(){
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
       tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
       tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
-      tile('ti-send','Send alert','To every phone','openSendAlert()')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
+      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
   html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
@@ -774,7 +826,8 @@ function openWeather(){
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
   var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||''; else if(mySid()) h['x-device']=deviceToken();
-  if(mySid()&&!window._claimedThisLoad){ window._claimedThisLoad=true; claimStudent(mySid()); }
+  if(mySid()) checkKicked();
+  sayHello();
   fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
     var fresh=a.filter(function(x){return seen.indexOf(x.id)<0;});

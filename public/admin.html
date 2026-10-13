@@ -53,6 +53,11 @@
   .ev .w{color:var(--slate);font-size:12.5px}
   .pill{display:inline-block;font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:1px 6px;background:var(--stone);margin-left:6px}
   .pill.gold{background:var(--gold)}
+  .whostats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+  .whorow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--hairline);font-size:14px}
+  .whorow .s{color:var(--slate);font-size:12.5px}
+  .whorow .on{color:var(--charcoal);font-weight:600}
+  .btn.sm{padding:8px 12px;font-size:12px}
   @media (max-width:560px){ h1{font-size:32px} input[type=password],input[type=text]{min-width:0;width:100%} .row .btn{width:100%} .stat b{font-size:28px} }
   .drop.over{border-color:var(--gold)}
   .drop b{font-family:var(--display);font-size:24px;font-weight:600;display:block}
@@ -73,7 +78,7 @@
 </style>
 </head>
 <body>
-<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v6</span></div></header>
+<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v10</span></div></header>
 <main><div class="wrap">
   <p class="label">Publish</p>
   <h1>Update the <em>app</em></h1>
@@ -108,6 +113,13 @@
   <p class="label">Live status</p>
   <div class="card" id="live"><p class="small muted">Checking…</p></div>
 
+  <p class="label">Who's signed in</p>
+  <div class="card rule">
+    <div class="row" style="justify-content:space-between"><p class="small muted" style="max-width:520px">Every student and staff sign-in, when they were last seen, and whether alerts are on. <b>Sign out</b> removes a student from the app on all their phones (within about a minute) so they can sign in again with the right name.</p>
+    <button class="btn dark" onclick="loadWho()">Load / refresh</button></div>
+    <div id="who" style="margin-top:12px"></div>
+  </div>
+
   <p class="label">Clear test data</p>
   <div class="card">
     <p class="small muted">Use before the trip if you've been testing. Needs the admin password.</p>
@@ -116,6 +128,7 @@
       <button class="btn line" onclick="clearSlot('roomnums')">Clear room numbers</button>
       <button class="btn line" onclick="clearSlot('alerts')">Clear alerts</button>
       <button class="btn line" onclick="clearSlot('claims')">Clear student sign-ins</button>
+      <button class="btn line" onclick="clearSlot('sessions')">Clear sign-in history</button>
     </div>
     <p class="msg" id="clearMsg"></p>
   </div>
@@ -235,6 +248,29 @@ function liveStatus(){
   }).catch(function(){ $('live').innerHTML='<p class="small muted">Can\'t reach the server from here (opened as a local file?). Use the live site\'s /admin.html.</p>'; });
 }
 if(sessionStorage.getItem('hny_admin')) $('pw').value=sessionStorage.getItem('hny_admin');
+function ago(ts){ if(!ts)return '—'; var m=Math.round((Date.now()-ts)/60000); if(m<1)return 'just now'; if(m<60)return m+' min ago'; var h=Math.round(m/60); if(h<48)return h+' h ago'; return Math.round(h/24)+' days ago'; }
+function loadWho(){
+  if(!pw()){ $('who').innerHTML='<p class="msg err">Enter the admin password (step 1) first.</p>'; return; }
+  $('who').innerHTML='<p class="small muted">Loading…</p>';
+  fetch(API+'?type=sessions',{headers:{'x-staff-key':pw()},cache:'no-store'}).then(function(r){return r.json().then(function(j){return {s:r.status,j:j};});}).then(function(x){
+    var j=x.j; if(!j.ok){ $('who').innerHTML='<p class="msg err">'+esc(j.error||('Error '+x.s))+'</p>'; return; }
+    var st=j.students||[], on=st.filter(function(a){return a.phones>0;});
+    var h='<div class="whostats"><div class="stat"><b>'+on.length+'</b><span>students signed in</span></div><div class="stat"><b>'+(st.length-on.length)+'</b><span>not signed in yet</span></div><div class="stat"><b>'+st.filter(function(a){return a.alerts;}).length+'</b><span>students with alerts on</span></div><div class="stat"><b>'+(j.staff||[]).length+'</b><span>staff sign-ins</span></div></div>';
+    if(!st.length) h+='<p class="small muted">No students yet — publish the App Database first.</p>';
+    h+=st.slice().sort(function(a,b){return (b.phones>0)-(a.phones>0)||(a.group||'').localeCompare(b.group||'')||a.name.localeCompare(b.name);}).map(function(a){
+      return '<div class="whorow"><div><b>'+esc(a.name)+'</b> <span class="s">('+esc(a.label)+') · '+esc(a.group||'')+'</span><div class="s">'+
+        (a.phones?'<span class="on">Signed in</span> · '+a.phones+' phone'+(a.phones>1?'s':'')+' · first '+esc(a.first?new Date(a.first).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—')+' · last seen '+esc(ago(a.last))+(a.device?' · '+esc(a.device):'')+(a.alerts?' · alerts on':' · alerts off'):'Not signed in'+(a.kickedAt?' · signed out by TCA '+esc(ago(a.kickedAt)):''))+'</div></div>'+
+        (a.phones?'<button class="btn line sm" onclick="kick('+esc(JSON.stringify(a.id))+','+esc(JSON.stringify(a.name))+')">Sign out</button>':'<span></span>')+'</div>'; }).join('');
+    if((j.staff||[]).length) h+='<h3 style="margin-top:18px">Staff</h3>'+j.staff.map(function(a){ var k={tca:'TCA Tours',admin:'Admin',teacher:'Teacher'}[a.kind]||a.kind;
+      return '<div class="whorow"><div><b>'+esc(a.name||k)+'</b><div class="s">'+esc(k)+' · last seen '+esc(ago(a.last))+(a.device?' · '+esc(a.device):'')+'</div></div><span></span></div>'; }).join('');
+    $('who').innerHTML=h;
+  }).catch(function(){ $('who').innerHTML='<p class="msg err">Could not reach the server.</p>'; });
+}
+function kick(id,name){
+  if(!confirm('Sign '+name+' out of the app on every phone they are using?')) return;
+  fetch(API+'?type=kick',{method:'POST',headers:{'content-type':'application/json','x-staff-key':pw()},body:JSON.stringify({sid:id})})
+    .then(function(r){ if(r.ok) loadWho(); else alert('Could not sign out ('+r.status+')'); }).catch(function(){ alert('Could not reach the server.'); });
+}
 liveStatus();
 </script>
 </body>
