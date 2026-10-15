@@ -129,6 +129,7 @@
       <button class="btn line" onclick="clearSlot('alerts')">Clear alerts</button>
       <button class="btn line" onclick="clearSlot('claims')">Clear student sign-ins</button>
       <button class="btn line" onclick="clearSlot('sessions')">Clear sign-in history</button>
+      <button class="btn dark" onclick="resetAll()">Sign everyone out (all phones)</button>
     </div>
     <p class="msg" id="clearMsg"></p>
   </div>
@@ -270,6 +271,12 @@ function kick(id,name){
   if(!confirm('Sign '+name+' out of the app on every phone they are using?')) return;
   fetch(API+'?type=kick',{method:'POST',headers:{'content-type':'application/json','x-staff-key':pw()},body:JSON.stringify({sid:id})})
     .then(function(r){ if(r.ok) loadWho(); else alert('Could not sign out ('+r.status+')'); }).catch(function(){ alert('Could not reach the server.'); });
+}
+function resetAll(){
+  if(!confirm('Sign EVERY phone out of the app — students, teachers and TCA staff? Everyone will need to sign in again, and alerts will need turning on again.')) return;
+  fetch(API+'?type=resetall',{method:'POST',headers:{'content-type':'application/json','x-staff-key':pw()},body:'{}'}).then(function(r){
+    say('clearMsg', r.ok?'Done — every phone will return to the launch page the next time it is opened (or within a minute if it is open now).':(r.status===403?'Needs the admin password.':'Not done ('+r.status+').'), !r.ok);
+  }).catch(function(){ say('clearMsg','Could not reach the server.',true); });
 }
 liveStatus();
 </script>

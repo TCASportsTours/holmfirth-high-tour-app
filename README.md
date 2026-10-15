@@ -112,3 +112,8 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Sign out** a student (TCA Tours and admin passwords only — teachers can't): their phones are signed out within about a minute and see "TCA Tours has signed you out"; they can sign in again with the right name.
 - Admin → Clear test data now also has **Clear sign-in history**.
 
+## v13: sign every phone out
+
+- **This release signs every phone out once**: the next time any phone opens the app it returns to the launch page (students, teachers, TCA). To do this again with a future release, change `RESET_VERSION` in `public/index.html`.
+- **Admin → Clear test data → Sign everyone out (all phones)**: signs every phone out (within a minute if the app is open, otherwise next time it's opened) and clears student sign-ins, sign-in history and alert registrations on the server, so every name is free to choose again.
+

@@ -14,6 +14,7 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=hello          -> "this phone is using the app" (student with token, or staff with key)
 //   GET  /tour?type=sessions       -> TCA/admin: who has signed in, when last seen
 //   POST /tour?type=kick {sid}     -> TCA/admin: sign a student's phones out
+//   POST /tour?type=resetall       -> admin: sign EVERY phone out (students and staff) and clear sign-in records
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -186,6 +187,12 @@ export default async (req) => {
       await Promise.all([store.set("claims", JSON.stringify(claims)), store.set("kicked", JSON.stringify(kicked)), store.set("sessions", JSON.stringify(ses)), store.set("pushsubs", JSON.stringify(subs))]);
       return reply(headers, 200, { ok: true, kickedAt: kicked[sid] });
     }
+    if (type === "resetall") {          // admin: every phone goes back to the launch page
+      if (!isAdmin) return reply(headers, 403, { ok: false, error: "admin password required" });
+      const at = Date.now();
+      await Promise.all([store.set("resetAt", String(at)), store.set("claims", "{}"), store.set("sessions", "{}"), store.set("pushsubs", "{}"), store.set("kicked", "{}")]);
+      return reply(headers, 200, { ok: true, resetAt: at });
+    }
     if (type === "unclaim") {           // teacher resets a student's phones
       if (!isStaff) return denied();
       const sid = String((parsed && parsed.sid) || "");
@@ -269,7 +276,7 @@ export default async (req) => {
   if (STAFF_READ.has(type)) {
     if (!staffPass) return notConfigured();
     if (!isStaff) return denied();
-    if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca });
+    if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca, at: Date.now() });
     if (type === "sessions") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
       const [pub, priv, se, c, k, ps] = await Promise.all(["current", "private", "sessions", "claims", "kicked", "pushsubs"].map((x) => store.get(x)));
@@ -299,8 +306,9 @@ export default async (req) => {
   }
   if (type === "me") {
     const sid = url.searchParams.get("sid") || "";
-    const kicked = safeObj(await store.get("kicked"));
-    return reply(headers, 200, { ok: true, kickedAt: kicked[sid] || null });
+    const [k, r] = await Promise.all([store.get("kicked"), store.get("resetAt")]);
+    const kicked = safeObj(k);
+    return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
   if (type === "pushkey") return reply(headers, 200, { ok: true, key: env("VAPID_PUBLIC_KEY") || null });
   if (type === "subway") return reply(headers, 200, await subwayStatus(store));
