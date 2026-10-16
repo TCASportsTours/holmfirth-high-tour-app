@@ -119,7 +119,7 @@ Known limits (by design): students sign in without a password, so someone could 
 
 ## v14: NYC Quiz
 
-- **Students** (only): More → **NYC Quiz** opens `public/quiz.html` (NYC Quiz v4, unchanged apart from one hook that passes the final score to the app) full-screen, with a Close button.
+- **Students** (only): a **Quiz** tab in the bottom bar opens `public/quiz.html` (NYC Quiz v4, unchanged apart from one hook that passes the final score to the app). It keeps its place when switching tabs. Teachers and TCA staff don't get the tab.
 - When a student finishes, the score is saved against their sign-in (their phone's token is required, so scores can't be posted for someone else). If there's no signal it is kept on the phone and sent later.
 - **TCA Tours staff**: More → **Quiz leaderboard** — who has done it, ranked on first try or best score, with attempts, correct answers and who hasn't done it yet. Teachers don't see the quiz or the leaderboard.
 - Admin → Clear test data → **Clear quiz scores**.

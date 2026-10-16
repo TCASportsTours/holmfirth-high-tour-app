@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v14  |  16 October 2026 (v14: NYC Quiz for students + TCA leaderboard; v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v15  |  16 October 2026 (v15: Quiz is its own tab for students; v14: NYC Quiz for students + TCA leaderboard; v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v14">
+<meta name="version" content="v15">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -241,12 +241,17 @@
   .modal[data-locked="1"] .sheetx{display:none}
   .pickhead{position:sticky;top:-22px;background:var(--white);margin:-22px -18px 0;padding:22px 18px 8px;z-index:2;border-bottom:1px solid var(--hairline)}
   .sheet::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--gold)}
-  .quizwrap{position:absolute;inset:0;z-index:35;background:var(--ink);display:none;flex-direction:column}
-  .quizwrap.on{display:flex}
+  .tabbar.six{grid-template-columns:repeat(6,1fr)}
+  .tab.quiztab{display:none}
+  .tabbar.six .tab.quiztab{display:flex}
+  .tabbar.six .tab{font-size:10.5px}
+  #s-quiz{padding:0}
+  #s-quiz.active{display:flex;flex-direction:column;height:100%}
+  #s-quiz iframe{flex:1;width:100%;border:0;background:#faf9f7;min-height:0}
+  .screens.quizmode{overflow:hidden}
   .quizbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px 16px;background:var(--ink);color:#fff}
   .quizbar b{flex:1;font-family:var(--display);font-size:20px;font-weight:600}
   .quizbar button{border:0;background:rgba(255,255,255,.1);color:#fff;padding:9px 12px;font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px}
-  .quizwrap iframe{flex:1;width:100%;border:0;background:#faf9f7}
   .lb{width:100%;border-collapse:collapse;background:var(--white);font-size:13.5px}
   .lb th{font-family:var(--display);font-weight:600;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);text-align:left;padding:8px 8px;border-bottom:2px solid var(--gold)}
   .lb td{padding:9px 8px;border-bottom:1px solid var(--hairline);vertical-align:top}
@@ -275,6 +280,7 @@
     <section class="screen" id="s-trip"></section>
     <section class="screen" id="s-around"></section>
     <section class="screen" id="s-pack"></section>
+    <section class="screen" id="s-quiz"><iframe id="quizframe" title="NYC Quiz"></iframe></section>
     <section class="screen" id="s-more"></section>
     <section class="screen" id="s-page"></section>
   </main>
@@ -282,20 +288,20 @@
   <nav class="tabbar" id="tabbar">
     <button class="tab active" data-tab="today" onclick="go('today')"><i class="ti ti-calendar-event"></i>Today</button>
     <button class="tab" data-tab="trip" onclick="go('trip')"><i class="ti ti-list-details"></i>Itinerary</button>
+    <button class="tab quiztab" data-tab="quiz" onclick="go('quiz')"><i class="ti ti-trophy"></i>Quiz</button>
     <button class="tab" data-tab="pack" onclick="go('pack')"><i class="ti ti-backpack"></i>What to take</button>
     <button class="tab" data-tab="around" onclick="go('around')"><i class="ti ti-train"></i>Getting around</button>
     <button class="tab" data-tab="more" onclick="go('more')"><i class="ti ti-layout-grid"></i>More</button>
   </nav>
 
   <div class="modal" id="modal" onclick="if(event.target===this&&this.dataset.locked!=='1')closeModal()"><div class="sheetwrap"><button class="sheetx" onclick="closeModal()" aria-label="Close"><i class="ti ti-x"></i></button><div class="sheet" id="modalBody"></div></div></div>
-  <div class="quizwrap" id="quizwrap"><div class="quizbar"><b>NYC Quiz</b><button onclick="closeQuiz()" aria-label="Close the quiz"><i class="ti ti-x"></i> Close</button></div><iframe id="quizframe" title="NYC Quiz"></iframe></div>
   <div class="toast" id="toast"></div>
 </div>
 
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v14 · 16 Oct 2026';
+var BUILD = 'v15 · 16 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -394,7 +400,8 @@ function go(tab){
   curTab=tab; pageStack=[];
   document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===tab);});
   show('s-'+tab);
-  ({today:renderToday,trip:renderTrip,pack:renderPack,around:renderAround,more:renderMore})[tab]();
+  $('screens').classList.toggle('quizmode',tab==='quiz');
+  ({today:renderToday,trip:renderTrip,quiz:renderQuiz,pack:renderPack,around:renderAround,more:renderMore})[tab]();
 }
 function show(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('active',s.id===id);});
@@ -471,7 +478,7 @@ function wipeSignIn(){
   P=null; role=null; LIVE={roomnums:{},register:{}};
 }
 function resetToLaunch(msg){
-  wipeSignIn(); closeModal(); show('s-signin'); renderSignin();
+  wipeSignIn(); showQuizTab(); $('screens').classList.remove('quizmode'); $('quizframe').removeAttribute('src'); closeModal(); show('s-signin'); renderSignin();
   if(msg) openModal('<p class="label">Signed out</p><h2 style="font-size:26px">Please sign in again</h2><p class="small muted" style="margin:8px 0 14px">'+esc(msg)+'</p><button class="btn gold" onclick="closeModal()">OK</button>');
 }
 /* Admin "Sign everyone out": every phone signed in before that moment returns to the launch page */
@@ -490,6 +497,7 @@ function checkKicked(){
   }).catch(function(){});
 }
 function kickedOut(){
+  $('tabbar').classList.remove('six'); $('screens').classList.remove('quizmode'); $('quizframe').removeAttribute('src');
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet('hny_claimed',null); lsSet('hny_claimed_at',null); lsSet('hny_claimed_sid',null); lsSet('hny_push',null);
   role=null; lsSet(LS.role,null); show('s-signin'); renderSignin();
   openModal('<p class="label">Signed out</p><h2 style="font-size:26px">TCA Tours has signed you out</h2><p class="small muted" style="margin:8px 0 14px">Please sign in again with your own name. If you think this is a mistake, speak to a teacher.</p><button class="btn gold" onclick="closeModal();pickRole(\'student\')">Sign in again</button>');
@@ -534,11 +542,10 @@ function kickStudent(id,name){
     .then(function(r){ if(r.ok){ toast(name+' signed out'); loadWho(); } else toast('Could not sign out ('+r.status+')'); }).catch(function(){ toast('Needs signal'); });
 }
 /* ---------- NYC QUIZ (students) ---------- */
-function openQuiz(){
-  var f=$('quizframe'); if(!f.getAttribute('src')) f.setAttribute('src','quiz.html');
-  $('quizwrap').classList.add('on');
-}
-function closeQuiz(){ $('quizwrap').classList.remove('on'); }
+/* Quiz tab (students only). The quiz page loads once and keeps its place when you switch tabs. */
+function renderQuiz(){ var f=$('quizframe'); if(!f.getAttribute('src')) f.setAttribute('src','quiz.html'); }
+function openQuiz(){ go('quiz'); }
+function showQuizTab(){ $('tabbar').classList.toggle('six',role==='student'); }
 function quizPending(){ try{ return JSON.parse(lsGet('hny_quiz_pending')||'[]'); }catch(e){ return []; } }
 function sendQuizScores(){
   var list=quizPending(); if(!list.length||!mySid())return;
@@ -603,10 +610,11 @@ function staffCheck(){
   }).catch(function(){ err.textContent='No connection — you need signal to sign in as staff the first time.'; err.classList.add('on'); });
 }
 function signOut(){
+  $('tabbar').classList.remove('six'); $('screens').classList.remove('quizmode'); $('quizframe').removeAttribute('src');
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
+function enter(){ $('app').classList.remove('locked'); showQuizTab(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -783,7 +791,7 @@ function subwaySVG(){
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
   var html='<p class="label">Signed in as '+esc(mySid()?lsGet(LS.sname):role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
-  html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+(role==='student'?tile('ti-trophy','NYC Quiz','How well do you know the city?','openQuiz()','dark'):'')+tile('ti-plane','Flights','Times & terminals','openFlights()');
+  html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
   if(isStaff()){
