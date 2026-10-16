@@ -4,8 +4,8 @@
       latest; without it you get the last saved copy.
    2. Push: shows staff alerts as phone notifications, even when the app is closed.
    Staff-only data (requests carrying the staff password) is never stored here. */
-var VERSION = 'hny-v8';
-var SHELL = ['./', 'index.html', 'manifest.json', 'js/tour-default.js', 'js/expenses.js',
+var VERSION = 'hny-v9';
+var SHELL = ['./', 'index.html', 'manifest.json', 'js/tour-default.js', 'js/expenses.js', 'js/currencies.js',
   'img/tca-logo-horizontal-white.png', 'img/icon-192.png', 'img/icon-512.png', 'img/favicon-64.png', 'img/apple-touch-icon.png'];
 var CDN = /^https:\/\/(fonts\.googleapis\.com|fonts\.gstatic\.com|cdn\.jsdelivr\.net)\//;
 

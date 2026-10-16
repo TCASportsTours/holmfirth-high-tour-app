@@ -140,3 +140,9 @@ Known limits (by design): students sign in without a password, so someone could 
 - Expenses need signal to submit; if there is none, the form keeps what was typed so it can be sent later.
 - Admin → Clear test data → **Clear expenses & receipts** (download them first).
 - Receipts are stored in Netlify Blobs (keys `exp/<id>`, `rcpt/<id>/<n>`), and are only returned with the TCA Tours or admin password.
+
+## v18: expenses list moved to admin, behind a second password
+
+- **On tour (TCA Tours staff)**: More → **Add expense** is a submit-only form. Staff can't see the list, totals or other people's expenses. After Submit they see the Ref and the date and time submitted.
+- **Currency**: a searchable list of countries with their currency, e.g. "United Kingdom (GBP)" (`public/js/currencies.js`). Type a country or a currency code. The live rate works for any of them; rates keep 6 significant figures, so small-unit currencies like the yen stay accurate.
+- **admin.html → Expenses · second password**: needs the admin password (step 1) **and** `EXPENSES_PASSWORD` (a Netlify environment variable). It shows the list, totals by staff member, Download spreadsheet (.xlsx), Download all receipts (.zip), Delete, and Clear all. Wrong expenses passwords count towards the 15-minute lockout. The expenses password is kept only for that browser tab (Lock clears it).

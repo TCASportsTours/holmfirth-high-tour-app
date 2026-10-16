@@ -21,9 +21,11 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=quizlock       -> TCA/admin: { mode: "auto" | "open" | "closed" }
 //   GET  /tour?type=fxrate&cur=USD -> TCA/admin: live rate, 1 <cur> = x GBP (open.er-api.com, fallback Frankfurter/ECB)
 //   POST /tour?type=expense        -> TCA/admin: submit an expense + receipt files; the server stamps the date and time
-//   GET  /tour?type=expenses       -> TCA/admin: every expense (no file data)
-//   GET  /tour?type=receipt&id=&n= -> TCA/admin: one receipt file { name, type, data (data: URL) }
-//   POST /tour?type=expensedel {id}-> TCA/admin: delete an expense and its receipts
+//   EXPENSES (admin password in x-staff-key AND the expenses password in x-expenses-key; staff on tour can't read them)
+//   GET  /tour?type=expenses       -> every expense (no file data)
+//   GET  /tour?type=receipt&id=&n= -> one receipt file { name, type, data (data: URL) }
+//   POST /tour?type=expensedel {id}-> delete an expense and its receipts
+//   DELETE /tour?type=expenses     -> clear every expense and receipt
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -39,7 +41,8 @@ import { getStore } from "@netlify/blobs";
 //   DELETE /tour?type=register|roomnums|alerts -> clear test data
 //
 // Passwords live in Netlify environment variables, never in the repo:
-//   STAFF_PASSWORD (teachers, required), TCA_PASSWORD (TCA Tours staff, optional), ADMIN_PASSWORD (optional).
+//   STAFF_PASSWORD (teachers, required), TCA_PASSWORD (TCA Tours staff, optional), ADMIN_PASSWORD (optional),
+//   EXPENSES_PASSWORD (second password for the expenses list in admin.html).
 // Push notifications need VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY and VAPID_SUBJECT (a URL or mailto:).
 
 const SUBWAY_FEED = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts";
@@ -66,7 +69,7 @@ const MAX_ALERTS = 30, MAX_TITLE = 120, MAX_MSG = 2000, MAX_TO = 100;
 const MAX_SUBS = 1000, MAX_DEVICES_PER_STUDENT = 3;
 // Expenses: one request carries the receipts (photos are shrunk on the phone first). Netlify's request limit is 6 MB.
 const MAX_EXPENSE_BODY = 5.5 * 1024 * 1024, MAX_RECEIPTS = 6;
-const CURRENCIES = ["USD", "GBP", "EUR", "CAD"];
+const CUR_RE = /^[A-Z]{3}$/;
 const FX_CACHE_MS = 10 * 60000;
 // Only the real browser push services — never let a subscription point the server at an arbitrary URL
 const PUSH_HOSTS = /(^|\.)(fcm\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com|push\.api\.chromium\.org)$/i;
@@ -122,7 +125,7 @@ export default async (req) => {
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, POST, OPTIONS, DELETE",
-    "access-control-allow-headers": "content-type, x-staff-key, x-device",
+    "access-control-allow-headers": "content-type, x-staff-key, x-device, x-expenses-key",
   };
   if (req.method === "OPTIONS") return new Response("", { headers });
 
@@ -138,28 +141,34 @@ export default async (req) => {
   const isStaff = same(given, staffPass) || same(given, adminPass) || (!!tcaPass && same(given, tcaPass));
   const isAdmin = same(given, adminPass);
   const isTca = isAdmin || (!!tcaPass && same(given, tcaPass));
+  // Expenses list: the admin password AND the separate expenses password
+  const expPass = env("EXPENSES_PASSWORD"), expGiven = req.headers.get("x-expenses-key") || "";
+  const isExp = isAdmin && !!expPass && same(expGiven, expPass);
+  const expDenied = () => reply(headers, expPass ? 401 : 503, { ok: false, error: expPass ? "expenses password required" : "EXPENSES_PASSWORD is not set in Netlify environment variables" });
   const notConfigured = () => reply(headers, 503, { ok: false, error: "STAFF_PASSWORD is not set in Netlify environment variables" });
   const denied = () => reply(headers, 401, { ok: false, error: "staff password required" });
 
   // ---- lockout: too many wrong passwords from one connection
   const ip = clientIp(req);
   let fails = {};
-  if (given) { try { fails = JSON.parse((await store.get("authfails")) || "{}"); } catch { fails = {}; } }
+  const tried = given || expGiven;
+  if (tried) { try { fails = JSON.parse((await store.get("authfails")) || "{}"); } catch { fails = {}; } }
   const f = fails[ip];
-  if (given && f && f.n >= LOCK_AFTER && Date.now() - f.first < LOCK_WINDOW_MS)
+  if (tried && f && f.n >= LOCK_AFTER && Date.now() - f.first < LOCK_WINDOW_MS)
     return reply(headers, 429, { ok: false, error: "Too many wrong passwords. Try again in 15 minutes." });
-  if (given && staffPass && !isStaff) {
+  if ((given && staffPass && !isStaff) || (expGiven && expPass && !same(expGiven, expPass))) {
     const cur = f && Date.now() - f.first < LOCK_WINDOW_MS ? f : { n: 0, first: Date.now() };
     cur.n++; fails[ip] = cur;
     for (const k of Object.keys(fails)) if (Date.now() - fails[k].first > LOCK_WINDOW_MS) delete fails[k];
     await store.set("authfails", JSON.stringify(fails));
-  } else if (given && isStaff && f) { delete fails[ip]; await store.set("authfails", JSON.stringify(fails)); }
+  } else if (given && isStaff && f && !(expGiven && !isExp)) { delete fails[ip]; await store.set("authfails", JSON.stringify(fails)); }
 
   // ---------------- DELETE (admin): clear a live/test slot
   if (req.method === "DELETE") {
     if (!staffPass) return notConfigured();
     if (!isAdmin) return denied();
-    if (type === "expenses") {          // test expenses: every expense and its receipt files
+    if (type === "expenses") {          // every expense and its receipt files (needs the expenses password too)
+      if (!isExp) return expDenied();
       let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
       if (typeof store.list === "function") { try { const l = await store.list({ prefix: "exp/" }); (l.blobs || []).forEach((b) => { const id = b.key.slice(4); if (!idx.includes(id)) idx.push(id); }); } catch {} }
       for (const id of idx) {
@@ -257,7 +266,7 @@ export default async (req) => {
       return reply(headers, 200, { ok: true, expense: e });
     }
     if (type === "expensedel") {
-      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      if (!isExp) return expDenied();
       const id = String((parsed && parsed.id) || "");
       if (!/^x[a-z0-9]{4,20}$/.test(id)) return reply(headers, 400, { ok: false, error: "bad id" });
       const old = await store.get("exp/" + id); let e = null; try { e = JSON.parse(old || "null"); } catch {}
@@ -380,9 +389,12 @@ export default async (req) => {
       });
       return reply(headers, 200, { ok: true, at: Date.now(), rows, state: await quizState(store) });
     }
-    if (type === "fxrate" || type === "expenses" || type === "receipt") {
+    if (type === "fxrate") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
-      if (type === "fxrate") return reply(headers, 200, await fxRate(store, String(url.searchParams.get("cur") || "").toUpperCase()));
+      return reply(headers, 200, await fxRate(store, String(url.searchParams.get("cur") || "").toUpperCase()));
+    }
+    if (type === "expenses" || type === "receipt") {
+      if (!isExp) return expDenied();
       if (type === "receipt") {
         const id = url.searchParams.get("id") || "", n = url.searchParams.get("n") || "0";
         if (!/^x[a-z0-9]{4,20}$/.test(id) || !/^\d$/.test(n)) return reply(headers, 400, { ok: false, error: "bad id" });
@@ -457,12 +469,12 @@ function cleanExpense(p) {
   const rate = Number(p.rate);
   if (!name) return { error: "Put the staff member's name" };
   if (!desc) return { error: "Say what the expense was for" };
-  if (!CURRENCIES.includes(currency)) return { error: "Choose a currency" };
-  if (!(amount > 0 && amount < 100000)) return { error: "Enter the amount" };
+  if (!CUR_RE.test(currency)) return { error: "Choose a currency" };
+  if (!(amount > 0 && amount < 1e10)) return { error: "Enter the amount" };
   if (!(rate > 0 && rate < 100)) return { error: "Enter the conversion rate to pounds" };
   const out = {
-    name, desc, currency, amount, rate: Math.round(rate * 1e6) / 1e6,
-    gbp: Math.round(amount * rate * 100) / 100,
+    name, desc, currency, country: String(p.country || "").slice(0, 60), amount, rate: Number(rate.toPrecision(8)),
+    gbp: Math.round(amount * Number(rate.toPrecision(8)) * 100) / 100,
     category: String(p.category || "Other").slice(0, 40),
     paidBy: String(p.paidBy || "").slice(0, 40),
     spentOn: /^\d{4}-\d{2}-\d{2}$/.test(String(p.spentOn || "")) ? String(p.spentOn) : "",
@@ -478,7 +490,7 @@ function cleanExpense(p) {
 async function delKey(store, k) { if (typeof store.delete === "function") await store.delete(k); else await store.set(k, ""); }
 // Live rate, 1 <cur> = x GBP. Cached 10 minutes so every staff phone sees the same rate.
 async function fxRate(store, cur) {
-  if (!CURRENCIES.includes(cur)) return { ok: false, error: "unknown currency" };
+  if (!CUR_RE.test(cur)) return { ok: false, error: "unknown currency" };
   if (cur === "GBP") return { ok: true, cur, rate: 1, source: "Paid in pounds", asOf: Date.now(), fetchedAt: Date.now() };
   let cache = {}; try { cache = JSON.parse((await store.get("fxcache")) || "{}"); } catch {}
   if (cache[cur] && Date.now() - cache[cur].fetchedAt < FX_CACHE_MS) return Object.assign({ ok: true, cached: true }, cache[cur]);
@@ -487,7 +499,7 @@ async function fxRate(store, cur) {
   try {
     const r = await get("https://open.er-api.com/v6/latest/" + cur, { signal: AbortSignal.timeout(6000) });
     const j = await r.json();
-    if (j && j.result === "success" && j.rates && j.rates.GBP) out = { cur, rate: j.rates.GBP, source: "ExchangeRate-API (open.er-api.com) mid-market rate", asOf: (j.time_last_update_unix || 0) * 1000 || Date.now() };
+    if (j && j.result === "success" && j.rates && j.rates.GBP && j.base_code === cur) out = { cur, rate: j.rates.GBP, source: "ExchangeRate-API (open.er-api.com) mid-market rate", asOf: (j.time_last_update_unix || 0) * 1000 || Date.now() };
   } catch {}
   if (!out) try {
     const r = await get("https://api.frankfurter.app/latest?from=" + cur + "&to=GBP", { signal: AbortSignal.timeout(6000) });

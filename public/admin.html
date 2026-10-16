@@ -78,7 +78,7 @@
 </style>
 </head>
 <body>
-<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v11</span></div></header>
+<header><div class="wrap"><img src="img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Tour admin · Holmfirth High · New York 2026 · v12</span></div></header>
 <main><div class="wrap">
   <p class="label">Publish</p>
   <h1>Update the <em>app</em></h1>
@@ -120,6 +120,14 @@
     <div id="who" style="margin-top:12px"></div>
   </div>
 
+  <p class="label">Expenses · second password</p>
+  <div class="card rule">
+    <p class="small muted" style="max-width:640px">Expenses and receipts submitted by TCA Tours staff on tour (in the app: More → Add expense). Staff can submit but can't see this list. Needs the admin password in step 1 <b>and</b> the expenses password.</p>
+    <div class="row" id="xaGate" style="margin-top:10px"><input type="password" id="xaPw" placeholder="Expenses password" autocomplete="off" onkeydown="if(event.key==='Enter')xaUnlock()"><button class="btn dark" onclick="xaUnlock()">Open expenses</button></div>
+    <p class="msg" id="xaMsg"></p>
+    <div id="xaBox"></div>
+  </div>
+
   <p class="label">Clear test data</p>
   <div class="card">
     <p class="small muted">Use before the trip if you've been testing. Needs the admin password.</p>
@@ -130,7 +138,6 @@
       <button class="btn line" onclick="clearSlot('claims')">Clear student sign-ins</button>
       <button class="btn line" onclick="clearSlot('sessions')">Clear sign-in history</button>
       <button class="btn line" onclick="clearSlot('quiz')">Clear quiz scores</button>
-      <button class="btn line" onclick="clearSlot('expenses')">Clear expenses &amp; receipts (download them first!)</button>
       <button class="btn dark" onclick="resetAll()">Sign everyone out (all phones)</button>
     </div>
     <p class="msg" id="clearMsg"></p>
@@ -138,6 +145,7 @@
 </div></main>
 
 <script src="js/parse-db.js"></script>
+<script src="js/expenses-admin.js"></script>
 <script>
 'use strict';
 var API='/.netlify/functions/tour', RES=null;
