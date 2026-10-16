@@ -306,7 +306,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v16 · 16 Oct 2026';
+var BUILD = 'v17 · 16 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -838,7 +838,7 @@ function renderMore(){
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
       tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
       tile('ti-ticket','Tickets & entry','Who has them, where to go','openTickets()')+tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
-      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark')+tile('ti-trophy','Quiz leaderboard','Who has done it & scores','openLeaderboard()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
+      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark')+tile('ti-trophy','Quiz leaderboard','Who has done it & scores','openLeaderboard()','dark')+tile('ti-receipt','Expenses','Receipts & claims','openExpenses()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
   html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
@@ -1338,5 +1338,6 @@ function refresh(){
   if(navigator.onLine===false) $('offline').classList.add('on');
 })();
 </script>
+<script src="js/expenses.js"></script>
 </body>
 </html>

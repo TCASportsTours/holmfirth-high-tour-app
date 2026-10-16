@@ -5,7 +5,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const mem = new Map();
-globalThis.__TOUR_TEST_STORE__ = { get: async (k) => (mem.has(k) ? mem.get(k) : null), set: async (k, v) => { mem.set(k, v); } };
+globalThis.__TOUR_TEST_STORE__ = { get: async (k) => (mem.has(k) ? mem.get(k) : null), set: async (k, v) => { mem.set(k, v); }, delete: async (k) => { mem.delete(k); },
+  list: async ({ prefix = "" } = {}) => ({ blobs: [...mem.keys()].filter((k) => k.startsWith(prefix)).map((key) => ({ key })) }) };
 const { default: handler } = await import("../netlify/functions/tour.mjs");
 
 const root = path.resolve(new URL("../public", import.meta.url).pathname);

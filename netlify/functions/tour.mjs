@@ -19,6 +19,11 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
 //   POST /tour?type=quizlock       -> TCA/admin: { mode: "auto" | "open" | "closed" }
+//   GET  /tour?type=fxrate&cur=USD -> TCA/admin: live rate, 1 <cur> = x GBP (open.er-api.com, fallback Frankfurter/ECB)
+//   POST /tour?type=expense        -> TCA/admin: submit an expense + receipt files; the server stamps the date and time
+//   GET  /tour?type=expenses       -> TCA/admin: every expense (no file data)
+//   GET  /tour?type=receipt&id=&n= -> TCA/admin: one receipt file { name, type, data (data: URL) }
+//   POST /tour?type=expensedel {id}-> TCA/admin: delete an expense and its receipts
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -59,6 +64,10 @@ const LOCK_AFTER = 8, LOCK_WINDOW_MS = 15 * 60000;          // 8 wrong passwords
 const MAX_BODY = 256 * 1024, MAX_PUBLISH_BODY = 3 * 1024 * 1024;
 const MAX_ALERTS = 30, MAX_TITLE = 120, MAX_MSG = 2000, MAX_TO = 100;
 const MAX_SUBS = 1000, MAX_DEVICES_PER_STUDENT = 3;
+// Expenses: one request carries the receipts (photos are shrunk on the phone first). Netlify's request limit is 6 MB.
+const MAX_EXPENSE_BODY = 5.5 * 1024 * 1024, MAX_RECEIPTS = 6;
+const CURRENCIES = ["USD", "GBP", "EUR", "CAD"];
+const FX_CACHE_MS = 10 * 60000;
 // Only the real browser push services — never let a subscription point the server at an arbitrary URL
 const PUSH_HOSTS = /(^|\.)(fcm\.googleapis\.com|push\.services\.mozilla\.com|push\.apple\.com|notify\.windows\.com|push\.api\.chromium\.org)$/i;
 const KEY_RULES = {
@@ -91,7 +100,7 @@ async function deviceOk(store, sid, token) {
 }
 
 const MERGE = new Set(["roomnums", "register"]);
-const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz"]);
+const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz", "fxrate", "expenses", "receipt"]);
 const SEEN_EVERY_MS = 5 * 60000;   // only write "last seen" every 5 minutes per person
 
 function env(name) {
@@ -150,6 +159,17 @@ export default async (req) => {
   if (req.method === "DELETE") {
     if (!staffPass) return notConfigured();
     if (!isAdmin) return denied();
+    if (type === "expenses") {          // test expenses: every expense and its receipt files
+      let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
+      if (typeof store.list === "function") { try { const l = await store.list({ prefix: "exp/" }); (l.blobs || []).forEach((b) => { const id = b.key.slice(4); if (!idx.includes(id)) idx.push(id); }); } catch {} }
+      for (const id of idx) {
+        let e = null; try { e = JSON.parse((await store.get("exp/" + id)) || "null"); } catch {}
+        for (const r of (e && e.receipts) || []) await delKey(store, "rcpt/" + id + "/" + r.n);
+        await delKey(store, "exp/" + id);
+      }
+      await store.set("expidx", "[]"); await store.set("expseq", "0");
+      return reply(headers, 200, { ok: true, cleared: type, removed: idx.length });
+    }
     const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}", quiz: "{}" };
     if (!(type in CLEARABLE)) return reply(headers, 400, { ok: false, error: "refused: that slot can't be cleared" });
     await store.set(key, CLEARABLE[type]);
@@ -159,7 +179,7 @@ export default async (req) => {
   // ---------------- POST
   if (req.method === "POST") {
     const raw = await req.text();
-    if (raw.length > ((!type || type === "private") ? MAX_PUBLISH_BODY : MAX_BODY)) return reply(headers, 413, { ok: false, error: "too large" });
+    if (raw.length > ((!type || type === "private") ? MAX_PUBLISH_BODY : type === "expense" ? MAX_EXPENSE_BODY : MAX_BODY)) return reply(headers, 413, { ok: false, error: "too large" });
     let parsed;
     try { parsed = JSON.parse(raw); } catch { return reply(headers, 400, { ok: false, error: "invalid JSON" }); }
 
@@ -216,6 +236,35 @@ export default async (req) => {
       rec.attempts = rec.attempts.slice(-20);
       quiz[sid] = rec; await store.set("quiz", JSON.stringify(quiz));
       return reply(headers, 200, { ok: true, attempts: rec.attempts.length });
+    }
+    // Expenses (TCA Tours staff): the date and time submitted is stamped here, by the server, not by the phone
+    if (type === "expense") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      const e = cleanExpense(parsed);
+      if (e.error) return reply(headers, 400, { ok: false, error: e.error });
+      const files = Array.isArray(parsed.receipts) ? parsed.receipts.slice(0, MAX_RECEIPTS) : [];
+      const okFiles = files.filter((f) => f && /^data:(image\/(jpeg|png|webp|heic|heif)|application\/pdf);base64,/.test(String(f.data || "")));
+      if (okFiles.length !== files.length) return reply(headers, 400, { ok: false, error: "receipts must be photos or PDFs" });
+      let seq = Number(await store.get("expseq")) || 0; seq++; await store.set("expseq", String(seq));
+      e.id = "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      e.ref = "EXP-" + String(seq).padStart(3, "0");
+      e.submittedAt = Date.now();
+      e.receipts = okFiles.map((f, i) => ({ n: i, name: String(f.name || "receipt").replace(/[^\w .()-]/g, "_").slice(0, 80), type: String(f.data).slice(5, String(f.data).indexOf(";")), size: Math.round(String(f.data).length * 0.75) }));
+      for (let i = 0; i < okFiles.length; i++) await store.set("rcpt/" + e.id + "/" + i, JSON.stringify({ name: e.receipts[i].name, type: e.receipts[i].type, data: String(okFiles[i].data) }));
+      await store.set("exp/" + e.id, JSON.stringify(e));
+      let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
+      if (!idx.includes(e.id)) { idx.push(e.id); await store.set("expidx", JSON.stringify(idx)); }
+      return reply(headers, 200, { ok: true, expense: e });
+    }
+    if (type === "expensedel") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      const id = String((parsed && parsed.id) || "");
+      if (!/^x[a-z0-9]{4,20}$/.test(id)) return reply(headers, 400, { ok: false, error: "bad id" });
+      const old = await store.get("exp/" + id); let e = null; try { e = JSON.parse(old || "null"); } catch {}
+      if (e) { for (const r of e.receipts || []) await delKey(store, "rcpt/" + id + "/" + r.n); await delKey(store, "exp/" + id); }
+      let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
+      await store.set("expidx", JSON.stringify(idx.filter((x) => x !== id)));
+      return reply(headers, 200, { ok: true, deleted: id });
     }
     if (type === "kick") {              // TCA Tours / admin signs a student's phones out
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
@@ -331,6 +380,24 @@ export default async (req) => {
       });
       return reply(headers, 200, { ok: true, at: Date.now(), rows, state: await quizState(store) });
     }
+    if (type === "fxrate" || type === "expenses" || type === "receipt") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      if (type === "fxrate") return reply(headers, 200, await fxRate(store, String(url.searchParams.get("cur") || "").toUpperCase()));
+      if (type === "receipt") {
+        const id = url.searchParams.get("id") || "", n = url.searchParams.get("n") || "0";
+        if (!/^x[a-z0-9]{4,20}$/.test(id) || !/^\d$/.test(n)) return reply(headers, 400, { ok: false, error: "bad id" });
+        const r = await store.get("rcpt/" + id + "/" + n);
+        return r ? new Response(r, { headers }) : reply(headers, 404, { ok: false, error: "not found" });
+      }
+      let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
+      // Also pick up any expense the index missed (two staff submitting at the same moment)
+      if (typeof store.list === "function") {
+        try { const l = await store.list({ prefix: "exp/" }); (l.blobs || []).forEach((b) => { const id = b.key.slice(4); if (!idx.includes(id)) idx.push(id); }); } catch {}
+      }
+      const rows = (await Promise.all(idx.map((id) => store.get("exp/" + id)))).map((x) => { try { return JSON.parse(x || "null"); } catch { return null; } }).filter(Boolean)
+        .sort((a, b) => a.submittedAt - b.submittedAt);
+      return reply(headers, 200, { ok: true, at: Date.now(), rows });
+    }
     if (type === "sessions") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
       const [pub, priv, se, c, k, ps] = await Promise.all(["current", "private", "sessions", "claims", "kicked", "pushsubs"].map((x) => store.get(x)));
@@ -379,6 +446,58 @@ export default async (req) => {
   if (data != null) return new Response(data, { headers });
   return new Response(type === "alerts" ? "[]" : "null", { headers });
 };
+
+// ---------------- expenses
+function cleanExpense(p) {
+  if (!p || typeof p !== "object") return { error: "missing details" };
+  const name = String(p.name || "").trim().slice(0, 60);
+  const desc = String(p.desc || "").trim().slice(0, 300);
+  const currency = String(p.currency || "").toUpperCase();
+  const amount = Math.round(Number(p.amount) * 100) / 100;
+  const rate = Number(p.rate);
+  if (!name) return { error: "Put the staff member's name" };
+  if (!desc) return { error: "Say what the expense was for" };
+  if (!CURRENCIES.includes(currency)) return { error: "Choose a currency" };
+  if (!(amount > 0 && amount < 100000)) return { error: "Enter the amount" };
+  if (!(rate > 0 && rate < 100)) return { error: "Enter the conversion rate to pounds" };
+  const out = {
+    name, desc, currency, amount, rate: Math.round(rate * 1e6) / 1e6,
+    gbp: Math.round(amount * rate * 100) / 100,
+    category: String(p.category || "Other").slice(0, 40),
+    paidBy: String(p.paidBy || "").slice(0, 40),
+    spentOn: /^\d{4}-\d{2}-\d{2}$/.test(String(p.spentOn || "")) ? String(p.spentOn) : "",
+    notes: String(p.notes || "").trim().slice(0, 500),
+    rateSource: String(p.rateSource || "").slice(0, 120),
+    rateAsOf: Number(p.rateAsOf) || null,
+    rateFetchedAt: Number(p.rateFetchedAt) || null,
+    rateEdited: !!p.rateEdited,
+  };
+  if (currency === "GBP") { out.rate = 1; out.gbp = amount; out.rateSource = "Paid in pounds"; out.rateEdited = false; }
+  return out;
+}
+async function delKey(store, k) { if (typeof store.delete === "function") await store.delete(k); else await store.set(k, ""); }
+// Live rate, 1 <cur> = x GBP. Cached 10 minutes so every staff phone sees the same rate.
+async function fxRate(store, cur) {
+  if (!CURRENCIES.includes(cur)) return { ok: false, error: "unknown currency" };
+  if (cur === "GBP") return { ok: true, cur, rate: 1, source: "Paid in pounds", asOf: Date.now(), fetchedAt: Date.now() };
+  let cache = {}; try { cache = JSON.parse((await store.get("fxcache")) || "{}"); } catch {}
+  if (cache[cur] && Date.now() - cache[cur].fetchedAt < FX_CACHE_MS) return Object.assign({ ok: true, cached: true }, cache[cur]);
+  const get = globalThis.__FX_FETCH__ || fetch;
+  let out = null;
+  try {
+    const r = await get("https://open.er-api.com/v6/latest/" + cur, { signal: AbortSignal.timeout(6000) });
+    const j = await r.json();
+    if (j && j.result === "success" && j.rates && j.rates.GBP) out = { cur, rate: j.rates.GBP, source: "ExchangeRate-API (open.er-api.com) mid-market rate", asOf: (j.time_last_update_unix || 0) * 1000 || Date.now() };
+  } catch {}
+  if (!out) try {
+    const r = await get("https://api.frankfurter.app/latest?from=" + cur + "&to=GBP", { signal: AbortSignal.timeout(6000) });
+    const j = await r.json();
+    if (j && j.rates && j.rates.GBP) out = { cur, rate: j.rates.GBP, source: "European Central Bank reference rate (Frankfurter)", asOf: Date.parse(j.date + "T16:00:00Z") || Date.now() };
+  } catch {}
+  if (!out) return cache[cur] ? Object.assign({ ok: true, stale: true }, cache[cur]) : { ok: false, error: "No live rate available. Type the rate from your bank or card app." };
+  out.fetchedAt = Date.now(); cache[cur] = out; await store.set("fxcache", JSON.stringify(cache));
+  return Object.assign({ ok: true }, out);
+}
 
 // ---------------- push notifications (Web Push, VAPID)
 async function sendPush(store, alert) {

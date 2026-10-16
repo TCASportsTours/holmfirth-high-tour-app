@@ -130,3 +130,13 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Quiz leaderboard** (TCA): **Unlock now**, **Lock now**, and **Automatic** (back to the scheduled time).
 - The leaderboard was wiped once with this release (`QUIZ_RESET_ID`); change the id to wipe it again on a future deploy, or use Admin → Clear quiz scores.
 
+
+## v17: tour expenses (TCA Tours staff)
+
+- **More → Expenses** (TCA Tours staff and admin only; teachers don't see it). **Add an expense**: staff member's name (required; remembered on that phone), what it was for, type, paid by, date of the expense, **currency** (USD, GBP, EUR, CAD), amount, and the **conversion rate to pounds**, plus receipt photos or PDFs (up to 6; photos are shrunk on the phone).
+- The rate is filled in with the **live rate at that moment**, from ExchangeRate-API (open.er-api.com), with the European Central Bank rate (Frankfurter) as a fallback; it's cached for 10 minutes. Staff can type the exact rate from their bank or card app instead, and the record says which was used. The £ amount is worked out as amount × rate, rounded to the penny, and shown as a sum.
+- **The date and time submitted is stamped by the server**, not the phone, and shown in New York and UK time. Each expense gets a Ref (EXP-001, EXP-002…).
+- **Spreadsheet (.xlsx)**: every expense, with the £ column as a formula (amount × rate), a total, and a "By staff member" sheet. **Receipts (.zip)**: every receipt file, named by Ref and staff member to match the spreadsheet. Each receipt can also be downloaded on its own.
+- Expenses need signal to submit; if there is none, the form keeps what was typed so it can be sent later.
+- Admin → Clear test data → **Clear expenses & receipts** (download them first).
+- Receipts are stored in Netlify Blobs (keys `exp/<id>`, `rcpt/<id>/<n>`), and are only returned with the TCA Tours or admin password.
