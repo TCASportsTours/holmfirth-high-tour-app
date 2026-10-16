@@ -117,3 +117,10 @@ Known limits (by design): students sign in without a password, so someone could 
 - **This release signs every phone out once**: the next time any phone opens the app it returns to the launch page (students, teachers, TCA). To do this again with a future release, change `RESET_VERSION` in `public/index.html`.
 - **Admin → Clear test data → Sign everyone out (all phones)**: signs every phone out (within a minute if the app is open, otherwise next time it's opened) and clears student sign-ins, sign-in history and alert registrations on the server, so every name is free to choose again.
 
+## v14: NYC Quiz
+
+- **Students** (only): More → **NYC Quiz** opens `public/quiz.html` (NYC Quiz v4, unchanged apart from one hook that passes the final score to the app) full-screen, with a Close button.
+- When a student finishes, the score is saved against their sign-in (their phone's token is required, so scores can't be posted for someone else). If there's no signal it is kept on the phone and sent later.
+- **TCA Tours staff**: More → **Quiz leaderboard** — who has done it, ranked on first try or best score, with attempts, correct answers and who hasn't done it yet. Teachers don't see the quiz or the leaderboard.
+- Admin → Clear test data → **Clear quiz scores**.
+

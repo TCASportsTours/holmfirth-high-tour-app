@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v13  |  15 October 2026 (v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v14  |  16 October 2026 (v14: NYC Quiz for students + TCA leaderboard; v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v13">
+<meta name="version" content="v14">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -241,6 +241,17 @@
   .modal[data-locked="1"] .sheetx{display:none}
   .pickhead{position:sticky;top:-22px;background:var(--white);margin:-22px -18px 0;padding:22px 18px 8px;z-index:2;border-bottom:1px solid var(--hairline)}
   .sheet::before{content:"";position:absolute;left:0;top:0;width:100%;height:3px;background:var(--gold)}
+  .quizwrap{position:absolute;inset:0;z-index:35;background:var(--ink);display:none;flex-direction:column}
+  .quizwrap.on{display:flex}
+  .quizbar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px 16px;background:var(--ink);color:#fff}
+  .quizbar b{flex:1;font-family:var(--display);font-size:20px;font-weight:600}
+  .quizbar button{border:0;background:rgba(255,255,255,.1);color:#fff;padding:9px 12px;font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:6px}
+  .quizwrap iframe{flex:1;width:100%;border:0;background:#faf9f7}
+  .lb{width:100%;border-collapse:collapse;background:var(--white);font-size:13.5px}
+  .lb th{font-family:var(--display);font-weight:600;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);text-align:left;padding:8px 8px;border-bottom:2px solid var(--gold)}
+  .lb td{padding:9px 8px;border-bottom:1px solid var(--hairline);vertical-align:top}
+  .lb .rk{font-family:var(--display);font-weight:600;font-size:18px;width:28px}
+  .lb .sc{font-family:var(--display);font-weight:600;font-size:18px;white-space:nowrap}
   .toast{position:absolute;left:16px;right:16px;bottom:82px;background:var(--ink);color:#fff;padding:12px 14px;font-size:14px;z-index:30;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
   .toast.on{opacity:1;transform:none}
   .offline{background:var(--charcoal);color:#fff;font-size:12px;padding:6px 16px;display:none;text-align:center}
@@ -277,13 +288,14 @@
   </nav>
 
   <div class="modal" id="modal" onclick="if(event.target===this&&this.dataset.locked!=='1')closeModal()"><div class="sheetwrap"><button class="sheetx" onclick="closeModal()" aria-label="Close"><i class="ti ti-x"></i></button><div class="sheet" id="modalBody"></div></div></div>
+  <div class="quizwrap" id="quizwrap"><div class="quizbar"><b>NYC Quiz</b><button onclick="closeQuiz()" aria-label="Close the quiz"><i class="ti ti-x"></i> Close</button></div><iframe id="quizframe" title="NYC Quiz"></iframe></div>
   <div class="toast" id="toast"></div>
 </div>
 
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v13 · 15 Oct 2026';
+var BUILD = 'v14 · 16 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -521,6 +533,53 @@ function kickStudent(id,name){
   fetch(API+'?type=kick',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({sid:id})})
     .then(function(r){ if(r.ok){ toast(name+' signed out'); loadWho(); } else toast('Could not sign out ('+r.status+')'); }).catch(function(){ toast('Needs signal'); });
 }
+/* ---------- NYC QUIZ (students) ---------- */
+function openQuiz(){
+  var f=$('quizframe'); if(!f.getAttribute('src')) f.setAttribute('src','quiz.html');
+  $('quizwrap').classList.add('on');
+}
+function closeQuiz(){ $('quizwrap').classList.remove('on'); }
+function quizPending(){ try{ return JSON.parse(lsGet('hny_quiz_pending')||'[]'); }catch(e){ return []; } }
+function sendQuizScores(){
+  var list=quizPending(); if(!list.length||!mySid())return;
+  var r=list[0];
+  fetch(API+'?type=quizscore',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({sid:mySid(),token:deviceToken()},r))})
+    .then(function(x){ if(x.ok||x.status===400||x.status===403){ var l=quizPending(); l.shift(); lsSet('hny_quiz_pending',l.length?JSON.stringify(l):null); if(x.ok) toast('Quiz score saved: '+r.score+' points'); if(l.length) sendQuizScores(); } })
+    .catch(function(){});
+}
+window.addEventListener('message',function(e){
+  if(e.origin!==location.origin||!e.data||e.data.type!=='hny-quiz'||!mySid())return;
+  var d=e.data, rec={score:d.score,max:d.max,correct:d.correct,total:d.total,streak:d.streak,rounds:d.rounds};
+  var l=quizPending(); l.push(rec); lsSet('hny_quiz_pending',JSON.stringify(l.slice(-5))); sendQuizScores();
+});
+/* ---------- QUIZ LEADERBOARD (TCA Tours staff) ---------- */
+var LBS={sort:'first'};
+function openLeaderboard(){ window._lb=null; paintLeaderboard(false); loadLeaderboard(); }
+function loadLeaderboard(){
+  fetch(API+'?type=quiz',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ window._lb=j; if($('lbBox')) paintLeaderboard(true); })
+    .catch(function(){ toast('Needs signal to load the leaderboard'); });
+}
+function paintLeaderboard(keep){
+  var j=window._lb, html='<p class="label">TCA Tours · NYC Quiz</p><h2>Quiz <em>leaderboard</em></h2><div id="lbBox">';
+  if(!j) html+='<div class="card"><p class="small muted">Loading…</p></div>';
+  else if(!j.ok) html+='<div class="card"><p class="small">'+esc(j.error||'Not allowed')+'</p></div>';
+  else {
+    var done=j.rows.filter(function(r){return r.attempts;}), notyet=j.rows.filter(function(r){return !r.attempts;});
+    var key=LBS.sort==='best'?'best':'first';
+    done.sort(function(a,b){ return (b[key].score-a[key].score)||((a[key].at||0)-(b[key].at||0)); });
+    var max=done.length?done[0][key].max:0;
+    html+='<div class="tiles" style="grid-template-columns:1fr 1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+done.length+'</b><span>have done it</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+notyet.length+'</b><span>not yet</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+(done.length?Math.round(done.reduce(function(t,r){return t+r[key].score;},0)/done.length):'—')+'</b><span>average</span></div></div>';
+    html+='<div class="seg" style="margin-top:12px"><button class="'+(LBS.sort==='first'?'on':'')+'" onclick="LBS.sort=\'first\';paintLeaderboard(true)">First try</button><button class="'+(LBS.sort==='best'?'on':'')+'" onclick="LBS.sort=\'best\';paintLeaderboard(true)">Best score</button></div>'+
+      '<p class="small muted" style="margin-bottom:8px">'+(LBS.sort==='first'?'Ranked on each student\'s first attempt — the fairest, since replays show the answers.':'Ranked on each student\'s best attempt.')+(max?' Out of '+max+' points.':'')+'</p>';
+    if(done.length) html+='<table class="lb"><tr><th>#</th><th>Student</th><th>Score</th><th>Tries</th></tr>'+done.map(function(r,i){ var t=r[key];
+      return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b><div class="small muted">'+esc(r.group||'')+' · '+t.correct+'/'+t.total+' correct · '+esc(ago(t.at))+'</div></td><td class="sc">'+t.score+'</td><td>'+r.attempts+(r.attempts>1?'<div class="small muted">first '+r.first.score+' · best '+r.best.score+'</div>':'')+'</td></tr>'; }).join('')+'</table>';
+    else html+='<div class="card"><p class="small">Nobody has finished the quiz yet. It\'s under More → NYC Quiz on students\' phones.</p></div>';
+    if(notyet.length) html+='<p class="label">Not done yet · '+notyet.length+'</p><div class="card"><p class="small">'+notyet.map(function(r){return esc(r.name);}).join(', ')+'</p></div>';
+    html+='<p class="small muted" style="margin-top:10px">Scores save when a student reaches the end of the quiz while signed in as themselves. <button class="linkbtn" onclick="loadLeaderboard()">Refresh</button></p>';
+  }
+  html+='</div>';
+  if(keep) rerenderPage(html); else openPage(html);
+}
 function teacherReset(){
   openModal('<p class="label">Teacher only</p><h2 style="font-size:26px">Change the <em>student</em></h2><p class="small muted" style="margin:6px 0 10px">A teacher enters the staff password to sign this phone out.</p><input class="field" id="resetPass" type="password" placeholder="Teacher or TCA password"><div class="err" id="resetErr">That password isn\'t right.</div>'+
     '<button class="btn dark" style="margin-top:10px" onclick="teacherResetCheck()">Sign this phone out</button><button class="btn ghost" onclick="closeModal()">Cancel</button>');
@@ -724,7 +783,7 @@ function subwaySVG(){
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
   var html='<p class="label">Signed in as '+esc(mySid()?lsGet(LS.sname):role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
-  html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
+  html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+(role==='student'?tile('ti-trophy','NYC Quiz','How well do you know the city?','openQuiz()','dark'):'')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
   if(isStaff()){
@@ -734,7 +793,7 @@ function renderMore(){
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
       tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
       tile('ti-ticket','Tickets & entry','Who has them, where to go','openTickets()')+tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
-      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
+      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark')+tile('ti-trophy','Quiz leaderboard','Who has done it & scores','openLeaderboard()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
   html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
@@ -849,7 +908,7 @@ function openWeather(){
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
   var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||''; else if(mySid()) h['x-device']=deviceToken();
-  if(mySid()) checkKicked(); else checkReset();
+  if(mySid()){ checkKicked(); sendQuizScores(); } else checkReset();
   sayHello();
   fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();

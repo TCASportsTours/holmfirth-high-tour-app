@@ -15,6 +15,8 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour?type=sessions       -> TCA/admin: who has signed in, when last seen
 //   POST /tour?type=kick {sid}     -> TCA/admin: sign a student's phones out
 //   POST /tour?type=resetall       -> admin: sign EVERY phone out (students and staff) and clear sign-in records
+//   POST /tour?type=quizscore      -> a signed-in student's phone saves a finished NYC Quiz score
+//   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -74,7 +76,7 @@ async function deviceOk(store, sid, token) {
 }
 
 const MERGE = new Set(["roomnums", "register"]);
-const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions"]);
+const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz"]);
 const SEEN_EVERY_MS = 5 * 60000;   // only write "last seen" every 5 minutes per person
 
 function env(name) {
@@ -133,7 +135,7 @@ export default async (req) => {
   if (req.method === "DELETE") {
     if (!staffPass) return notConfigured();
     if (!isAdmin) return denied();
-    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}" };
+    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}", quiz: "{}" };
     if (!(type in CLEARABLE)) return reply(headers, 400, { ok: false, error: "refused: that slot can't be cleared" });
     await store.set(key, CLEARABLE[type]);
     return reply(headers, 200, { ok: true, cleared: type });
@@ -175,6 +177,21 @@ export default async (req) => {
         ses[who] = cur; await store.set("sessions", JSON.stringify(ses));
       }
       return reply(headers, 200, { ok: true });
+    }
+    // NYC Quiz: only a phone signed in as that student can save that student's score
+    if (type === "quizscore") {
+      const sid = String((parsed && parsed.sid) || "");
+      if (!(await deviceOk(store, sid, parsed.token))) return reply(headers, 403, { ok: false, error: "sign in as a student first" });
+      const n = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= 0 && v <= max ? v : null; };
+      const max = n(parsed.max, 1000), score = n(parsed.score, 1000), total = n(parsed.total, 100), correct = n(parsed.correct, 100), streak = n(parsed.streak, 100);
+      if (max === null || score === null || score > max || total === null || correct === null || correct > total) return reply(headers, 400, { ok: false, error: "bad score" });
+      const rounds = Array.isArray(parsed.rounds) ? parsed.rounds.slice(0, 10).map((x) => n(x, 1000) || 0) : [];
+      const quiz = safeObj(await store.get("quiz"));
+      const rec = quiz[sid] || { attempts: [] };
+      rec.attempts.push({ score, max, correct, total, streak: streak || 0, rounds, at: Date.now() });
+      rec.attempts = rec.attempts.slice(-20);
+      quiz[sid] = rec; await store.set("quiz", JSON.stringify(quiz));
+      return reply(headers, 200, { ok: true, attempts: rec.attempts.length });
     }
     if (type === "kick") {              // TCA Tours / admin signs a student's phones out
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
@@ -277,6 +294,18 @@ export default async (req) => {
     if (!staffPass) return notConfigured();
     if (!isStaff) return denied();
     if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca, at: Date.now() });
+    if (type === "quiz") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      const [pub, priv, qz] = await Promise.all(["current", "private", "quiz"].map((x) => store.get(x)));
+      let P = null, U = null; try { P = JSON.parse(priv || "null"); } catch {} try { U = JSON.parse(pub || "null"); } catch {}
+      const quiz = safeObj(qz), labels = {}; ((U && U.students) || []).forEach((x) => (labels[x.id] = x.label));
+      const rows = ((P && P.students) || []).map((x) => {
+        const a = (quiz[x.id] && quiz[x.id].attempts) || [];
+        const best = a.reduce((m, t) => (!m || t.score > m.score ? t : m), null);
+        return { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group, attempts: a.length, first: a[0] || null, best, last: a[a.length - 1] || null };
+      });
+      return reply(headers, 200, { ok: true, at: Date.now(), rows });
+    }
     if (type === "sessions") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
       const [pub, priv, se, c, k, ps] = await Promise.all(["current", "private", "sessions", "claims", "kicked", "pushsubs"].map((x) => store.get(x)));
