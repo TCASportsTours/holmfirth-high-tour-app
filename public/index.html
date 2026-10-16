@@ -610,7 +610,7 @@ function paintLeaderboard(keep){
       '<p class="small muted" style="margin-bottom:8px">'+(LBS.sort==='first'?'Ranked on each student\'s first attempt — the fairest, since replays show the answers.':'Ranked on each student\'s best attempt.')+(max?' Out of '+max+' points.':'')+'</p>';
     if(done.length) html+='<table class="lb"><tr><th>#</th><th>Student</th><th>Score</th><th>Tries</th></tr>'+done.map(function(r,i){ var t=r[key];
       return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b><div class="small muted">'+esc(r.group||'')+' · '+t.correct+'/'+t.total+' correct · '+esc(ago(t.at))+'</div></td><td class="sc">'+t.score+'</td><td>'+r.attempts+(r.attempts>1?'<div class="small muted">first '+r.first.score+' · best '+r.best.score+'</div>':'')+'</td></tr>'; }).join('')+'</table>';
-    else html+='<div class="card"><p class="small">Nobody has finished the quiz yet. It\'s under More → NYC Quiz on students\' phones.</p></div>';
+    else html+='<div class="card"><p class="small">Nobody has finished the quiz yet. It\'s on the Quiz tab on students\' phones.</p></div>';
     if(notyet.length) html+='<p class="label">Not done yet · '+notyet.length+'</p><div class="card"><p class="small">'+notyet.map(function(r){return esc(r.name);}).join(', ')+'</p></div>';
     html+='<p class="small muted" style="margin-top:10px">Scores save when a student reaches the end of the quiz while signed in as themselves. <button class="linkbtn" onclick="loadLeaderboard()">Refresh</button></p>';
   }
