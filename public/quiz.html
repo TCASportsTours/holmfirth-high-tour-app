@@ -173,7 +173,10 @@ footer{flex:0 0 auto;background:#fff;border-top:1px solid var(--line);
 .revq.ok{border-left:4px solid var(--right)} .revq.no{border-left:4px solid var(--wrong)}
 .revq .mk{display:inline-block;width:22px;font-weight:700} .revq.ok .mk{color:var(--right)} .revq.no .mk{color:var(--wrong)}
 .ver{font-size:11px;letter-spacing:.14em;color:var(--grey);margin-top:18px;font-family:var(--head);font-weight:600;text-transform:uppercase}
+/* Inside the Holmfirth NYC app the app header already shows the TCA Tours logo */
+html.embedded .lock, html.embedded .brandrow{display:none}
 </style>
+<script>try{ if(window.self!==window.top) document.documentElement.classList.add('embedded'); }catch(e){ document.documentElement.classList.add('embedded'); }</script>
 </head>
 <body>
 
