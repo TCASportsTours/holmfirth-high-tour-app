@@ -124,3 +124,9 @@ Known limits (by design): students sign in without a password, so someone could 
 - **TCA Tours staff**: More → **Quiz leaderboard** — who has done it, ranked on first try or best score, with attempts, correct answers and who hasn't done it yet. Teachers don't see the quiz or the leaderboard.
 - Admin → Clear test data → **Clear quiz scores**.
 
+## v16: quiz lock
+
+- The NYC Quiz is **locked until the final evening in New York: Thursday 29 October, 5pm New York time** (`QUIZ_OPENS_AT` in `netlify/functions/tour.mjs`). Students see a locked screen with a countdown on the Quiz tab; scores can't be saved while it's locked.
+- **Quiz leaderboard** (TCA): **Unlock now**, **Lock now**, and **Automatic** (back to the scheduled time).
+- The leaderboard was wiped once with this release (`QUIZ_RESET_ID`); change the id to wipe it again on a future deploy, or use Admin → Clear quiz scores.
+

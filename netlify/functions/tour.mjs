@@ -17,6 +17,8 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=resetall       -> admin: sign EVERY phone out (students and staff) and clear sign-in records
 //   POST /tour?type=quizscore      -> a signed-in student's phone saves a finished NYC Quiz score
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
+//   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
+//   POST /tour?type=quizlock       -> TCA/admin: { mode: "auto" | "open" | "closed" }
 //
 //   STAFF ONLY (header  x-staff-key: <STAFF_PASSWORD (teachers) or TCA_PASSWORD (TCA Tours staff)>)
 //   GET  /tour?type=auth           -> 200 if the password is right (used by the staff sign-in)
@@ -38,6 +40,19 @@ import { getStore } from "@netlify/blobs";
 const SUBWAY_FEED = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/camsys%2Fsubway-alerts";
 const SUBWAY_LINES = ["1", "2", "3", "A", "C", "E", "7", "R", "W"]; // the lines on our itinerary
 const SUBWAY_CACHE_MS = 120000;
+
+// ---- NYC Quiz: locked until the final evening in New York (Thu 29 Oct 2026, 5pm EDT = 21:00 UTC)
+const QUIZ_OPENS_AT = Date.UTC(2026, 9, 29, 21, 0);
+// Changing this id wipes the leaderboard once, on the next request after a deploy
+const QUIZ_RESET_ID = "2026-10-16-launch";
+async function quizReset(store) {
+  if ((await store.get("quizResetId")) !== QUIZ_RESET_ID) { await store.set("quiz", "{}"); await store.set("quizResetId", QUIZ_RESET_ID); }
+}
+async function quizState(store) {
+  let mode = "auto"; try { mode = (JSON.parse((await store.get("quizlock")) || "{}").mode) || "auto"; } catch {}
+  const open = mode === "open" || (mode === "auto" && Date.now() >= QUIZ_OPENS_AT);
+  return { ok: true, open, mode, opensAt: QUIZ_OPENS_AT, now: Date.now() };
+}
 
 // ---- hardening limits
 const LOCK_AFTER = 8, LOCK_WINDOW_MS = 15 * 60000;          // 8 wrong passwords in 15 min -> locked out for 15 min
@@ -179,7 +194,16 @@ export default async (req) => {
       return reply(headers, 200, { ok: true });
     }
     // NYC Quiz: only a phone signed in as that student can save that student's score
+    if (type === "quizlock") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      const mode = String((parsed && parsed.mode) || "");
+      if (!["auto", "open", "closed"].includes(mode)) return reply(headers, 400, { ok: false, error: "bad mode" });
+      await store.set("quizlock", JSON.stringify({ mode, at: Date.now() }));
+      return reply(headers, 200, await quizState(store));
+    }
     if (type === "quizscore") {
+      await quizReset(store);
+      if (!(await quizState(store)).open) return reply(headers, 423, { ok: false, error: "the quiz is locked" });
       const sid = String((parsed && parsed.sid) || "");
       if (!(await deviceOk(store, sid, parsed.token))) return reply(headers, 403, { ok: false, error: "sign in as a student first" });
       const n = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= 0 && v <= max ? v : null; };
@@ -296,6 +320,7 @@ export default async (req) => {
     if (type === "auth") return reply(headers, 200, { ok: true, admin: isAdmin, tca: isTca, at: Date.now() });
     if (type === "quiz") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      await quizReset(store);
       const [pub, priv, qz] = await Promise.all(["current", "private", "quiz"].map((x) => store.get(x)));
       let P = null, U = null; try { P = JSON.parse(priv || "null"); } catch {} try { U = JSON.parse(pub || "null"); } catch {}
       const quiz = safeObj(qz), labels = {}; ((U && U.students) || []).forEach((x) => (labels[x.id] = x.label));
@@ -304,7 +329,7 @@ export default async (req) => {
         const best = a.reduce((m, t) => (!m || t.score > m.score ? t : m), null);
         return { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group, attempts: a.length, first: a[0] || null, best, last: a[a.length - 1] || null };
       });
-      return reply(headers, 200, { ok: true, at: Date.now(), rows });
+      return reply(headers, 200, { ok: true, at: Date.now(), rows, state: await quizState(store) });
     }
     if (type === "sessions") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
@@ -339,6 +364,7 @@ export default async (req) => {
     const kicked = safeObj(k);
     return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
+  if (type === "quizstate") return reply(headers, 200, await quizState(store));
   if (type === "pushkey") return reply(headers, 200, { ok: true, key: env("VAPID_PUBLIC_KEY") || null });
   if (type === "subway") return reply(headers, 200, await subwayStatus(store));
   if (type && type !== "alerts") return reply(headers, 400, { ok: false, error: "unknown slot" });

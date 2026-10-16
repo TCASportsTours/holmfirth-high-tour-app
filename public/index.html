@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!--
   TCA Tours — Holmfirth High · New York 2026 — tour app
-  Version: v15  |  16 October 2026 (v15: Quiz is its own tab for students; v14: NYC Quiz for students + TCA leaderboard; v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
+  Version: v16  |  16 October 2026 (v16: quiz locked until the final evening + manual unlock; v15: Quiz is its own tab for students; v14: NYC Quiz for students + TCA leaderboard; v13: reset all phones to the launch page; v12: staff tickets & entry; v11: close button on every pop-up, pinned name search; v10: TCA can sign students out; who's signed in; v9: hardened after break-it testing; v8: student accounts, alerts to chosen students, add-to-home-screen prompt; v7: offline mode, push alerts, live subway status, register delete/export; v6: individual teacher accounts, combined Medical/dietary/SEND, admin layout fixes; v5: full packing list by category, MSG bag info, Liz Jackson contact; v4: What to take tab, staff registers, TCA-only rows; v3: website links; v2: Teacher + TCA Tours staff sign-ins)
   Built to the TCA Tours brand book v1: charcoal, gold, Cormorant Garamond + Work Sans, square corners.
   Public data: js/tour-default.js (bundled) or the published feed. Staff data: password-protected feed only.
 -->
@@ -9,7 +9,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="version" content="v15">
+<meta name="version" content="v16">
 <title>Holmfirth High · New York 2026</title>
 <meta name="description" content="TCA Tours — itinerary, getting around, safety tips and help for the Holmfirth High New York trip.">
 <meta name="theme-color" content="#2A292B">
@@ -246,6 +246,11 @@
   .tabbar.six .tab.quiztab{display:flex}
   .tabbar.six .tab{font-size:10.5px}
   #s-quiz{padding:0}
+  .quizlock{margin:auto;padding:28px 22px;text-align:center;max-width:360px}
+  .quizlock .ic{width:72px;height:72px;margin:0 auto 18px;display:grid;place-items:center;background:var(--ink);color:var(--gold);font-size:34px}
+  .quizlock h2{font-size:32px}
+  .quizlock .when{font-family:var(--display);font-size:22px;font-weight:600;margin:12px 0 4px}
+  .quizlock .cdn{display:inline-block;margin-top:14px;padding:8px 14px;background:var(--gold);color:var(--charcoal);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase}
   #s-quiz.active{display:flex;flex-direction:column;height:100%}
   #s-quiz iframe{flex:1;width:100%;border:0;background:#faf9f7;min-height:0}
   .screens.quizmode{overflow:hidden}
@@ -280,7 +285,7 @@
     <section class="screen" id="s-trip"></section>
     <section class="screen" id="s-around"></section>
     <section class="screen" id="s-pack"></section>
-    <section class="screen" id="s-quiz"><iframe id="quizframe" title="NYC Quiz"></iframe></section>
+    <section class="screen" id="s-quiz"><div class="quizlock" id="quizlock" style="display:none"></div><iframe id="quizframe" title="NYC Quiz"></iframe></section>
     <section class="screen" id="s-more"></section>
     <section class="screen" id="s-page"></section>
   </main>
@@ -301,7 +306,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v15 · 16 Oct 2026';
+var BUILD = 'v16 · 16 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -543,7 +548,27 @@ function kickStudent(id,name){
 }
 /* ---------- NYC QUIZ (students) ---------- */
 /* Quiz tab (students only). The quiz page loads once and keeps its place when you switch tabs. */
-function renderQuiz(){ var f=$('quizframe'); if(!f.getAttribute('src')) f.setAttribute('src','quiz.html'); }
+var QUIZ=null;   // { open, mode, opensAt } from the server; locked until the final evening unless TCA unlocks it
+function loadQuizState(){
+  return fetch(API+'?type=quizstate',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    var was=QUIZ&&QUIZ.open; QUIZ=j; lsSet('hny_quizstate',JSON.stringify(j));
+    if($('s-quiz').classList.contains('active')&&was!==j.open) renderQuiz();
+  }).catch(function(){ if(!QUIZ){ try{ QUIZ=JSON.parse(lsGet('hny_quizstate')||'null'); }catch(e){} } });
+}
+function quizOpen(){ var q=QUIZ; if(!q) return false; return q.mode==='open'||(q.mode!=='closed'&&Date.now()>=q.opensAt); }
+function quizWhen(ts){ var d=new Date(ts), day=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:NY});
+  var t=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:NY}).replace(':00','').replace(' ','').toLowerCase(); return day+' · '+t; }
+function renderQuiz(){
+  var f=$('quizframe'), lock=$('quizlock');
+  if(quizOpen()){ lock.style.display='none'; f.style.display=''; if(!f.getAttribute('src')) f.setAttribute('src','quiz.html'); return; }
+  f.style.display='none'; f.removeAttribute('src'); lock.style.display='block';
+  var q=QUIZ, auto=q&&q.mode!=='closed', gap=q?humanGap(q.opensAt-Date.now()):null;
+  lock.innerHTML='<div class="ic"><i class="ti ti-lock"></i></div><p class="label" style="justify-content:center">NYC Quiz</p><h2>Not <em>yet</em></h2>'+
+    (q&&auto?'<p class="muted" style="margin-top:10px">The quiz unlocks on your final evening in New York.</p><p class="when">'+esc(quizWhen(q.opensAt))+'</p><p class="small muted">New York time</p>'+(q.opensAt>Date.now()?'<span class="cdn">'+esc(gap.n)+' '+esc(gap.l)+'</span>':'')
+      :'<p class="muted" style="margin-top:10px">'+(q?'The quiz is locked for now. Tony will let you know when it opens.':'Needs signal to check whether the quiz is open.')+'</p>')+
+    '<p class="small muted" style="margin-top:18px">Keep exploring — every question is about things you\'ll see this week.</p>';
+  if(!q) loadQuizState().then(function(){ if(QUIZ) renderQuiz(); });
+}
 function openQuiz(){ go('quiz'); }
 function showQuizTab(){ $('tabbar').classList.toggle('six',role==='student'); }
 function quizPending(){ try{ return JSON.parse(lsGet('hny_quiz_pending')||'[]'); }catch(e){ return []; } }
@@ -551,7 +576,7 @@ function sendQuizScores(){
   var list=quizPending(); if(!list.length||!mySid())return;
   var r=list[0];
   fetch(API+'?type=quizscore',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({sid:mySid(),token:deviceToken()},r))})
-    .then(function(x){ if(x.ok||x.status===400||x.status===403){ var l=quizPending(); l.shift(); lsSet('hny_quiz_pending',l.length?JSON.stringify(l):null); if(x.ok) toast('Quiz score saved: '+r.score+' points'); if(l.length) sendQuizScores(); } })
+    .then(function(x){ if(x.status===423) toast('The quiz is locked, so this score wasn\'t saved'); if(x.ok||x.status===400||x.status===403||x.status===423){ var l=quizPending(); l.shift(); lsSet('hny_quiz_pending',l.length?JSON.stringify(l):null); if(x.ok) toast('Quiz score saved: '+r.score+' points'); if(l.length) sendQuizScores(); } })
     .catch(function(){});
 }
 window.addEventListener('message',function(e){
@@ -571,6 +596,11 @@ function paintLeaderboard(keep){
   if(!j) html+='<div class="card"><p class="small muted">Loading…</p></div>';
   else if(!j.ok) html+='<div class="card"><p class="small">'+esc(j.error||'Not allowed')+'</p></div>';
   else {
+    var st=j.state||{}, mode=st.mode||'auto';
+    html+='<div class="card rule"><div class="cardhead"><h3 style="font-size:20px">'+(st.open?'Quiz is <em>unlocked</em>':'Quiz is <em>locked</em>')+'</h3><span class="tag '+(st.open?'gold':'alarm')+'">'+(st.open?'Open':'Locked')+'</span></div>'+
+      '<p class="small muted" style="margin:4px 0 10px">'+(mode==='auto'?(st.open?'Opened automatically on the final evening ('+esc(quizWhen(st.opensAt))+' NY).':'Opens automatically '+esc(quizWhen(st.opensAt))+' New York time.'):mode==='open'?'Unlocked by hand. Students can play now.':'Locked by hand. It won\'t open automatically until you choose Automatic again.')+'</p>'+
+      '<div class="btnrow">'+(st.open?'<button class="btn line" onclick="setQuizLock(\'closed\')"><i class="ti ti-lock"></i> Lock now</button>':'<button class="btn gold" onclick="setQuizLock(\'open\')"><i class="ti ti-lock-open"></i> Unlock now</button>')+
+      (mode!=='auto'?'<button class="btn line" onclick="setQuizLock(\'auto\')"><i class="ti ti-clock"></i> Automatic</button>':'')+'</div></div>';
     var done=j.rows.filter(function(r){return r.attempts;}), notyet=j.rows.filter(function(r){return !r.attempts;});
     var key=LBS.sort==='best'?'best':'first';
     done.sort(function(a,b){ return (b[key].score-a[key].score)||((a[key].at||0)-(b[key].at||0)); });
@@ -586,6 +616,13 @@ function paintLeaderboard(keep){
   }
   html+='</div>';
   if(keep) rerenderPage(html); else openPage(html);
+}
+function setQuizLock(mode){
+  var msg={open:'Unlock the NYC Quiz for every student now?',closed:'Lock the NYC Quiz? Students won\'t be able to play or save scores.',auto:'Go back to automatic? The quiz will be '+(Date.now()>=(window._lb&&window._lb.state&&window._lb.state.opensAt||0)?'open (the final evening has started).':'locked until the final evening.')}[mode];
+  if(!confirm(msg))return;
+  fetch(API+'?type=quizlock',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({mode:mode})})
+    .then(function(r){ if(r.ok){ toast(mode==='open'?'Quiz unlocked — students\' phones update within a minute':mode==='closed'?'Quiz locked':'Quiz back on automatic'); loadLeaderboard(); } else toast('Could not change it ('+r.status+')'); })
+    .catch(function(){ toast('Needs signal'); });
 }
 function teacherReset(){
   openModal('<p class="label">Teacher only</p><h2 style="font-size:26px">Change the <em>student</em></h2><p class="small muted" style="margin:6px 0 10px">A teacher enters the staff password to sign this phone out.</p><input class="field" id="resetPass" type="password" placeholder="Teacher or TCA password"><div class="err" id="resetErr">That password isn\'t right.</div>'+
@@ -614,7 +651,7 @@ function signOut(){
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); showQuizTab(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
+function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(role==='student') loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -916,7 +953,7 @@ function openWeather(){
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
   var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||''; else if(mySid()) h['x-device']=deviceToken();
-  if(mySid()){ checkKicked(); sendQuizScores(); } else checkReset();
+  if(mySid()){ checkKicked(); sendQuizScores(); loadQuizState(); } else checkReset();
   sayHello();
   fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
