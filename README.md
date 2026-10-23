@@ -146,3 +146,8 @@ Known limits (by design): students sign in without a password, so someone could 
 - **On tour (TCA Tours staff)**: More → **Add expense** is a submit-only form. Staff can't see the list, totals or other people's expenses. After Submit they see the Ref and the date and time submitted.
 - **Currency**: a searchable list of countries with their currency, e.g. "United Kingdom (GBP)" (`public/js/currencies.js`). Type a country or a currency code. The live rate works for any of them; rates keep 6 significant figures, so small-unit currencies like the yen stay accurate.
 - **admin.html → Expenses · second password**: needs the admin password (step 1) **and** `EXPENSES_PASSWORD` (a Netlify environment variable). It shows the list, totals by staff member, Download spreadsheet (.xlsx), Download all receipts (.zip), Delete, and Clear all. Wrong expenses passwords count towards the 15-minute lockout. The expenses password is kept only for that browser tab (Lock clears it).
+
+## v19: tour playlist + Thursday TCA meetings
+
+- **Tour playlist** for everyone (students, teachers, TCA): a card on Today and a tile on More, opening the Spotify playlist. It comes from the **Links** tab of the App Database: a row with Group = `Playlist` (or any open.spotify.com/playlist link). Change or remove it there and Publish.
+- App Database **v8**: two TCA-only rows on Thursday 29 Oct, Tony meets Yoleida at the DoubleTree Chelsea (12 noon) and Tony meets Kenny at the Moxy Times Square (2pm). Teachers and students never receive them.

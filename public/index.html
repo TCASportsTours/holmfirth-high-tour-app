@@ -262,6 +262,10 @@
   #exCurOpts{max-height:260px;overflow-y:auto;margin-top:6px}
   #exCurOpts button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--hairline);background:#fff;padding:11px 8px;font:15px var(--body);color:var(--charcoal);cursor:pointer}
   #exCurOpts button:hover,#exCurOpts button:focus{background:var(--stone)}
+  a.tile{text-decoration:none;color:inherit}
+  .playlist{display:flex;align-items:center;gap:14px;background:var(--ink);border-color:var(--ink);color:#fff;text-decoration:none}
+  .playlist>i:first-child{font-size:34px;color:var(--gold)} .playlist>span{flex:1} .playlist b{font-family:var(--display);font-size:21px;font-weight:600;display:block}
+  .playlist .small{color:#D9D8DA} .playlist>i:last-child{color:#D9D8DA}
   .lb{width:100%;border-collapse:collapse;background:var(--white);font-size:13.5px}
   .lb th{font-family:var(--display);font-weight:600;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--slate);text-align:left;padding:8px 8px;border-bottom:2px solid var(--gold)}
   .lb td{padding:9px 8px;border-bottom:1px solid var(--hairline);vertical-align:top}
@@ -311,7 +315,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v18 · 16 Oct 2026';
+var BUILD = 'v19 · 23 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -695,6 +699,7 @@ function renderToday(){
     var tomorrow=evs.filter(function(e){return e.day===d+1;});
     if(tomorrow.length) html+='<p class="label">Tomorrow</p>'+dayRows(tomorrow.slice(0,4),evs)+'<button class="btn line" style="margin-top:12px" onclick="go(\'trip\')">Full itinerary</button>';
   }
+  html+=playlistCard();
   if(t['Time Note']) html+='<div class="card rule"><h3 style="font-size:19px">Time difference</h3><p class="small muted" style="margin-top:4px">'+esc(t['Time Note'])+'</p></div>';
   $('s-today').innerHTML=html;
   loadWeather();
@@ -796,7 +801,7 @@ function renderAround(){
     '<div class="card dark" style="margin-top:10px"><h3 style="font-size:20px">Listen for 103rd Street</h3><p class="small" style="margin-top:4px;color:#D9D8DA">On the way back, listen carefully to the announcements to make sure your train stops at 103rd Street. '+bullet(1)+' trains stop there. '+bullet(2)+' '+bullet(3)+' trains only stop at 96th Street — a 10 minute walk.</p></div>'+
     '<p class="label">Our subway lines</p>'+subwaySVG()+
     '<p class="small muted" style="margin-top:8px">Simplified diagram of the lines we use most — not to scale. The A, C, E, R, W and 7 trains on the itinerary are on the official map.</p>';
-  var links=(T.links||[]); if(links.length){ html+='<div style="margin-top:12px">'+links.map(function(l,i){return '<a class="btn '+(i===0?'dark':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>';}).join('')+'</div>'; }
+  var links=(T.links||[]).filter(function(l){ return l!==playlistLink(); }); if(links.length){ html+='<div style="margin-top:12px">'+links.map(function(l,i){return '<a class="btn '+(i===0?'dark':'line')+'" target="_blank" rel="noopener" href="'+esc(l.url)+'"><i class="ti ti-external-link"></i> '+esc(l.label)+'</a>';}).join('')+'</div>'; }
   html+='<div class="card" style="margin-top:14px"><p class="small"><b>Distances:</b> 20 blocks (streets) is about a mile — roughly 20 minutes\' walk.</p></div>';
   $('s-around').innerHTML=html;
 }
@@ -829,12 +834,18 @@ function subwaySVG(){
   return '<div class="subway">'+legend+'<svg viewBox="0 0 340 '+H+'" role="img" aria-label="Simplified map of the 1, 2 and 3 subway lines from 110th Street to South Ferry and Brooklyn">'+s+'</svg></div>';
 }
 
+/* ---------- tour playlist (Links tab row with Group "Playlist") — everyone sees it ---------- */
+function playlistLink(){ return (T.links||[]).filter(function(l){ return /playlist/i.test(l.group||'')||/open\.spotify\.com\/playlist/.test(l.url||''); })[0]||null; }
+function playlistCard(){ var p=playlistLink(); if(!p) return '';
+  return '<a class="card playlist" target="_blank" rel="noopener" href="'+esc(p.url)+'"><i class="ti ti-brand-spotify"></i><span><b>Tour playlist</b><span class="small">Listen on Spotify — the soundtrack to New York</span></span><i class="ti ti-external-link"></i></a>'; }
+
 /* ================= MORE ================= */
 function tile(icon,title,sub,fn,cls){ return '<button class="tile '+(cls||'')+'" onclick="'+fn+'"><i class="ti '+icon+'"></i><b>'+esc(title)+'</b>'+(sub?'<span>'+esc(sub)+'</span>':'')+'</button>'; }
 function renderMore(){
   var html='<p class="label">Signed in as '+esc(mySid()?lsGet(LS.sname):role==='staff'?(lsGet(LS.kind)==='tca'?'TCA Tours staff':(me()?me()+' · '+(myGroup()||'teacher'):'teacher')):'student')+'</p>';
   html+='<div class="tiles">'+tile('ti-urgent','Emergency','911 · hostel · help','openSOS()','alarm')+tile('ti-plane','Flights','Times & terminals','openFlights()');
   (T.more||[]).forEach(function(m,i){ if(isPackTile(m))return; html+=tile(m.icon||'ti-info-circle',m.tile,'','openMore('+i+')'); });
+  if(playlistLink()) html+='<a class="tile" target="_blank" rel="noopener" href="'+esc(playlistLink().url)+'"><i class="ti ti-brand-spotify"></i><b>Tour playlist</b><span>On Spotify</span></a>';
   html+=tile('ti-users','Teachers','Who\'s on the trip','openTeachers()')+tile('ti-cloud','Weather','7-day forecast','openWeather()')+'</div>';
   if(isStaff()){
     var n=P&&P.students?P.students.length:0;

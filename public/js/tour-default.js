@@ -612,7 +612,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e36-5thavenuetherockefellerc",
+   "id": "e38-5thavenuetherockefellerc",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -631,7 +631,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e37-lastminuteshopping",
+   "id": "e39-lastminuteshopping",
    "day": 5,
    "date": "2026-10-29",
    "time": "",
@@ -645,7 +645,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e38-ellensstardustdiner",
+   "id": "e40-ellensstardustdiner",
    "day": 5,
    "date": "2026-10-29",
    "time": "16:15",
@@ -664,7 +664,7 @@ window.TOUR_DEFAULT = {
    ]
   },
   {
-   "id": "e39-coachpickupatthehosteljf",
+   "id": "e41-coachpickupatthehosteljf",
    "day": 5,
    "date": "2026-10-29",
    "time": "19:15",
@@ -678,7 +678,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e40-flynewyorkjfklondonheath",
+   "id": "e42-flynewyorkjfklondonheath",
    "day": 5,
    "date": "2026-10-30",
    "time": "00:20",
@@ -692,7 +692,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e41-arrivelondonheathrow",
+   "id": "e43-arrivelondonheathrow",
    "day": 6,
    "date": "2026-10-30",
    "time": "11:10",
@@ -706,7 +706,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e42-flyheathrowmanchesterba1",
+   "id": "e44-flyheathrowmanchesterba1",
    "day": 6,
    "date": "2026-10-30",
    "time": "13:05",
@@ -720,7 +720,7 @@ window.TOUR_DEFAULT = {
    "links": []
   },
   {
-   "id": "e43-arrivemanchestercoachtos",
+   "id": "e45-arrivemanchestercoachtos",
    "day": 6,
    "date": "2026-10-30",
    "time": "14:20",
@@ -907,6 +907,11 @@ window.TOUR_DEFAULT = {
    "label": "Hostel on Google Maps",
    "url": "https://www.google.com/maps/search/?api=1&query=891+Amsterdam+Ave+New+York+NY+10025",
    "group": "Hostel"
+  },
+  {
+   "label": "Tour playlist on Spotify",
+   "url": "https://open.spotify.com/playlist/1XRLEEOVreCZVA9sQHZ2Yh",
+   "group": "Playlist"
   }
  ],
  "staff": [
