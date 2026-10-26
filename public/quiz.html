@@ -349,7 +349,7 @@ function intro(){
     </div>
     <div class="ver">NYC Quiz · v4</div>
   </div>`);
-  cta('START THE QUIZ',()=>{ Q=QB.map(shuf); i=0;score=0;streak=0;best=0;answered=[]; roundIntro(0); });
+  cta('START THE QUIZ',()=>{ appSay({type:'hny-quiz-start'}); Q=QB.map(shuf); i=0;score=0;streak=0;best=0;answered=[]; roundIntro(0); });
 }
 function roundIntro(r){
   head(false);
@@ -457,7 +457,9 @@ function theAns(a){
   if(a.q.multi) return a.q.multi.ok.map(x=>a.q.o[x]).join(', ');
   return a.q.o[a.q.c];
 }
-/* Holmfirth NYC app: hand the final score to the app (which saves it for the TCA leaderboard). */
+/* Holmfirth NYC app: tell the app the quiz has started, and hand it the final score (saved for the TCA leaderboard). */
+function inApp(){ try{ return window.parent!==window; }catch(e){ return true; } }
+function appSay(m){ try{ if(inApp()) window.parent.postMessage(m, location.origin); }catch(e){} }
 function reportScore(){
   try{ if(window.parent!==window) window.parent.postMessage({type:'hny-quiz', score:score, max:MAX, correct:answered.filter(a=>a.right).length, total:Q.length, streak:best,
     rounds:ROUNDS.map((R,x)=>answered.filter(z=>z.q.r===x).reduce((t,z)=>t+z.pts,0))}, location.origin); }catch(e){}
@@ -502,6 +504,8 @@ function results(){
   restartArm();
 }
 function restartArm(){
+  /* In the app it's one go each: no replay */
+  if(inApp()){ cta('DONE',()=>appSay({type:'hny-quiz-close'})); return; }
   cta('PLAY AGAIN',()=>{
     cta('TAP AGAIN TO WIPE YOUR SCORE',()=>intro(),'purple');
     setTimeout(()=>{ if($('cta').textContent.startsWith('TAP AGAIN')) restartArm(); },3000);

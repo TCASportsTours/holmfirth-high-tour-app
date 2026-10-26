@@ -15,7 +15,10 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour?type=sessions       -> TCA/admin: who has signed in, when last seen
 //   POST /tour?type=kick {sid}     -> TCA/admin: sign a student's phones out
 //   POST /tour?type=resetall       -> admin: sign EVERY phone out (students and staff) and clear sign-in records
-//   POST /tour?type=quizscore      -> a signed-in student's phone saves a finished NYC Quiz score
+//   POST /tour?type=quizscore      -> a signed-in student (phone token) or teacher (teacher password + name) saves
+//                                     their finished NYC Quiz score. ONE go each: a second score is refused (409).
+//   POST /tour?type=quizstart      -> same player says "I've started" (counted, so restarts show on the leaderboard)
+//   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
 //   POST /tour?type=quizlock       -> TCA/admin: { mode: "auto" | "open" | "closed" }
@@ -230,21 +233,34 @@ export default async (req) => {
       await store.set("quizlock", JSON.stringify({ mode, at: Date.now() }));
       return reply(headers, 200, await quizState(store));
     }
+    if (type === "quizstart") {
+      await quizReset(store);
+      if (!(await quizState(store)).open) return reply(headers, 423, { ok: false, error: "the quiz is locked" });
+      const who = await quizPlayer(store, parsed || {}, given, staffPass);
+      if (!who) return reply(headers, 403, { ok: false, error: "sign in as a student or teacher first" });
+      const quiz = safeObj(await store.get("quiz"));
+      const rec = quiz[who] || { attempts: [] };
+      if (rec.attempts.length) return reply(headers, 409, { ok: false, done: true, attempt: rec.attempts[0] });
+      rec.starts = (rec.starts || 0) + 1; rec.startedAt = rec.startedAt || Date.now();
+      quiz[who] = rec; await store.set("quiz", JSON.stringify(quiz));
+      return reply(headers, 200, { ok: true, starts: rec.starts });
+    }
     if (type === "quizscore") {
       await quizReset(store);
       if (!(await quizState(store)).open) return reply(headers, 423, { ok: false, error: "the quiz is locked" });
-      const sid = String((parsed && parsed.sid) || "");
-      if (!(await deviceOk(store, sid, parsed.token))) return reply(headers, 403, { ok: false, error: "sign in as a student first" });
+      const sid = await quizPlayer(store, parsed || {}, given, staffPass);
+      if (!sid) return reply(headers, 403, { ok: false, error: "sign in as a student or teacher first" });
       const n = (v, max) => { v = Math.round(Number(v)); return Number.isFinite(v) && v >= 0 && v <= max ? v : null; };
       const max = n(parsed.max, 1000), score = n(parsed.score, 1000), total = n(parsed.total, 100), correct = n(parsed.correct, 100), streak = n(parsed.streak, 100);
       if (max === null || score === null || score > max || total === null || correct === null || correct > total) return reply(headers, 400, { ok: false, error: "bad score" });
       const rounds = Array.isArray(parsed.rounds) ? parsed.rounds.slice(0, 10).map((x) => n(x, 1000) || 0) : [];
       const quiz = safeObj(await store.get("quiz"));
       const rec = quiz[sid] || { attempts: [] };
+      // One go each: only the first finished score counts
+      if (rec.attempts.length) return reply(headers, 409, { ok: false, done: true, error: "already done", attempt: rec.attempts[0] });
       rec.attempts.push({ score, max, correct, total, streak: streak || 0, rounds, at: Date.now() });
-      rec.attempts = rec.attempts.slice(-20);
       quiz[sid] = rec; await store.set("quiz", JSON.stringify(quiz));
-      return reply(headers, 200, { ok: true, attempts: rec.attempts.length });
+      return reply(headers, 200, { ok: true, attempt: rec.attempts[0] });
     }
     // Expenses (TCA Tours staff): the date and time submitted is stamped here, by the server, not by the phone
     if (type === "expense") {
@@ -382,12 +398,11 @@ export default async (req) => {
       const [pub, priv, qz] = await Promise.all(["current", "private", "quiz"].map((x) => store.get(x)));
       let P = null, U = null; try { P = JSON.parse(priv || "null"); } catch {} try { U = JSON.parse(pub || "null"); } catch {}
       const quiz = safeObj(qz), labels = {}; ((U && U.students) || []).forEach((x) => (labels[x.id] = x.label));
-      const rows = ((P && P.students) || []).map((x) => {
-        const a = (quiz[x.id] && quiz[x.id].attempts) || [];
-        const best = a.reduce((m, t) => (!m || t.score > m.score ? t : m), null);
-        return { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group, attempts: a.length, first: a[0] || null, best, last: a[a.length - 1] || null };
-      });
-      return reply(headers, 200, { ok: true, at: Date.now(), rows, state: await quizState(store) });
+      const row = (key, base) => { const r = quiz[key] || {}, a = r.attempts || [];
+        return Object.assign(base, { attempts: a.length, first: a[0] || null, starts: r.starts || 0, startedAt: r.startedAt || null }); };
+      const rows = ((P && P.students) || []).map((x) => row(x.id, { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group }));
+      const teachers = teacherNames(U).map((t) => row("t:" + t.name, { id: "t:" + t.name, name: t.name, group: t.group }));
+      return reply(headers, 200, { ok: true, at: Date.now(), rows, teachers, state: await quizState(store) });
     }
     if (type === "fxrate") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
@@ -444,6 +459,12 @@ export default async (req) => {
     return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
   if (type === "quizstate") return reply(headers, 200, await quizState(store));
+  if (type === "quizme") {
+    const who = await quizPlayer(store, { sid: url.searchParams.get("sid") || "", token: req.headers.get("x-device") || "", teacher: url.searchParams.get("teacher") || "" }, given, staffPass);
+    if (!who) return reply(headers, 403, { ok: false, error: "sign in as a student or teacher first" });
+    const r = safeObj(await store.get("quiz"))[who] || {};
+    return reply(headers, 200, { ok: true, done: !!(r.attempts && r.attempts.length), attempt: (r.attempts && r.attempts[0]) || null, starts: r.starts || 0 });
+  }
   if (type === "pushkey") return reply(headers, 200, { ok: true, key: env("VAPID_PUBLIC_KEY") || null });
   if (type === "subway") return reply(headers, 200, await subwayStatus(store));
   if (type && type !== "alerts") return reply(headers, 400, { ok: false, error: "unknown slot" });
@@ -458,6 +479,17 @@ export default async (req) => {
   if (data != null) return new Response(data, { headers });
   return new Response(type === "alerts" ? "[]" : "null", { headers });
 };
+
+// ---------------- NYC Quiz players: a student (device token) or a teacher (teacher password + their name)
+function teacherNames(U) { return ((U && U.staff) || []).filter((x) => /teacher/i.test(x.role || "") && x.name); }
+async function quizPlayer(store, p, given, staffPass) {
+  const sid = String(p.sid || "");
+  if (sid) return (await deviceOk(store, sid, p.token)) ? sid : null;
+  const name = String(p.teacher || "");
+  if (!name || !staffPass || !same(given, staffPass)) return null;   // the teacher password only (not TCA/admin)
+  let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
+  return teacherNames(U).some((t) => t.name === name) ? "t:" + name : null;
+}
 
 // ---------------- expenses
 function cleanExpense(p) {

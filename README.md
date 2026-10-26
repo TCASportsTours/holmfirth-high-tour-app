@@ -151,3 +151,10 @@ Known limits (by design): students sign in without a password, so someone could 
 
 - **Tour playlist** for everyone (students, teachers, TCA): a card on Today and a tile on More, opening the Spotify playlist. It comes from the **Links** tab of the App Database: a row with Group = `Playlist` (or any open.spotify.com/playlist link). Change or remove it there and Publish.
 - App Database **v8**: two TCA-only rows on Thursday 29 Oct, Tony meets Yoleida at the DoubleTree Chelsea (12 noon) and Tony meets Kenny at the Moxy Times Square (2pm). Teachers and students never receive them.
+
+## v20: teachers' quiz league, one go each
+
+- **One quiz, two league tables.** Teachers now get the Quiz tab too, scored against their own name (the one they picked at sign-in). TCA Tours staff don't play. Quiz leaderboard (TCA) shows a **Students' league** and a **Teachers' league**.
+- **One go each.** Only the first finished score counts. The server refuses a second score (409) for that student or teacher, on any phone. Once finished, the Quiz tab shows "All done" and their score, and the in-app quiz shows **Done** instead of Play again.
+- If someone leaves part-way and starts again, they can still finish, but the leaderboard marks them **Restarted 1×** (the server counts every start), so Tony can see it.
+- Teacher scores need the teacher password plus a teacher name from the published Staff tab; the TCA and admin passwords can't post teacher scores.

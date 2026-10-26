@@ -315,7 +315,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v19 · 23 Oct 2026';
+var BUILD = 'v20 · 26 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -555,42 +555,75 @@ function kickStudent(id,name){
   fetch(API+'?type=kick',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({sid:id})})
     .then(function(r){ if(r.ok){ toast(name+' signed out'); loadWho(); } else toast('Could not sign out ('+r.status+')'); }).catch(function(){ toast('Needs signal'); });
 }
-/* ---------- NYC QUIZ (students) ---------- */
-/* Quiz tab (students only). The quiz page loads once and keeps its place when you switch tabs. */
+/* ---------- NYC QUIZ (students and teachers: one quiz, two league tables, ONE go each) ---------- */
+/* Quiz tab. The quiz page loads once and keeps its place when you switch tabs. Once you've finished, the tab shows your score instead. */
 var QUIZ=null;   // { open, mode, opensAt } from the server; locked until the final evening unless TCA unlocks it
+function quizWho(){ if(mySid()) return mySid(); if(isTeacher()&&me()) return 't:'+me(); return null; }
+function quizPlays(){ return role==='student'||isTeacher(); }
+/* Who is playing, in the form the server checks: a student's phone token, or the teacher password + the teacher's name */
+function quizAuth(){ return mySid()?{h:{'x-device':deviceToken()},b:{sid:mySid(),token:deviceToken()},q:'sid='+encodeURIComponent(mySid())}
+  :{h:{'x-staff-key':lsGet(LS.key)||''},b:{teacher:me()||''},q:'teacher='+encodeURIComponent(me()||'')}; }
+function quizDone(){ try{ var d=JSON.parse(lsGet('hny_quiz_done')||'null'); return d&&d.who===quizWho()?d:null; }catch(e){ return null; } }
+function setQuizDone(att){ lsSet('hny_quiz_done',JSON.stringify(Object.assign({who:quizWho()},att||{}))); }
 function loadQuizState(){
   return fetch(API+'?type=quizstate',{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     var was=QUIZ&&QUIZ.open; QUIZ=j; lsSet('hny_quizstate',JSON.stringify(j));
     if($('s-quiz').classList.contains('active')&&was!==j.open) renderQuiz();
   }).catch(function(){ if(!QUIZ){ try{ QUIZ=JSON.parse(lsGet('hny_quizstate')||'null'); }catch(e){} } });
 }
+/* Ask the server whether this person has already done it (e.g. on another phone) */
+function checkQuizMe(){
+  if(!quizWho()) return;
+  var a=quizAuth();
+  fetch(API+'?type=quizme&'+a.q,{headers:a.h,cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
+    if(j&&j.ok&&j.done&&!quizDone()){ setQuizDone(j.attempt); if($('s-quiz').classList.contains('active')) renderQuiz(); }
+  }).catch(function(){});
+}
 function quizOpen(){ var q=QUIZ; if(!q) return false; return q.mode==='open'||(q.mode!=='closed'&&Date.now()>=q.opensAt); }
 function quizWhen(ts){ var d=new Date(ts), day=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:NY});
   var t=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:NY}).replace(':00','').replace(' ','').toLowerCase(); return day+' · '+t; }
 function renderQuiz(){
-  var f=$('quizframe'), lock=$('quizlock');
-  if(quizOpen()){ lock.style.display='none'; f.style.display=''; if(!f.getAttribute('src')) f.setAttribute('src','quiz.html'); return; }
+  var f=$('quizframe'), lock=$('quizlock'), done=quizDone();
+  if(isTeacher()&&!me()){ f.style.display='none'; f.removeAttribute('src'); lock.style.display='block';
+    lock.innerHTML='<div class="ic"><i class="ti ti-user-question"></i></div><p class="label" style="justify-content:center">NYC Quiz</p><h2>Which teacher <em>are you?</em></h2><p class="muted" style="margin-top:10px">Pick your name so your score goes in the teachers\' league table.</p>'+teacherButtons(); return; }
+  if(done && !window._quizJustFinished){
+    f.style.display='none'; f.removeAttribute('src'); lock.style.display='block';
+    lock.innerHTML='<div class="ic"><i class="ti ti-trophy"></i></div><p class="label" style="justify-content:center">NYC Quiz · '+(mySid()?'students\' league':'teachers\' league')+'</p><h2>All <em>done</em></h2>'+
+      (done.score!=null?'<p class="when" style="font-size:40px">'+esc(done.score)+(done.max?' <span class="small muted">/ '+esc(done.max)+'</span>':'')+'</p><p class="small muted">points'+(done.total?' · '+esc(done.correct)+' out of '+esc(done.total)+' right':'')+'</p>':'')+
+      '<p class="muted" style="margin-top:14px">It\'s one go each, so the quiz can\'t be played again. Tony will announce the winners'+(mySid()?' of the students\' league.':' of the teachers\' league.')+'</p>';
+    return; }
+  if(quizOpen()){ lock.style.display='none'; f.style.display=''; if(!f.getAttribute('src')) f.setAttribute('src','quiz.html'); checkQuizMe(); return; }
   f.style.display='none'; f.removeAttribute('src'); lock.style.display='block';
   var q=QUIZ, auto=q&&q.mode!=='closed', gap=q?humanGap(q.opensAt-Date.now()):null;
   lock.innerHTML='<div class="ic"><i class="ti ti-lock"></i></div><p class="label" style="justify-content:center">NYC Quiz</p><h2>Not <em>yet</em></h2>'+
     (q&&auto?'<p class="muted" style="margin-top:10px">The quiz unlocks on your final evening in New York.</p><p class="when">'+esc(quizWhen(q.opensAt))+'</p><p class="small muted">New York time</p>'+(q.opensAt>Date.now()?'<span class="cdn">'+esc(gap.n)+' '+esc(gap.l)+'</span>':'')
       :'<p class="muted" style="margin-top:10px">'+(q?'The quiz is locked for now. Tony will let you know when it opens.':'Needs signal to check whether the quiz is open.')+'</p>')+
-    '<p class="small muted" style="margin-top:18px">Keep exploring — every question is about things you\'ll see this week.</p>';
+    '<p class="small muted" style="margin-top:18px">One go each, so make it count. '+(mySid()?'Students compete against students':'Teachers compete against teachers')+'.</p>';
   if(!q) loadQuizState().then(function(){ if(QUIZ) renderQuiz(); });
 }
 function openQuiz(){ go('quiz'); }
-function showQuizTab(){ $('tabbar').classList.toggle('six',role==='student'); }
-function quizPending(){ try{ return JSON.parse(lsGet('hny_quiz_pending')||'[]'); }catch(e){ return []; } }
+function showQuizTab(){ $('tabbar').classList.toggle('six',quizPlays()); }
+function quizPending(){ try{ return JSON.parse(lsGet('hny_quiz_pending')||'[]').filter(function(r){ return !r.who||r.who===quizWho(); }); }catch(e){ return []; } }
 function sendQuizScores(){
-  var list=quizPending(); if(!list.length||!mySid())return;
-  var r=list[0];
-  fetch(API+'?type=quizscore',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(Object.assign({sid:mySid(),token:deviceToken()},r))})
-    .then(function(x){ if(x.status===423) toast('The quiz is locked, so this score wasn\'t saved'); if(x.ok||x.status===400||x.status===403||x.status===423){ var l=quizPending(); l.shift(); lsSet('hny_quiz_pending',l.length?JSON.stringify(l):null); if(x.ok) toast('Quiz score saved: '+r.score+' points'); if(l.length) sendQuizScores(); } })
-    .catch(function(){});
+  var list=quizPending(); if(!list.length||!quizWho())return;
+  var r=list[0], a=quizAuth(), body=Object.assign({},a.b,r); delete body.who;
+  fetch(API+'?type=quizscore',{method:'POST',headers:Object.assign({'content-type':'application/json'},a.h),body:JSON.stringify(body)})
+    .then(function(x){ return x.json().catch(function(){return {};}).then(function(j){
+      if(x.status===423||x.status===403){ lsSet('hny_quiz_done',null); toast(x.status===423?'The quiz is locked, so this score wasn\'t saved':'Score not saved: sign in again'); }
+      if(x.status===409&&j.attempt){ setQuizDone(j.attempt); toast('You\'d already done the quiz: your first score ('+j.attempt.score+') is the one that counts'); }
+      if(x.ok||x.status===400||x.status===403||x.status===409||x.status===423){ var l=quizPending(); l.shift(); lsSet('hny_quiz_pending',l.length?JSON.stringify(l):null); if(x.ok) toast('Quiz score saved: '+r.score+' points'); if(l.length) sendQuizScores(); }
+    }); }).catch(function(){});
 }
 window.addEventListener('message',function(e){
-  if(e.origin!==location.origin||!e.data||e.data.type!=='hny-quiz'||!mySid())return;
-  var d=e.data, rec={score:d.score,max:d.max,correct:d.correct,total:d.total,streak:d.streak,rounds:d.rounds};
+  if(e.origin!==location.origin||!e.data||!quizWho())return;
+  var d=e.data;
+  if(d.type==='hny-quiz-start'){ var a=quizAuth(); fetch(API+'?type=quizstart',{method:'POST',headers:Object.assign({'content-type':'application/json'},a.h),body:JSON.stringify(a.b)})
+      .then(function(x){ return x.json(); }).then(function(j){ if(j&&j.done){ setQuizDone(j.attempt); window._quizJustFinished=false; renderQuiz(); toast('You\'ve already done the quiz: one go each'); } }).catch(function(){}); return; }
+  if(d.type==='hny-quiz-close'){ window._quizJustFinished=false; renderQuiz(); return; }
+  if(d.type!=='hny-quiz') return;
+  if(quizDone()) return;   /* one go each: only the first finished score is sent */
+  var rec={who:quizWho(),score:d.score,max:d.max,correct:d.correct,total:d.total,streak:d.streak,rounds:d.rounds};
+  setQuizDone({score:d.score,max:d.max,correct:d.correct,total:d.total}); window._quizJustFinished=true;   /* keep the results on screen until they tap Done */
   var l=quizPending(); l.push(rec); lsSet('hny_quiz_pending',JSON.stringify(l.slice(-5))); sendQuizScores();
 });
 /* ---------- QUIZ LEADERBOARD (TCA Tours staff) ---------- */
@@ -607,30 +640,31 @@ function paintLeaderboard(keep){
   else {
     var st=j.state||{}, mode=st.mode||'auto';
     html+='<div class="card rule"><div class="cardhead"><h3 style="font-size:20px">'+(st.open?'Quiz is <em>unlocked</em>':'Quiz is <em>locked</em>')+'</h3><span class="tag '+(st.open?'gold':'alarm')+'">'+(st.open?'Open':'Locked')+'</span></div>'+
-      '<p class="small muted" style="margin:4px 0 10px">'+(mode==='auto'?(st.open?'Opened automatically on the final evening ('+esc(quizWhen(st.opensAt))+' NY).':'Opens automatically '+esc(quizWhen(st.opensAt))+' New York time.'):mode==='open'?'Unlocked by hand. Students can play now.':'Locked by hand. It won\'t open automatically until you choose Automatic again.')+'</p>'+
+      '<p class="small muted" style="margin:4px 0 10px">'+(mode==='auto'?(st.open?'Opened automatically on the final evening ('+esc(quizWhen(st.opensAt))+' NY).':'Opens automatically '+esc(quizWhen(st.opensAt))+' New York time.'):mode==='open'?'Unlocked by hand. Students and teachers can play now.':'Locked by hand. It won\'t open automatically until you choose Automatic again.')+'</p>'+
       '<div class="btnrow">'+(st.open?'<button class="btn line" onclick="setQuizLock(\'closed\')"><i class="ti ti-lock"></i> Lock now</button>':'<button class="btn gold" onclick="setQuizLock(\'open\')"><i class="ti ti-lock-open"></i> Unlock now</button>')+
       (mode!=='auto'?'<button class="btn line" onclick="setQuizLock(\'auto\')"><i class="ti ti-clock"></i> Automatic</button>':'')+'</div></div>';
-    var done=j.rows.filter(function(r){return r.attempts;}), notyet=j.rows.filter(function(r){return !r.attempts;});
-    var key=LBS.sort==='best'?'best':'first';
-    done.sort(function(a,b){ return (b[key].score-a[key].score)||((a[key].at||0)-(b[key].at||0)); });
-    var max=done.length?done[0][key].max:0;
-    html+='<div class="tiles" style="grid-template-columns:1fr 1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+done.length+'</b><span>have done it</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+notyet.length+'</b><span>not yet</span></div><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+(done.length?Math.round(done.reduce(function(t,r){return t+r[key].score;},0)/done.length):'—')+'</b><span>average</span></div></div>';
-    html+='<div class="seg" style="margin-top:12px"><button class="'+(LBS.sort==='first'?'on':'')+'" onclick="LBS.sort=\'first\';paintLeaderboard(true)">First try</button><button class="'+(LBS.sort==='best'?'on':'')+'" onclick="LBS.sort=\'best\';paintLeaderboard(true)">Best score</button></div>'+
-      '<p class="small muted" style="margin-bottom:8px">'+(LBS.sort==='first'?'Ranked on each student\'s first attempt — the fairest, since replays show the answers.':'Ranked on each student\'s best attempt.')+(max?' Out of '+max+' points.':'')+'</p>';
-    if(done.length) html+='<table class="lb"><tr><th>#</th><th>Student</th><th>Score</th><th>Tries</th></tr>'+done.map(function(r,i){ var t=r[key];
-      return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b><div class="small muted">'+esc(r.group||'')+' · '+t.correct+'/'+t.total+' correct · '+esc(ago(t.at))+'</div></td><td class="sc">'+t.score+'</td><td>'+r.attempts+(r.attempts>1?'<div class="small muted">first '+r.first.score+' · best '+r.best.score+'</div>':'')+'</td></tr>'; }).join('')+'</table>';
-    else html+='<div class="card"><p class="small">Nobody has finished the quiz yet. It\'s on the Quiz tab on students\' phones.</p></div>';
-    if(notyet.length) html+='<p class="label">Not done yet · '+notyet.length+'</p><div class="card"><p class="small">'+notyet.map(function(r){return esc(r.name);}).join(', ')+'</p></div>';
-    html+='<p class="small muted" style="margin-top:10px">Scores save when a student reaches the end of the quiz while signed in as themselves. <button class="linkbtn" onclick="loadLeaderboard()">Refresh</button></p>';
+    html+=lbTable('Students\' league',j.rows||[],true)+lbTable('Teachers\' league',j.teachers||[],false);
+    html+='<p class="small muted" style="margin-top:10px">One go each: only the first finished score counts and the quiz can\'t be replayed. "Restarted" means they left part-way through and started again. <button class="linkbtn" onclick="loadLeaderboard()">Refresh</button></p>';
   }
   html+='</div>';
   if(keep) rerenderPage(html); else openPage(html);
 }
+function lbTable(title,rows,students){
+  var done=rows.filter(function(r){return r.first;}), notyet=rows.filter(function(r){return !r.first;});
+  done.sort(function(a,b){ return (b.first.score-a.first.score)||((a.first.at||0)-(b.first.at||0)); });
+  var max=done.length?done[0].first.max:0, avg=done.length?Math.round(done.reduce(function(t,r){return t+r.first.score;},0)/done.length):null;
+  var h='<p class="label">'+esc(title)+' · '+done.length+' of '+rows.length+' done'+(avg!=null?' · average '+avg:'')+'</p>';
+  if(done.length) h+='<table class="lb"><tr><th>#</th><th>'+(students?'Student':'Teacher')+'</th><th>Score</th></tr>'+done.map(function(r,i){ var t=r.first;
+      return '<tr><td class="rk">'+(i+1)+'</td><td><b>'+esc(r.name)+'</b><div class="small muted">'+(students&&r.group?esc(r.group)+' · ':'')+t.correct+'/'+t.total+' correct · '+esc(ago(t.at))+(r.starts>1?' · <span class="tag alarm" style="margin:0">Restarted '+(r.starts-1)+'×</span>':'')+'</div></td><td class="sc">'+t.score+(max?'<div class="small muted">/ '+max+'</div>':'')+'</td></tr>'; }).join('')+'</table>';
+  else h+='<div class="card"><p class="small">Nobody in this league has finished yet.</p></div>';
+  if(notyet.length) h+='<div class="card"><p class="small"><b>Not done yet:</b> '+notyet.map(function(r){ return esc(r.name)+(r.starts?' <span class="muted">(started, not finished)</span>':''); }).join(', ')+'</p></div>';
+  return h;
+}
 function setQuizLock(mode){
-  var msg={open:'Unlock the NYC Quiz for every student now?',closed:'Lock the NYC Quiz? Students won\'t be able to play or save scores.',auto:'Go back to automatic? The quiz will be '+(Date.now()>=(window._lb&&window._lb.state&&window._lb.state.opensAt||0)?'open (the final evening has started).':'locked until the final evening.')}[mode];
+  var msg={open:'Unlock the NYC Quiz for every student and teacher now?',closed:'Lock the NYC Quiz? Students and teachers won\'t be able to play or save scores.',auto:'Go back to automatic? The quiz will be '+(Date.now()>=(window._lb&&window._lb.state&&window._lb.state.opensAt||0)?'open (the final evening has started).':'locked until the final evening.')}[mode];
   if(!confirm(msg))return;
   fetch(API+'?type=quizlock',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({mode:mode})})
-    .then(function(r){ if(r.ok){ toast(mode==='open'?'Quiz unlocked — students\' phones update within a minute':mode==='closed'?'Quiz locked':'Quiz back on automatic'); loadLeaderboard(); } else toast('Could not change it ('+r.status+')'); })
+    .then(function(r){ if(r.ok){ toast(mode==='open'?'Quiz unlocked — phones update within a minute':mode==='closed'?'Quiz locked':'Quiz back on automatic'); loadLeaderboard(); } else toast('Could not change it ('+r.status+')'); })
     .catch(function(){ toast('Needs signal'); });
 }
 function teacherReset(){
@@ -660,7 +694,7 @@ function signOut(){
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(role==='student') loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
+function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(quizPlays()) loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -669,7 +703,7 @@ function myGroup(){ var n=me(); if(!n)return null; var t=teacherList().filter(fu
 function teacherButtons(){ return teacherList().map(function(t){
     return '<button class="who" onclick="pickTeacher('+jsArg(t.name)+')"><span class="ic"><i class="ti ti-user"></i></span><span><b>'+esc(t.name)+'</b><span>'+esc(t.group)+'</span></span><i class="ti ti-chevron-right arr"></i></button>'; }).join(''); }
 function pickTeacherScreen(){ $('staffBox').innerHTML='<p class="label">Which teacher are you?</p>'+teacherButtons(); }
-function pickTeacher(n){ lsSet(LS.me,n); closeModal(); enter(); }
+function pickTeacher(n){ var was=$('app').classList.contains('locked'); lsSet(LS.me,n); closeModal(); if(was) enter(); else { showQuizTab(); renderQuiz(); } }
 
 /* ================= TODAY ================= */
 function renderToday(){
@@ -969,7 +1003,7 @@ function openWeather(){
 function seenAlerts(){ try{ return JSON.parse(lsGet(LS.seen)||'[]'); }catch(e){ return []; } }
 function loadAlerts(){
   var h={}; if(isStaff()) h['x-staff-key']=lsGet(LS.key)||''; else if(mySid()) h['x-device']=deviceToken();
-  if(mySid()){ checkKicked(); sendQuizScores(); loadQuizState(); } else checkReset();
+  if(mySid()){ checkKicked(); sendQuizScores(); loadQuizState(); } else { checkReset(); if(isTeacher()){ sendQuizScores(); loadQuizState(); } }
   sayHello();
   fetch(API+'?type=alerts'+(mySid()?'&sid='+encodeURIComponent(mySid()):''),{cache:'no-store',headers:h}).then(function(r){return r.ok?r.json():[];}).then(function(a){
     if(!Array.isArray(a))return; ALERTS=a; var seen=seenAlerts();
