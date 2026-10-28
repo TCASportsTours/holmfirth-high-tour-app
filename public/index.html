@@ -315,7 +315,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v20 · 26 Oct 2026';
+var BUILD = 'v21 · 28 Oct 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -557,7 +557,7 @@ function kickStudent(id,name){
 }
 /* ---------- NYC QUIZ (students and teachers: one quiz, two league tables, ONE go each) ---------- */
 /* Quiz tab. The quiz page loads once and keeps its place when you switch tabs. Once you've finished, the tab shows your score instead. */
-var QUIZ=null;   // { open, mode, opensAt } from the server; locked until the final evening unless TCA unlocks it
+var QUIZ=null;   // { open, mode, opensAt } from the server; locked until QUIZ_OPENS_AT unless TCA unlocks it
 function quizWho(){ if(mySid()) return mySid(); if(isTeacher()&&me()) return 't:'+me(); return null; }
 function quizPlays(){ return role==='student'||isTeacher(); }
 /* Who is playing, in the form the server checks: a student's phone token, or the teacher password + the teacher's name */
@@ -579,6 +579,7 @@ function checkQuizMe(){
     if(j&&j.ok&&j.done&&!quizDone()){ setQuizDone(j.attempt); if($('s-quiz').classList.contains('active')) renderQuiz(); }
   }).catch(function(){});
 }
+function nyDay(ts){ return new Date(ts).toLocaleDateString('en-GB',{timeZone:NY}); }
 function quizOpen(){ var q=QUIZ; if(!q) return false; return q.mode==='open'||(q.mode!=='closed'&&Date.now()>=q.opensAt); }
 function quizWhen(ts){ var d=new Date(ts), day=d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long',timeZone:NY});
   var t=d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit',timeZone:NY}).replace(':00','').replace(' ','').toLowerCase(); return day+' · '+t; }
@@ -596,7 +597,7 @@ function renderQuiz(){
   f.style.display='none'; f.removeAttribute('src'); lock.style.display='block';
   var q=QUIZ, auto=q&&q.mode!=='closed', gap=q?humanGap(q.opensAt-Date.now()):null;
   lock.innerHTML='<div class="ic"><i class="ti ti-lock"></i></div><p class="label" style="justify-content:center">NYC Quiz</p><h2>Not <em>yet</em></h2>'+
-    (q&&auto?'<p class="muted" style="margin-top:10px">The quiz unlocks on your final evening in New York.</p><p class="when">'+esc(quizWhen(q.opensAt))+'</p><p class="small muted">New York time</p>'+(q.opensAt>Date.now()?'<span class="cdn">'+esc(gap.n)+' '+esc(gap.l)+'</span>':'')
+    (q&&auto?'<p class="muted" style="margin-top:10px">The quiz unlocks '+(nyDay(q.opensAt)===nyDay(Date.now())?'this evening':'on')+':</p><p class="when">'+esc(quizWhen(q.opensAt))+'</p><p class="small muted">New York time</p>'+(q.opensAt>Date.now()?'<span class="cdn">'+esc(gap.n)+' '+esc(gap.l)+'</span>':'')
       :'<p class="muted" style="margin-top:10px">'+(q?'The quiz is locked for now. Tony will let you know when it opens.':'Needs signal to check whether the quiz is open.')+'</p>')+
     '<p class="small muted" style="margin-top:18px">One go each, so make it count. '+(mySid()?'Students compete against students':'Teachers compete against teachers')+'.</p>';
   if(!q) loadQuizState().then(function(){ if(QUIZ) renderQuiz(); });
@@ -640,7 +641,7 @@ function paintLeaderboard(keep){
   else {
     var st=j.state||{}, mode=st.mode||'auto';
     html+='<div class="card rule"><div class="cardhead"><h3 style="font-size:20px">'+(st.open?'Quiz is <em>unlocked</em>':'Quiz is <em>locked</em>')+'</h3><span class="tag '+(st.open?'gold':'alarm')+'">'+(st.open?'Open':'Locked')+'</span></div>'+
-      '<p class="small muted" style="margin:4px 0 10px">'+(mode==='auto'?(st.open?'Opened automatically on the final evening ('+esc(quizWhen(st.opensAt))+' NY).':'Opens automatically '+esc(quizWhen(st.opensAt))+' New York time.'):mode==='open'?'Unlocked by hand. Students and teachers can play now.':'Locked by hand. It won\'t open automatically until you choose Automatic again.')+'</p>'+
+      '<p class="small muted" style="margin:4px 0 10px">'+(mode==='auto'?(st.open?'Opened automatically at '+esc(quizWhen(st.opensAt))+' NY.':'Opens automatically '+esc(quizWhen(st.opensAt))+' New York time.'):mode==='open'?'Unlocked by hand. Students and teachers can play now.':'Locked by hand. It won\'t open automatically until you choose Automatic again.')+'</p>'+
       '<div class="btnrow">'+(st.open?'<button class="btn line" onclick="setQuizLock(\'closed\')"><i class="ti ti-lock"></i> Lock now</button>':'<button class="btn gold" onclick="setQuizLock(\'open\')"><i class="ti ti-lock-open"></i> Unlock now</button>')+
       (mode!=='auto'?'<button class="btn line" onclick="setQuizLock(\'auto\')"><i class="ti ti-clock"></i> Automatic</button>':'')+'</div></div>';
     html+=lbTable('Students\' league',j.rows||[],true)+lbTable('Teachers\' league',j.teachers||[],false);
@@ -661,7 +662,7 @@ function lbTable(title,rows,students){
   return h;
 }
 function setQuizLock(mode){
-  var msg={open:'Unlock the NYC Quiz for every student and teacher now?',closed:'Lock the NYC Quiz? Students and teachers won\'t be able to play or save scores.',auto:'Go back to automatic? The quiz will be '+(Date.now()>=(window._lb&&window._lb.state&&window._lb.state.opensAt||0)?'open (the final evening has started).':'locked until the final evening.')}[mode];
+  var msg={open:'Unlock the NYC Quiz for every student and teacher now?',closed:'Lock the NYC Quiz? Students and teachers won\'t be able to play or save scores.',auto:'Go back to automatic? The quiz will be '+(Date.now()>=(window._lb&&window._lb.state&&window._lb.state.opensAt||0)?'open (that time has passed).':'locked until '+quizWhen(window._lb&&window._lb.state&&window._lb.state.opensAt)+' NY.')}[mode];
   if(!confirm(msg))return;
   fetch(API+'?type=quizlock',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({mode:mode})})
     .then(function(r){ if(r.ok){ toast(mode==='open'?'Quiz unlocked — phones update within a minute':mode==='closed'?'Quiz locked':'Quiz back on automatic'); loadLeaderboard(); } else toast('Could not change it ('+r.status+')'); })

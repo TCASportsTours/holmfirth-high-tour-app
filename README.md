@@ -126,7 +126,7 @@ Known limits (by design): students sign in without a password, so someone could 
 
 ## v16: quiz lock
 
-- The NYC Quiz is **locked until the final evening in New York: Thursday 29 October, 5pm New York time** (`QUIZ_OPENS_AT` in `netlify/functions/tour.mjs`). Students see a locked screen with a countdown on the Quiz tab; scores can't be saved while it's locked.
+- The NYC Quiz is **locked until Wednesday 28 October, 5.30pm New York time** (changed in v21; was Thursday 5pm) (`QUIZ_OPENS_AT` in `netlify/functions/tour.mjs`). Students see a locked screen with a countdown on the Quiz tab; scores can't be saved while it's locked.
 - **Quiz leaderboard** (TCA): **Unlock now**, **Lock now**, and **Automatic** (back to the scheduled time).
 - The leaderboard was wiped once with this release (`QUIZ_RESET_ID`); change the id to wipe it again on a future deploy, or use Admin → Clear quiz scores.
 

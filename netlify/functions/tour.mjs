@@ -52,8 +52,8 @@ const SUBWAY_FEED = "https://api-endpoint.mta.info/Dataservice/mtagtfsfeeds/cams
 const SUBWAY_LINES = ["1", "2", "3", "A", "C", "E", "7", "R", "W"]; // the lines on our itinerary
 const SUBWAY_CACHE_MS = 120000;
 
-// ---- NYC Quiz: locked until the final evening in New York (Thu 29 Oct 2026, 5pm EDT = 21:00 UTC)
-const QUIZ_OPENS_AT = Date.UTC(2026, 9, 29, 21, 0);
+// ---- NYC Quiz: locked until Wed 28 Oct 2026, 5.30pm New York time (EDT, UTC-4) = 21:30 UTC
+const QUIZ_OPENS_AT = Date.UTC(2026, 9, 28, 21, 30);
 // Changing this id wipes the leaderboard once, on the next request after a deploy
 const QUIZ_RESET_ID = "2026-10-16-launch";
 async function quizReset(store) {
