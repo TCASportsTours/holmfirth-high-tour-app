@@ -263,6 +263,19 @@
   #exCurOpts button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--hairline);background:#fff;padding:11px 8px;font:15px var(--body);color:var(--charcoal);cursor:pointer}
   #exCurOpts button:hover,#exCurOpts button:focus{background:var(--stone)}
   a.tile{text-decoration:none;color:inherit}
+  .tqcard h3{font-size:21px}.tqhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}.tqhead i{font-size:22px;color:var(--charcoal)}
+  .tqq{font-weight:600;margin-top:14px;font-size:14.5px}.tqreq{color:var(--alarm)}.tqhint{font-size:12.5px;color:var(--slate);margin-top:2px}
+  .tqstars{display:flex;flex-wrap:wrap;align-items:center;gap:2px;margin-top:6px}
+  .tqstars button{border:0;background:none;padding:4px;cursor:pointer;font-size:26px;color:var(--hairline);line-height:1}
+  .tqstars button.on{color:var(--gold)} .tqstars .tqna{font-size:12.5px;color:var(--slate);border:1px solid var(--hairline);padding:5px 9px;margin-left:8px}
+  .tqstars .tqna.on{background:var(--charcoal);color:#fff;border-color:var(--charcoal)}
+  .tqchips{margin-top:6px}.tqtext{margin-top:6px;font-size:15px;resize:vertical}
+  .tqnps{display:grid;grid-template-columns:repeat(11,1fr);gap:3px;margin-top:6px}
+  .tqnps button{border:1px solid var(--charcoal);background:transparent;padding:8px 0;font-size:13px;cursor:pointer}.tqnps button.on{background:var(--charcoal);color:#fff}
+  .tqnpsends{display:flex;justify-content:space-between;font-size:11.5px;color:var(--slate);margin-top:3px}
+  .tqmeta{display:flex;gap:6px;flex-wrap:wrap}.tqmeta span{background:var(--stone);font-size:12px;font-weight:600;padding:3px 8px}
+  .tqtrip{border-top:1px solid var(--hairline);margin-top:10px;padding-top:6px}.tqtripname{font-weight:600;font-size:14px}.tqtripname span{display:block;font-weight:400;font-size:12px;color:var(--slate)}
+  .tqthanks{width:56px;height:56px;margin:0 auto 12px;display:grid;place-items:center;background:var(--ink);color:var(--gold);font-size:28px}
   .playlist{display:flex;align-items:center;gap:14px;background:var(--ink);border-color:var(--ink);color:#fff;text-decoration:none}
   .playlist>i:first-child{font-size:34px;color:var(--gold)} .playlist>span{flex:1} .playlist b{font-family:var(--display);font-size:21px;font-weight:600;display:block}
   .playlist .small{color:#D9D8DA} .playlist>i:last-child{color:#D9D8DA}
@@ -315,7 +328,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v21 · 28 Oct 2026';
+var BUILD = 'v22 · 7 Nov 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -695,7 +708,7 @@ function signOut(){
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(quizPlays()) loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); }
+function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(quizPlays()) loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); setTimeout(function(){ if(typeof maybeAskQuestionnaire==='function') maybeAskQuestionnaire(); },2500); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -886,10 +899,11 @@ function renderMore(){
     var n=P&&P.students?P.students.length:0;
     html+='<p class="label">Staff only</p>';
     if(!P) html+='<div class="card"><p class="small">Staff information hasn\'t loaded. <button class="linkbtn" onclick="loadPrivate(true)">Try again</button></p><p class="small muted" id="privMsg"></p></div>';
+    if(isTeacher()) html+='<div class="tiles" style="grid-template-columns:1fr"><button class="tile dark" onclick="openQuestionnaire()" style="min-height:0"><i class="ti ti-clipboard-check"></i><b>Tour questionnaire</b><span>'+(typeof tqDone==='function'&&tqDone()?'Sent: thank you! Tap to change your answers':'Five minutes: how did New York go?')+'</span></button></div>';
     html+='<div class="tiles">'+tile('ti-checklist','Register','Head count · '+n+' students','openRegister()','dark')+tile('ti-bed','Rooms','Groups & room numbers','openRooms()')+
       tile('ti-first-aid-kit','Medical, dietary & SEND','Medication · allergies · needs','openWelfare()')+tile('ti-tools-kitchen-2','Meal orders','Pre-orders','openMeals()')+
       tile('ti-ticket','Tickets & entry','Who has them, where to go','openTickets()')+tile('ti-bus','Transfers','Coach bookings','openTransfers()')+tile('ti-address-book','Contacts','Staff emergency list','openContacts()')+
-      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark')+tile('ti-trophy','Quiz leaderboard','Who has done it & scores','openLeaderboard()','dark')+tile('ti-receipt','Add expense','Receipt & amount','openExpenseForm()','dark'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
+      tile('ti-send','Send alert','To every phone','openSendAlert()')+(isTcaStaff()?tile('ti-users-group','Who\'s signed in','See & sign students out','openWho()','dark')+tile('ti-trophy','Quiz leaderboard','Who has done it & scores','openLeaderboard()','dark')+tile('ti-receipt','Add expense','Receipt & amount','openExpenseForm()','dark')+tile('ti-clipboard-check','Questionnaire results','Teachers\' feedback','openTqResults()','dark')+tile('ti-eye','Preview questionnaire','As teachers see it','openQuestionnaire()'):'')+tile('ti-refresh','Refresh','Reload staff data','loadPrivate(true)')+'</div>';
   }
   if(pushState()!=='on'&&pushState()!=='unsupported') html+='<div style="margin-top:14px">'+pushCard()+'</div>';
   html+='<button class="btn ghost" style="margin-top:18px" onclick="openA2HS()"><i class="ti ti-device-mobile-down"></i> Add this app to your phone</button>';
@@ -1390,6 +1404,7 @@ function refresh(){
 })();
 </script>
 <script src="js/currencies.js"></script>
+<script src="js/questionnaire.js"></script>
 <script src="js/expenses.js"></script>
 </body>
 </html>

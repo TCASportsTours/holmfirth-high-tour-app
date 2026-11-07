@@ -158,3 +158,10 @@ Known limits (by design): students sign in without a password, so someone could 
 - **One go each.** Only the first finished score counts. The server refuses a second score (409) for that student or teacher, on any phone. Once finished, the Quiz tab shows "All done" and their score, and the in-app quiz shows **Done** instead of Play again.
 - If someone leaves part-way and starts again, they can still finish, but the leaderboard marks them **Restarted 1×** (the server counts every start), so Tony can see it.
 - Teacher scores need the teacher password plus a teacher name from the published Staff tab; the TCA and admin passwords can't post teacher scores.
+
+## v22: teacher questionnaire (questionnaire v1), modelled on the GCS Tour App v48/v49
+
+- **Teachers**: a pop-up on opening the app (at most once a day, until they've sent it) and a **Tour questionnaire** tile at the top of More → Staff only. About five minutes. Only "The tour overall" is required. A draft is kept on the phone; sending again replaces their earlier answers.
+- **Sections**: About you (role, first TCA trip, how the school heard about TCA Tours) · Before the trip (5 ratings) · The tour (8 ratings) · The trips (every activity, event and dinner venue on the itinerary, or "Didn't go") · The students (3 ratings, recommended spending money, curriculum notes) · The app (parts used, what's missing) · Last few (best moment, do better, book again, 0–10 recommend, where next, when, permission to quote).
+- **TCA Tours staff**: More → **Questionnaire results**, with the working beside every average and the NPS, counts, comments, delete, and **Export to Excel** (Responses + Trips sheets). More → **Preview questionnaire** shows it as teachers see it; anything TCA sends is marked as a test.
+- Stored in the backend slot `?type=tq`, one entry per teacher. Admin → Clear test data can clear it (`tq`).

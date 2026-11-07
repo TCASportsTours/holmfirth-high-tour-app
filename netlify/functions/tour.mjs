@@ -18,6 +18,9 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=quizscore      -> a signed-in student (phone token) or teacher (teacher password + name) saves
 //                                     their finished NYC Quiz score. ONE go each: a second score is refused (409).
 //   POST /tour?type=quizstart      -> same player says "I've started" (counted, so restarts show on the leaderboard)
+//   POST /tour?type=tq             -> teacher questionnaire: teacher password + their name (TCA/admin = test); replaces their earlier answers
+//   GET  /tour?type=tq             -> TCA/admin: every questionnaire response + the teacher list
+//   POST /tour?type=tqdel {key}    -> TCA/admin: delete one response
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -106,7 +109,7 @@ async function deviceOk(store, sid, token) {
 }
 
 const MERGE = new Set(["roomnums", "register"]);
-const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz", "fxrate", "expenses", "receipt"]);
+const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz", "fxrate", "expenses", "receipt", "tq"]);
 const SEEN_EVERY_MS = 5 * 60000;   // only write "last seen" every 5 minutes per person
 
 function env(name) {
@@ -182,7 +185,7 @@ export default async (req) => {
       await store.set("expidx", "[]"); await store.set("expseq", "0");
       return reply(headers, 200, { ok: true, cleared: type, removed: idx.length });
     }
-    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}", quiz: "{}" };
+    const CLEARABLE = { register: "{}", roomnums: "{}", alerts: "[]", claims: "{}", pushsubs: "{}", sessions: "{}", kicked: "{}", quiz: "{}", tq: "{}" };
     if (!(type in CLEARABLE)) return reply(headers, 400, { ok: false, error: "refused: that slot can't be cleared" });
     await store.set(key, CLEARABLE[type]);
     return reply(headers, 200, { ok: true, cleared: type });
@@ -290,6 +293,29 @@ export default async (req) => {
       let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
       await store.set("expidx", JSON.stringify(idx.filter((x) => x !== id)));
       return reply(headers, 200, { ok: true, deleted: id });
+    }
+    // Post-tour teacher questionnaire: one entry per teacher; the server stamps the time
+    if (type === "tq") {
+      const raw2 = JSON.stringify((parsed && parsed.a) || {});
+      if (!parsed || typeof parsed.a !== "object" || raw2.length > 20000) return reply(headers, 400, { ok: false, error: "bad answers" });
+      if (typeof parsed.a.r_overall !== "number") return reply(headers, 400, { ok: false, error: "Please give the tour an overall rating" });
+      let key = null, teacher = "", test = false;
+      if (isTca) { key = "test:tca"; teacher = "TCA Tours (test)"; test = true; }
+      else {
+        const t = await quizPlayer(store, { teacher: String(parsed.teacher || "") }, given, staffPass);
+        if (!t) return reply(headers, 403, { ok: false, error: "sign in as a teacher first" });
+        key = t; teacher = t.slice(2);
+      }
+      const all = safeObj(await store.get("tq"));
+      all[key] = { key, teacher, test, ts: Date.now(), v: Number(parsed.v) || 1, a: parsed.a };
+      await store.set("tq", JSON.stringify(all));
+      return reply(headers, 200, { ok: true });
+    }
+    if (type === "tqdel") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      const all = safeObj(await store.get("tq")); delete all[String((parsed && parsed.key) || "")];
+      await store.set("tq", JSON.stringify(all));
+      return reply(headers, 200, { ok: true });
     }
     if (type === "kick") {              // TCA Tours / admin signs a student's phones out
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
@@ -403,6 +429,12 @@ export default async (req) => {
       const rows = ((P && P.students) || []).map((x) => row(x.id, { id: x.id, name: x.name, label: labels[x.id] || x.name, group: x.group }));
       const teachers = teacherNames(U).map((t) => row("t:" + t.name, { id: "t:" + t.name, name: t.name, group: t.group }));
       return reply(headers, 200, { ok: true, at: Date.now(), rows, teachers, state: await quizState(store) });
+    }
+    if (type === "tq") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
+      const rows = Object.values(safeObj(await store.get("tq"))).sort((a, b) => a.ts - b.ts);
+      return reply(headers, 200, { ok: true, rows, teachers: teacherNames(U).map((t) => t.name) });
     }
     if (type === "fxrate") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
