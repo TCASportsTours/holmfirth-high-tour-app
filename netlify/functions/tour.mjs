@@ -23,17 +23,14 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=tqdel {key}    -> TCA/admin: delete one response
 //   FEEDBACK (separate links: /feedback/teachers and /feedback/students; no sign-in needed to send)
 //   POST /tour?type=fbphoto        -> one photo (shrunk on the phone) for a questionnaire; returns its id
-//   POST /tour?type=feedback       -> a teacher or student questionnaire; saved here, then sent to the master Google Sheet
-//   GET  /tour?type=fb             -> TCA/admin: every response (+ the older in-app teacher answers), and the hub status
-//   GET  /tour?type=fbrows         -> TCA/admin: every response laid out as the spreadsheet's tabs (for Export to Excel)
+//   POST /tour?type=feedback       -> a teacher or student questionnaire
+//   GET  /tour?type=fb             -> TCA/admin: every response (+ the older in-app teacher answers and the Google Form history)
+//   GET  /tour?type=fbrows         -> TCA/admin: every response laid out as spreadsheet tabs (for Export to Excel)
 //   GET  /tour?type=fbphoto&id=    -> TCA/admin: one photo
-//   POST /tour?type=fbsync {id}    -> TCA/admin: send one response to the spreadsheet (one step per call: a photo, then the rows)
-//   POST /tour?type=fbping         -> TCA/admin: check the spreadsheet link; creates its tabs
-//   POST /tour?type=fbdel {id}     -> TCA/admin: delete a response here (not from the spreadsheet)
-//   The master Google Sheet is set by FEEDBACK_HUB_URL + FEEDBACK_HUB_TOKEN (see hub/TCA_Feedback_Hub_v2.gs).
-//   RESULTS PAGE (/sheet): header x-sheet-key = FEEDBACK_VIEW_PASSWORD (no Google account needed)
-//   GET  /tour?type=sheetdata      -> every tab of the master spreadsheet (every tour); this tour's own copy if it isn't connected
-//   GET  /tour?type=sheetphoto&id= -> one questionnaire photo (from the app, else from the Drive folder)
+//   POST /tour?type=fbdel {id}     -> TCA/admin: delete a response
+//   RESULTS PAGE (/sheet): header x-sheet-key = FEEDBACK_VIEW_PASSWORD
+//   GET  /tour?type=sheetdata      -> every response as spreadsheet tabs (Website reviews, Teachers, Students, Trip ratings, Photos)
+//   GET  /tour?type=sheetphoto&id= -> one questionnaire photo
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -196,7 +193,7 @@ export default async (req) => {
         for (const ph of (e && e.photos) || []) await delKey(store, "fbp/" + ph.id);
         await delKey(store, "fb/" + id);
       }
-      await store.set("fbidx", "[]"); await store.set("fbsynced", "{}");
+      await store.set("fbidx", "[]");
       return reply(headers, 200, { ok: true, cleared: type, removed: ids.length });
     }
     if (type === "expenses") {          // every expense and its receipt files (needs the expenses password too)
@@ -331,10 +328,6 @@ export default async (req) => {
       const rec = { id, at: Date.now(), kind: parsed.kind === "teacher" ? "teacher" : "student", name: String(parsed.name || "photo.jpg").replace(/[^\w .()-]/g, "_").slice(0, 80),
         mime: data.slice(5, data.indexOf(";")), data, url: "" };
       await store.set("fbp/" + id, JSON.stringify(rec));
-      // Straight to the Drive folder when the spreadsheet is connected (otherwise it's sent with the response later)
-      const tour = await fbTour(store);
-      const h = await hubPost({ action: "photo", id, name: rec.name, mime: rec.mime, data: data.slice(data.indexOf(",") + 1), tour: tour.name });
-      if (h && h.ok && h.url) { rec.url = h.url; await store.set("fbp/" + id, JSON.stringify(rec)); }
       return reply(headers, 200, { ok: true, id });
     }
     if (type === "feedback") {
@@ -355,30 +348,18 @@ export default async (req) => {
       await store.set("fb/" + e.id, JSON.stringify(e));
       let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
       idx.push(e.id); await store.set("fbidx", JSON.stringify(idx));
-      // Send to the spreadsheet now if it's connected and every photo is already in Drive; otherwise TCA can send it later
-      let synced = false;
-      try { const r = await fbSyncStep(store, e); synced = !!r.done; } catch {}
-      return reply(headers, 200, { ok: true, id: e.id, synced });
+      return reply(headers, 200, { ok: true, id: e.id });
     }
-    if (type === "fbsync" || type === "fbdel" || type === "fbping") {
+    if (type === "fbdel") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
-      if (type === "fbping") {
-        const h = await hubPost({ action: "ping" });
-        if (h && h.ok && h.sheet) await store.set("fbsheet", String(h.sheet));
-        return reply(headers, 200, h || { ok: false, error: "no answer" });
-      }
       const id = String((parsed && parsed.id) || "");
       const e = await fbGet(store, id);
-      if (!e) return reply(headers, 404, { ok: false, error: "not found" });
-      if (type === "fbdel") {
-        if (id.startsWith("tq-")) { const all = safeObj(await store.get("tq")); delete all[e.tqKey]; await store.set("tq", JSON.stringify(all)); }
-        else { for (const ph of e.photos || []) await delKey(store, "fbp/" + ph.id); await delKey(store, "fb/" + id);
-          let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
-          await store.set("fbidx", JSON.stringify(idx.filter((x) => x !== id))); }
-        return reply(headers, 200, { ok: true });
-      }
-      const r = await fbSyncStep(store, e, true);
-      return reply(headers, r.ok === false ? 502 : 200, r);
+      if (!e) return reply(headers, 404, { ok: false, error: "not found" });   // (the Google Form history can't be deleted)
+      if (id.startsWith("tq-")) { const all = safeObj(await store.get("tq")); delete all[e.tqKey]; await store.set("tq", JSON.stringify(all)); }
+      else { for (const ph of e.photos || []) await delKey(store, "fbp/" + ph.id); await delKey(store, "fb/" + id);
+        let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
+        await store.set("fbidx", JSON.stringify(idx.filter((x) => x !== id))); }
+      return reply(headers, 200, { ok: true });
     }
     // Post-tour teacher questionnaire: one entry per teacher; the server stamps the time
     if (type === "tq") {
@@ -518,16 +499,14 @@ export default async (req) => {
     }
     if (type === "fb" || type === "fbrows") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
-      const all = await fbAll(store), synced = safeObj(await store.get("fbsynced"));
+      const all = await fbAll(store);
       if (type === "fbrows") {
         const tabs = {};
         for (const e of all) { const t = await fbRows(store, e); Object.keys(t).forEach((k) => { (tabs[k] = tabs[k] || []).push(...t[k]); }); }
         return reply(headers, 200, { ok: true, tabs });
       }
       let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
-      return reply(headers, 200, { ok: true, rows: all.map((e) => Object.assign({}, e, { synced: synced[e.id] || null })),
-        teachers: teacherNames(U).map((t) => t.name), hub: !!(env("FEEDBACK_HUB_URL") && env("FEEDBACK_HUB_TOKEN")),
-        sheet: env("FEEDBACK_SHEET_URL") || (await store.get("fbsheet")) || "" });
+      return reply(headers, 200, { ok: true, rows: all, teachers: teacherNames(U).map((t) => t.name) });
     }
     if (type === "tq") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
@@ -599,15 +578,11 @@ export default async (req) => {
       if (!/^p[a-z0-9]{4,20}$/.test(id)) return reply(headers, 400, { ok: false, error: "bad id" });
       const local = await store.get("fbp/" + id);
       if (local) { try { const r = JSON.parse(local); return reply(headers, 200, { ok: true, data: r.data }); } catch {} }
-      const h = await hubPost({ action: "photoget", id });
-      return h && h.ok ? reply(headers, 200, { ok: true, data: "data:" + (h.mime || "image/jpeg") + ";base64," + h.data }) : reply(headers, 404, { ok: false, error: (h && h.error) || "not found" });
+      return reply(headers, 404, { ok: false, error: "not found" });
     }
-    const h = await hubPost({ action: "read" });
-    if (h && h.ok && h.tabs) return reply(headers, 200, { ok: true, source: "sheet", tabs: h.tabs, sheet: h.sheet || env("FEEDBACK_SHEET_URL") || "" });
-    // Not connected yet: this tour's own answers, laid out the same way
     const tabs = {};
     for (const e of await fbAll(store)) { const t = await fbRows(store, e); Object.keys(t).forEach((k) => { (tabs[k] = tabs[k] || []).push(...t[k]); }); }
-    return reply(headers, 200, { ok: true, source: "app", note: (h && h.error) || "", tabs, sheet: env("FEEDBACK_SHEET_URL") || "" });
+    return reply(headers, 200, { ok: true, tabs });
   }
   if (type === "fbphoto") {   // a questionnaire photo: TCA/admin only
     if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
@@ -648,7 +623,7 @@ async function quizPlayer(store, p, given, staffPass) {
   return teacherNames(U).some((t) => t.name === name) ? "t:" + name : null;
 }
 
-// ---------------- questionnaires -> the master Google Sheet ("feedback hub")
+// ---------------- questionnaires (teacher + student links), shown on the results page /sheet
 const FB_MAX_PHOTOS = 6, FB_MAX_PHOTO = 3 * 1024 * 1024, FB_MAX_RESPONSES = 3000, FB_RATE = 400;
 async function fbRateOk(store, ip) {
   let r = {}; try { r = JSON.parse((await store.get("fbrate")) || "{}"); } catch {}
@@ -673,25 +648,36 @@ function fbFromTq(t, tour) {
   return { id: "tq-" + String(t.key).replace(/[^A-Za-z0-9]/g, ""), tqKey: t.key, kind: "teacher", ts: t.ts, tour,
     a: Object.assign({ name: t.teacher }, t.a || {}), photos: [], source: "App", test: !!t.test };
 }
+/* Teacher feedback from TCA's Google Form, before the app: kept here so all feedback is in one place.
+   Both teachers said yes to their comments being used with their name and school. */
+const FB_HISTORY = [
+  { id: "g-skinners", ts: Date.UTC(2026, 2, 24, 13, 39), school: "The Skinners' School", name: "Helen Kirk", overall: 5, objectives: 5, support: 5,
+    stoodOut: "The bespoke feel to planning", impact: "Life experiences", recommend: "Yes",
+    say: "Use TCA because you will get a friendly 1-1 bespoke trip that tailors to your needs. It was also really good value.",
+    improve: "It was great to see and experience the contrasting theatre and music that NYC has to offer.\nMeeting real New Yorkers was great. My only comment was loved going inside the Jazz venues so more of that would be good, with the music venues and the theatres." },
+  { id: "g-wycombe", ts: Date.UTC(2026, 2, 27, 13, 40), school: "Wycombe Abbey", name: "Louise Maddison", overall: 5, objectives: 5, support: 5,
+    stoodOut: "What really stood out was the level of access and engagement our pupils had to world class performance art. Seeing the Broadway and Off-Broadway shows gave them a clear sense of industry standards (and lots of enjoyment), but what made the trip more unique was the behind the scenes insight. They got the chance to watch the shows and then speak to the professionals who brought them to life. It was great to watch them get the chance to participate, not just observe, with experiences like learning choreography and pitching their own show.",
+    impact: "I would say the biggest impact was how the trip connected their classroom learning with career pathways in the arts. The Q&As and the visit to Juilliard helped them understand the wide range of roles within the industry.",
+    recommend: "Yes", say: "",
+    improve: "This was a brand new tour, and Tony was great at balancing his extensive knowledge of NY with my suggestions to make a fully theatre-centric tour. There were a small number of teething problems with catering, flights and breakfast but these were swiftly sorted. We were grateful to have TCA presence on the trip itself, and Tony and Chris balanced this well - allowing us space while also being on hand if any problems arose. I would not hesitate in using TCA again. I'm currently in talks to run this as a bi-annual trip." },
+];
+function fbHistory() {
+  return FB_HISTORY.map((h) => ({ id: h.id, kind: "teacher", ts: h.ts, source: "Google Form", test: false, photos: [],
+    tour: { name: "New York (Google Form, before the app)", school: h.school, destination: "New York", dates: "" },
+    a: { name: h.name, school: h.school, r_overall: h.overall, r_objectives: h.objectives, r_support: h.support, stoodOut: h.stoodOut, impact: h.impact,
+      recommend: h.recommend, say: h.say, summary: h.say || h.improve, improve: h.improve, quoteOk: "Yes, with my name and school" } }));
+}
 async function fbAll(store) {
   const ids = await fbIds(store), tour = await fbTour(store);
   const out = (await Promise.all(ids.map((id) => store.get("fb/" + id)))).map((x) => { try { return JSON.parse(x || "null"); } catch { return null; } }).filter(Boolean);
   Object.values(safeObj(await store.get("tq"))).forEach((t) => out.push(fbFromTq(t, tour)));
+  out.push(...fbHistory());
   return out.sort((a, b) => a.ts - b.ts);
 }
 async function fbGet(store, id) {
   if (id.startsWith("tq-")) { const tour = await fbTour(store); const t = Object.values(safeObj(await store.get("tq"))).find((x) => "tq-" + String(x.key).replace(/[^A-Za-z0-9]/g, "") === id); return t ? fbFromTq(t, tour) : null; }
   if (!/^f[a-z0-9]{4,20}$/.test(id)) return null;
   try { return JSON.parse((await store.get("fb/" + id)) || "null"); } catch { return null; }
-}
-async function hubPost(body) {
-  const url = env("FEEDBACK_HUB_URL"), tok = env("FEEDBACK_HUB_TOKEN");
-  if (!url || !tok) return { ok: false, notConfigured: true, error: "The master spreadsheet isn't connected yet (FEEDBACK_HUB_URL / FEEDBACK_HUB_TOKEN)." };
-  try {
-    const r = await (globalThis.__HUB_FETCH__ || fetch)(url, { method: "POST", headers: { "content-type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ token: tok }, body)), redirect: "follow", signal: AbortSignal.timeout(9000) });
-    return await r.json();
-  } catch (err) { return { ok: false, error: "The spreadsheet didn't answer: " + String((err && err.message) || err).slice(0, 120) }; }
 }
 function fbCredit(e) {
   const a = e.a || {}, q = String(a.quoteOk || ""), school = a.school || e.tour.school, dest = String(e.tour.destination || "").split(",")[0];
@@ -711,7 +697,7 @@ async function fbRows(store, e) {
   const photos = [];
   for (const ph of e.photos || []) { let rec = null; try { rec = JSON.parse((await store.get("fbp/" + ph.id)) || "null"); } catch {}
     photos.push(Object.assign({}, base, { "Who": who, "Name": a.name || "", "Caption": ph.cap || "", "OK to post?": a.photoOk || "",
-      "Others in photo have consent?": a.photoOk === "Yes" ? (a.othersOk ? "Yes: confirmed by sender" : "") : "", "Photo": (rec && rec.url) || "In the tour app only", "Photo ID": ph.id })); }
+      "Others in photo have consent?": a.photoOk === "Yes" ? (a.othersOk ? "Yes: confirmed by sender" : "") : "", "Photo ID": ph.id })); }
   const head = Object.assign({}, base, { "Destination": t.destination, "Tour dates": t.dates, "School / Organisation": a.school || t.school, "Name": a.name || "", "Source": e.source || "", "Test?": e.test ? "Yes" : "" });
   const rows = {};
   if (e.kind === "teacher") {
@@ -745,27 +731,6 @@ async function fbRows(store, e) {
   if (photos.length) rows["Photos"] = photos;
   return rows;
 }
-/* One step towards the spreadsheet: a photo still to go to Drive, else the rows. Called again until done. */
-async function fbSyncStep(store, e, manual) {
-  const synced = safeObj(await store.get("fbsynced"));
-  if (synced[e.id] && !manual) return { ok: true, done: true };
-  for (const ph of e.photos || []) {
-    let rec = null; try { rec = JSON.parse((await store.get("fbp/" + ph.id)) || "null"); } catch {}
-    if (rec && !rec.url) {
-      if (!manual) return { ok: true, done: false };       // leave photos for a TCA "Send" (keeps the student's wait short)
-      const h = await hubPost({ action: "photo", id: rec.id, name: rec.name, mime: rec.mime, data: rec.data.slice(rec.data.indexOf(",") + 1), tour: e.tour.name, caption: ph.cap });
-      if (!(h && h.ok && h.url)) return { ok: false, error: (h && h.error) || "photo not saved" };
-      rec.url = h.url; await store.set("fbp/" + rec.id, JSON.stringify(rec));
-      return { ok: true, done: false, step: "photo" };
-    }
-  }
-  const h = await hubPost({ action: "rows", id: e.id, rows: await fbRows(store, e) });
-  if (!(h && h.ok)) return { ok: false, error: (h && h.error) || "not saved" };
-  synced[e.id] = Date.now(); await store.set("fbsynced", JSON.stringify(synced));
-  if (h.sheet) await store.set("fbsheet", String(h.sheet));
-  return { ok: true, done: true, sheet: h.sheet || "" };
-}
-
 // ---------------- expenses
 function cleanExpense(p) {
   if (!p || typeof p !== "object") return { error: "missing details" };

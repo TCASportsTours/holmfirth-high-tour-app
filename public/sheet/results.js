@@ -1,7 +1,6 @@
-/* TCA Tours — Feedback results page (/sheet), v1.
-   Shows the master feedback spreadsheet (every tour's teacher and student questionnaires) behind its own password,
-   so nobody needs a Google account. Data comes from the spreadsheet via the tour site's backend (?type=sheetdata);
-   until the spreadsheet is connected it shows this tour's own copy. The password is kept for this browser tab only. */
+/* TCA Tours — Feedback results page (/sheet), v2.
+   Every teacher and student questionnaire (plus the Google Form history) behind its own password, with
+   Download as Excel. No Google account or spreadsheet needed. The password is kept for this browser tab only. */
 (function(){
 'use strict';
 var API='/.netlify/functions/tour', KEY='tca_sheet_key';
@@ -50,15 +49,13 @@ var OVERALL_T='Overall, how satisfied were you with your TCA tour experience? (1
 function paint(){
   var T=rows('Teachers'), S=rows('Students'), tA=avg(T.map(function(r){return r[OVERALL_T];})), sA=avg(S.map(function(r){return r['Overall rating (1–5)'];}));
   var h='<p class="label">TCA Tours · every tour</p><h1>Feedback <em>results</em></h1>';
-  if(D.source==='app') h+='<p class="banner"><i class="ti ti-info-circle"></i> The master spreadsheet isn’t connected yet, so this shows <b>this tour’s</b> answers only. '+esc(D.note||'')+'</p>';
   h+='<div class="stat"><div><b>'+T.length+'</b><span>teacher responses</span></div><div><b>'+S.length+'</b><span>student responses</span></div>'+
     '<div><b>'+(tA?tA.avg:'—')+'</b><span>teachers’ overall (1–5)'+(tA?'<br>'+esc(tA.work):'')+'</span></div>'+
     '<div><b>'+(sA?sA.avg:'—')+'</b><span>students’ overall (1–5)'+(sA?'<br>'+esc(sA.work):'')+'</span></div></div>';
   h+='<div class="row" style="margin-top:14px"><select class="field" id="tour" style="max-width:340px"><option value="">All tours</option>'+tours().map(function(t){ return '<option'+(t===TOUR?' selected':'')+'>'+esc(t)+'</option>'; }).join('')+'</select>'+
     '<input class="field" id="find" placeholder="Search names, comments…" value="'+esc(FIND)+'"></div>';
   h+='<div class="tabsbar">'+TABS.map(function(t){ return '<button class="'+(t===VIEW?'on':'')+'" data-tab="'+esc(t)+'">'+esc(t)+'<b>'+rows(t).length+'</b></button>'; }).join('')+'</div>';
-  h+='<div class="row" style="margin:6px 0 4px"><button class="lnk" id="xl"><i class="ti ti-table-down"></i> Download as Excel</button>'+
-    (D.sheet?'<a class="lnk" href="'+esc(D.sheet)+'" target="_blank" rel="noopener"><i class="ti ti-brand-google"></i> Open in Google Sheets (owner)</a>':'')+
+  h+='<div class="row" style="margin:6px 0 4px"><button class="lnk" id="xl"><i class="ti ti-table-down"></i> Download as Excel</button><span class="meta">(the tour and search shown)</span>'+
     '<button class="lnk" id="out"><i class="ti ti-logout"></i> Lock</button><span class="meta" id="flash"></span></div>';
   h+='<div id="view">'+view()+'</div>';
   $('main').innerHTML=h;

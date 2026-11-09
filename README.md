@@ -185,43 +185,19 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Teachers:** `https://holmfirthnyc.tcatours.co.uk/feedback/teachers/`, the same questions as v22/v23 plus optional photos. No sign-in; they type their name. The app's pop-up and tile now open this page with the teacher's name filled in, and the app stops asking once it's sent.
 - **Students:** `https://holmfirthnyc.tcatours.co.uk/feedback/students/`, about 2 minutes: name, overall rating, each trip ("Didn't go"), best bit, anything to change, recommend to a friend, a comment, and permission to use it (first name + school / anonymously / no).
 - **Photos (both, optional):** up to 6, shrunk on the phone and uploaded as soon as they're picked, each with a caption. If they add photos they must answer **"Can we post your photos?"**. A **Yes** needs the tick: *"If there's anyone else in my photos, I have permission from them and their parents for the photos to be used."* (Teachers' wording mentions the school's photo consent list.) Students are told to check with a parent or guardian first.
-- **TCA Tours (in the app, More):**
+- **TCA Tours (in the app, More):** (v27: the Google Sheet was dropped; see v27)
   - **Questionnaire links:** copy or preview the two links; preview sends are marked as tests
   - **Questionnaire results:** teachers and students together, website reviews with credit lines, a photo gallery marked *OK to post* / *TCA only*, ratings with the working, every response
   - **Send to spreadsheet** and **Export to Excel** (the same tabs as the master sheet)
 
-### The master spreadsheet (all tours in one place)
-
-`hub/TCA_Feedback_Hub_v2.gs` is a Google Apps Script that lives inside ONE master Google Sheet. Every tour app sends its questionnaires to it.
-
-- **Tabs:**
-  - **Website reviews:** only comments with permission, ready to use
-  - **Teachers**
-  - **Students**
-  - **Trip ratings:** one row per trip rating, so trips can be compared across tours
-  - **Photos:** links to the photos, saved in Drive under *TCA Tours — Tour Feedback Photos / <tour>*
-- **Columns:** new questions on future tours simply add columns at the end, and a response is never added twice.
-- **Set up once:**
-  1. Make the Google Sheet.
-  2. Extensions → Apps Script; paste the script with the real token in `TOKEN`.
-  3. Deploy → New deployment → Web app (Execute as **Me**, access **Anyone**); authorise.
-  4. Copy the web-app URL into Netlify as `FEEDBACK_HUB_URL`, with the same token as `FEEDBACK_HUB_TOKEN` (and optionally `FEEDBACK_SHEET_URL` = the sheet's own link). Redeploy.
-- **Every future tour site** built from this app gets the same two variables, so its answers land in the same sheet with its own tour name. Answers sent before the sheet is connected are kept in the app; press **Send** on Questionnaire results to add them.
-- Admin → Clear test data can clear `fb` (answers and photos in the app; not the spreadsheet).
-
-## v26: feedback results page behind a password (no Google account)
-
-- **https://holmfirthnyc.tcatours.co.uk/sheet** is a results page for the master feedback spreadsheet, locked with its own password (`FEEDBACK_VIEW_PASSWORD` in Netlify; not in this repo). Nobody needs a Google account. The Google Sheet itself stays private to its owner.
-- **What it shows:**
-  - every tour, with a **tour filter** and **search**
-  - totals and average overall ratings, with the working
-  - tabs: **Website reviews** (with Copy), **Teachers**, **Students**, **Trip ratings** (averages per trip, with the working) and **Photos** (marked *OK to post* / *TCA Tours only*, with downloads)
-  - **Download as Excel**
-  - "Open in Google Sheets" for the owner
-- **Where the data comes from:** read live from the spreadsheet by the hub script (**v2** adds the `read` and `photoget` actions, so paste the v2 script). Until the spreadsheet is connected, the page shows this tour's own answers.
-- Wrong passwords count towards the 15-minute lockout. The password is remembered only for that browser tab; **Lock** clears it.
-- **Links:** the app (TCA → More → **Feedback results**) and admin.html → **Open feedback results**.
 ## v25: one-tap link to the feedback spreadsheet
 
-- **https://holmfirthnyc.tcatours.co.uk/sheet** goes straight to the master feedback Google Sheet (set by `FEEDBACK_SHEET_URL`). The sheet stays private: Google asks you to sign in with an account that has access.
+- **https://holmfirthnyc.tcatours.co.uk/sheet** (v26/v27: now the password-protected results page; see below).
 - Also in the app (TCA Tours staff → More → **Feedback spreadsheet**) and at the top of admin.html (**Feedback spreadsheet**, with previews of both forms).
+
+## v27: no Google Sheet, results page + Excel only
+
+- The Google Sheet and its Apps Script were removed. Every questionnaire stays in the app's own store and is collected on the password page **/sheet**, with **Download as Excel** (tabs: Website reviews, Teachers, Students, Trip ratings, Photos). No Google account is needed by anyone.
+- The Skinners' and Wycombe Abbey responses from TCA's Google Form are built in (`FB_HISTORY` in the backend), so all teacher feedback shows in one place.
+- Photos stay in the app's store and are viewed and downloaded on /sheet or in the app's Questionnaire results.
+- Netlify variables no longer used: `FEEDBACK_HUB_URL`, `FEEDBACK_HUB_TOKEN`, `FEEDBACK_SHEET_URL`. Still used: `FEEDBACK_VIEW_PASSWORD`.

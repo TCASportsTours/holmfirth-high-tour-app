@@ -3,8 +3,8 @@
    Teachers: a pop-up as soon as the app opens (until they've sent it) and a "Tour questionnaire" tile, both opening the
    teacher link with their name filled in. TCA Tours staff: More → Questionnaire results (teachers + students, website
    reviews, photos, ratings with the working) and More → Questionnaire links (copy / preview the two links).
-   Every response is also sent to TCA Tours' master Google Sheet (all tours in one place); "Send to spreadsheet" resends
-   any that haven't gone yet. Answers teachers sent inside the app before the links existed (v22/v23) are included.
+   The full results (every tour, plus the Google Form history) are at /sheet behind their own password, with Download as Excel.
+   Answers teachers sent inside the app before the links existed (v22/v23) are included.
    Uses helpers from index.html: API, LS, lsGet, lsSet, esc, jsArg, $, toast, openPage, rerenderPage, openModal, closeModal, me, isTeacher, isTcaStaff, ago. */
 'use strict';
 var FB_TEACH = '/feedback/teachers/', FB_STUD = '/feedback/students/';
@@ -37,10 +37,10 @@ function openFbLinks(){
       '<div class="btnrow" style="margin-top:10px"><button class="btn dark" onclick="tqCopy('+jsArg(u)+',\'Link copied\')"><i class="ti ti-copy"></i> Copy link</button>'+
       '<a class="btn line" href="'+esc(path)+'?test=1"><i class="ti ti-eye"></i> Preview</a></div></div>'; };
   openPage('<p class="label">TCA Tours · feedback</p><h2>Questionnaire <em>links</em></h2>'+
-    '<p class="small muted">Send these to the school. No sign-in needed. Everything goes to the master feedback spreadsheet, with every other tour’s.</p>'+
+    '<p class="small muted">Send these to the school. No sign-in needed.</p>'+
     row('Teachers','About 3 minutes, plus optional detail. Built on the TCA feedback form; asks permission to use their review on the website.',FB_TEACH)+
     row('Students','About 2 minutes: overall rating, each trip, best bit, a comment, and optional photos with permission to post.',FB_STUD)+
-    '<p class="small muted">Preview sends are marked as tests and left out of the results.</p>');
+    '<p class="small muted">Preview sends are marked as tests and left out of the results. Everything is collected at /sheet (password), with Download as Excel.</p>');
 }
 
 /* ---------- results (TCA Tours staff) ---------- */
@@ -51,7 +51,9 @@ function fbLoad(){ fetch(API+'?type=fb',{headers:{'x-staff-key':lsGet(LS.key)||'
 /* Average with the working shown: "(5 + 4) ÷ 2 = 4.5" */
 function tqAvg(vals){ var n=vals.filter(function(v){return typeof v==='number';}); if(!n.length) return null; var t=n.reduce(function(a,b){return a+b;},0);
   return {avg:Math.round(t/n.length*10)/10, n:n.length, work:'('+n.join(' + ')+') ÷ '+n.length+' = '+(Math.round(t/n.length*100)/100)}; }
-function fbRows(){ return ((FBR&&FBR.rows)||[]).filter(function(r){ return (FBF.test||!r.test)&&(FBF.kind==='all'||r.kind===FBF.kind); }); }
+/* This tour only: the Google Form history from earlier tours shows on /sheet, not here */
+function fbMine(){ return ((FBR&&FBR.rows)||[]).filter(function(r){ return r.source!=='Google Form'; }); }
+function fbRows(){ return fbMine().filter(function(r){ return (FBF.test||!r.test)&&(FBF.kind==='all'||r.kind===FBF.kind); }); }
 function fbCredit(r){ var a=r.a||{}, q=a.quoteOk||'', school=a.school||(r.tour&&r.tour.school)||'', dest=String((r.tour&&r.tour.destination)||'').split(',')[0];
   if(!/^Yes/.test(q)) return '';
   if(r.kind==='student') return /first name/.test(q)?String(a.name||'').trim().split(/\s+/)[0]+', '+school:'A student on the '+dest+' trip';
@@ -64,19 +66,12 @@ function fbPaint(keep){
   if(!j) h+='<div class="card"><p class="small muted">Loading…</p></div>';
   else if(!j.ok) h+='<div class="card"><p class="small">'+esc(j.error||'Not allowed')+'</p></div>';
   else {
-    var all=(j.rows||[]).filter(function(r){return FBF.test||!r.test;}), rows=fbRows();
+    var all=fbMine().filter(function(r){return FBF.test||!r.test;}), rows=fbRows();
     var T_=all.filter(function(r){return r.kind==='teacher';}), S_=all.filter(function(r){return r.kind==='student';});
-    var answered={}; T_.forEach(function(r){ answered[String(r.a.name||'')]=1; }); var unsent=all.filter(function(r){return !r.synced;}).length;
+    var answered={}; T_.forEach(function(r){ answered[String(r.a.name||'')]=1; });
     h+='<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+T_.length+'</b><span>teacher'+(T_.length===1?'':'s')+' answered</span></div>'+
       '<div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+S_.length+'</b><span>student'+(S_.length===1?'':'s')+' answered</span></div></div>';
-    /* the master spreadsheet */
-    h+='<div class="card rule"><h3 style="font-size:20px">Master spreadsheet</h3>'+
-      (j.hub?'<p class="small muted" style="margin-top:4px">Every response goes to the master feedback sheet, with every other tour’s. '+(unsent?'<b>'+unsent+' not sent yet.</b>':'All sent.')+'</p>'
-        :'<p class="small" style="margin-top:4px"><b>Not connected yet.</b> Answers are safe here; send them once the spreadsheet is set up (see the README).</p>')+
-      '<div class="btnrow" style="margin-top:10px">'+(j.sheet?'<a class="btn dark" target="_blank" rel="noopener" href="'+esc(j.sheet)+'"><i class="ti ti-table"></i> Open sheet</a>':'')+
-      (j.hub&&unsent?'<button class="btn gold" onclick="fbSyncAll()"><i class="ti ti-cloud-upload"></i> Send '+unsent+'</button>':'')+
-      (j.hub&&!j.sheet?'<button class="btn line" onclick="fbPing()"><i class="ti ti-plug-connected"></i> Check link</button>':'')+'</div>'+
-      '<p class="small" id="fbSyncMsg" style="margin-top:6px"></p></div>';
+    h+='<a class="btn dark" href="/sheet" target="_blank" rel="noopener" style="margin-top:4px"><i class="ti ti-table"></i> Full results: every tour + Excel</a>';
     h+='<div class="seg" style="margin-top:6px">'+[['all','Everyone'],['teacher','Teachers'],['student','Students']].map(function(x){ return '<button class="'+(FBF.kind===x[0]?'on':'')+'" onclick="FBF.kind=\''+x[0]+'\';fbPaint(true)">'+x[1]+'</button>'; }).join('')+'</div>';
     var tests=(j.rows||[]).filter(function(r){return r.test;}).length;
     if(tests) h+='<p class="small"><label><input type="checkbox" '+(FBF.test?'checked':'')+' onchange="FBF.test=this.checked;fbPaint(true)"> Include '+tests+' test answer'+(tests>1?'s':'')+'</label></p>';
@@ -108,9 +103,9 @@ function fbPaint(keep){
         var bits=(r.kind==='teacher'?[['Sum up',a.summary],['Stood out',a.stoodOut],['Biggest impact',a.impact],['Would say to another school',a.say],['Comments & suggestions',a.improve]]
           :[['Describe it to a friend',a.summary],['Best bit',a.best],['Would change',a.change]]).filter(function(x){return x[1];});
         return '<div class="card rule"><div class="cardhead"><h3 style="font-size:19px">'+esc(a.name||'—')+' <span class="tag">'+(r.kind==='teacher'?'Teacher':'Student')+'</span>'+(r.test?' <span class="tag">Test</span>':'')+'</h3><span class="small muted">'+esc(ago(r.ts))+'</span></div>'+
-          '<p class="small muted">'+esc(['Overall '+(a.r_overall||'—')+'/5','Recommend: '+(a.recommend||'—'),'Quote: '+(a.quoteOk||'not answered'),(r.photos||[]).length?(r.photos.length+' photo'+(r.photos.length>1?'s':'')):'',r.synced?'In the sheet':'Not in the sheet yet',r.source].filter(Boolean).join(' · '))+'</p>'+
+          '<p class="small muted">'+esc(['Overall '+(a.r_overall||'—')+'/5','Recommend: '+(a.recommend||'—'),'Quote: '+(a.quoteOk||'not answered'),(r.photos||[]).length?(r.photos.length+' photo'+(r.photos.length>1?'s':'')):'',r.source].filter(Boolean).join(' · '))+'</p>'+
           (bits.length?bits.map(function(x){ return '<p class="small" style="margin-top:6px"><b>'+esc(x[0])+':</b> '+esc(x[1])+'</p>'; }).join(''):'<p class="small muted">No comments.</p>')+
-          '<p style="margin-top:8px"><button class="linkbtn" onclick="fbDelete('+jsArg(r.id)+','+jsArg(a.name||'this')+')">Delete here</button></p></div>'; }).join('');
+          (/^g-/.test(r.id)?'':'<p style="margin-top:8px"><button class="linkbtn" onclick="fbDelete('+jsArg(r.id)+','+jsArg(a.name||'this')+')">Delete</button></p>')+'</div>'; }).join('');
     } else h+='<div class="card"><p class="small">No answers yet. Send the links from More → Questionnaire links.</p></div>';
     h+='<p class="small muted" style="margin-top:10px"><button class="linkbtn" onclick="fbLoad()">Refresh</button></p>';
   }
@@ -126,27 +121,11 @@ function fbThumbs(){ [].forEach.call(document.querySelectorAll('img[data-ph]'),f
 function fbPhotoSave(id,name){ var d=FB_IMG[id]; if(!d){ toast('Still loading'); return; } var a=document.createElement('a'); a.href=d; a.download=String(name).replace(/[^\w-]+/g,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 function tqCopy(t,msg){ try{ navigator.clipboard.writeText(t).then(function(){ toast(msg||'Review copied'); },function(){ prompt('Copy this:',t); }); }catch(e){ prompt('Copy this:',t); } }
 function fbDelete(id,name){
-  if(!confirm('Delete '+name+'’s answers from the app? (If they’re already in the spreadsheet, delete the rows there too.)')) return;
+  if(!confirm('Delete '+name+'’s answers? This can’t be undone.')) return;
   fetch(API+'?type=fbdel',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({id:id})})
     .then(function(r){ if(r.ok){ toast('Deleted'); fbLoad(); } else toast('Could not delete ('+r.status+')'); }).catch(function(){ toast('Needs signal'); });
 }
-function fbPing(){ var m=$('fbSyncMsg'); m.textContent='Checking…';
-  fetch(API+'?type=fbping',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:'{}'}).then(function(r){return r.json();})
-    .then(function(j){ m.textContent=j&&j.ok?'Connected.':'Not connected: '+((j&&j.error)||'no answer'); if(j&&j.ok) fbLoad(); }).catch(function(){ m.textContent='Needs signal'; }); }
-/* Send every response that isn't in the spreadsheet yet: one step per call (each photo, then the rows) */
-function fbSyncAll(){
-  var list=((FBR&&FBR.rows)||[]).filter(function(r){return !r.synced;}), i=0, sent=0, m=$('fbSyncMsg');
-  (function next(){
-    if(i>=list.length){ m.textContent='Sent '+sent+' of '+list.length+'.'; fbLoad(); return; }
-    var r=list[i]; m.textContent='Sending '+(i+1)+' of '+list.length+'…';
-    fetch(API+'?type=fbsync',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({id:r.id})})
-      .then(function(x){return x.json();}).then(function(j){
-        if(!j||j.ok===false){ m.textContent='Stopped: '+((j&&j.error)||'not sent'); fbLoad(); return; }
-        if(j.done){ sent++; i++; } next();
-      }).catch(function(){ m.textContent='Lost signal. Try again.'; });
-  })();
-}
-/* Same tabs and columns as the master spreadsheet, for keeping a copy */
+/* Every response as spreadsheet tabs (Website reviews, Teachers, Students, Trip ratings, Photos) */
 function fbExport(){
   fetch(API+'?type=fbrows',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.json();}).then(function(j){
     if(!j||!j.ok) return toast('Couldn’t get the answers');

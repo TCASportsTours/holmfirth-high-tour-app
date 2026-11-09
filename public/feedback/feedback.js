@@ -1,7 +1,7 @@
 /* TCA Tours — tour questionnaires on their own links, v1.
    /feedback/teachers  (window.FB_KIND = 'teacher')  ·  /feedback/students  (window.FB_KIND = 'student')
-   No sign-in. Answers go to the tour app's backend (?type=feedback), which keeps a copy and sends them on to
-   TCA Tours' master Google Sheet, where every tour's questionnaires are kept together.
+   No sign-in. Answers go to the tour app's backend (?type=feedback) and are collected on the password-protected
+   results page /sheet (with Download as Excel).
    Photos are optional: shrunk on the phone, uploaded as soon as they're picked, then sent with the answers.
    A draft is kept on the device, so half-finished answers survive closing the page.
    Link options: ?t=<teacher name> (from inside the tour app: fills in the name and marks it done in the app),
