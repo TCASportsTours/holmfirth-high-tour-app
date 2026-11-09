@@ -179,3 +179,32 @@ Known limits (by design): students sign in without a password, so someone could 
 
 - Teachers see the questionnaire pop-up **as soon as the app opens**, every time, until they've sent it. This includes straight after signing in, and coming back to the app after more than 10 minutes away.
 - "Later" hides it only until the next time they open the app. Once it's sent it never appears again. Students and TCA staff never get it.
+
+## v24: questionnaires on their own links + one master spreadsheet for every tour
+
+- **Teachers:** `https://holmfirthnyc.tcatours.co.uk/feedback/teachers/`, the same questions as v22/v23 plus optional photos. No sign-in; they type their name. The app's pop-up and tile now open this page with the teacher's name filled in, and the app stops asking once it's sent.
+- **Students:** `https://holmfirthnyc.tcatours.co.uk/feedback/students/`, about 2 minutes: name, overall rating, each trip ("Didn't go"), best bit, anything to change, recommend to a friend, a comment, and permission to use it (first name + school / anonymously / no).
+- **Photos (both, optional):** up to 6, shrunk on the phone and uploaded as soon as they're picked, each with a caption. If they add photos they must answer **"Can we post your photos?"**. A **Yes** needs the tick: *"If there's anyone else in my photos, I have permission from them and their parents for the photos to be used."* (Teachers' wording mentions the school's photo consent list.) Students are told to check with a parent or guardian first.
+- **TCA Tours (in the app, More):**
+  - **Questionnaire links:** copy or preview the two links; preview sends are marked as tests
+  - **Questionnaire results:** teachers and students together, website reviews with credit lines, a photo gallery marked *OK to post* / *TCA only*, ratings with the working, every response
+  - **Send to spreadsheet** and **Export to Excel** (the same tabs as the master sheet)
+
+### The master spreadsheet (all tours in one place)
+
+`hub/TCA_Feedback_Hub_v1.gs` is a Google Apps Script that lives inside ONE master Google Sheet. Every tour app sends its questionnaires to it.
+
+- **Tabs:**
+  - **Website reviews:** only comments with permission, ready to use
+  - **Teachers**
+  - **Students**
+  - **Trip ratings:** one row per trip rating, so trips can be compared across tours
+  - **Photos:** links to the photos, saved in Drive under *TCA Tours — Tour Feedback Photos / <tour>*
+- **Columns:** new questions on future tours simply add columns at the end, and a response is never added twice.
+- **Set up once:**
+  1. Make the Google Sheet.
+  2. Extensions → Apps Script; paste the script with the real token in `TOKEN`.
+  3. Deploy → New deployment → Web app (Execute as **Me**, access **Anyone**); authorise.
+  4. Copy the web-app URL into Netlify as `FEEDBACK_HUB_URL`, with the same token as `FEEDBACK_HUB_TOKEN` (and optionally `FEEDBACK_SHEET_URL` = the sheet's own link). Redeploy.
+- **Every future tour site** built from this app gets the same two variables, so its answers land in the same sheet with its own tour name. Answers sent before the sheet is connected are kept in the app; press **Send** on Questionnaire results to add them.
+- Admin → Clear test data can clear `fb` (answers and photos in the app; not the spreadsheet).

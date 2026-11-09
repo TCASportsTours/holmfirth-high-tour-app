@@ -10,3 +10,6 @@
   Cache-Control: no-store, max-age=0, must-revalidate
 /sw.js
   Cache-Control: no-store, max-age=0, must-revalidate
+/feedback/*
+  Cache-Control: no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow

@@ -10,7 +10,7 @@ globalThis.__TOUR_TEST_STORE__ = { get: async (k) => (mem.has(k) ? mem.get(k) : 
 const { default: handler } = await import("../netlify/functions/tour.mjs");
 
 const root = path.resolve(new URL("../public", import.meta.url).pathname);
-const types = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".txt": "text/plain", ".webmanifest": "application/manifest+json" };
+const types = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript", ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".txt": "text/plain", ".webmanifest": "application/manifest+json" };
 const port = Number(process.argv[2] || 8787);
 
 http.createServer(async (req, res) => {

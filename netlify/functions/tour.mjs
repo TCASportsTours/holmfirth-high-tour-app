@@ -21,6 +21,16 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=tq             -> teacher questionnaire: teacher password + their name (TCA/admin = test); replaces their earlier answers
 //   GET  /tour?type=tq             -> TCA/admin: every questionnaire response + the teacher list
 //   POST /tour?type=tqdel {key}    -> TCA/admin: delete one response
+//   FEEDBACK (separate links: /feedback/teachers and /feedback/students; no sign-in needed to send)
+//   POST /tour?type=fbphoto        -> one photo (shrunk on the phone) for a questionnaire; returns its id
+//   POST /tour?type=feedback       -> a teacher or student questionnaire; saved here, then sent to the master Google Sheet
+//   GET  /tour?type=fb             -> TCA/admin: every response (+ the older in-app teacher answers), and the hub status
+//   GET  /tour?type=fbrows         -> TCA/admin: every response laid out as the spreadsheet's tabs (for Export to Excel)
+//   GET  /tour?type=fbphoto&id=    -> TCA/admin: one photo
+//   POST /tour?type=fbsync {id}    -> TCA/admin: send one response to the spreadsheet (one step per call: a photo, then the rows)
+//   POST /tour?type=fbping         -> TCA/admin: check the spreadsheet link; creates its tabs
+//   POST /tour?type=fbdel {id}     -> TCA/admin: delete a response here (not from the spreadsheet)
+//   The master Google Sheet is set by FEEDBACK_HUB_URL + FEEDBACK_HUB_TOKEN (see hub/TCA_Feedback_Hub_v1.gs).
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -109,7 +119,7 @@ async function deviceOk(store, sid, token) {
 }
 
 const MERGE = new Set(["roomnums", "register"]);
-const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz", "fxrate", "expenses", "receipt", "tq"]);
+const STAFF_READ = new Set(["private", "auth", "roomnums", "register", "sessions", "quiz", "fxrate", "expenses", "receipt", "tq", "fb", "fbrows"]);
 const SEEN_EVERY_MS = 5 * 60000;   // only write "last seen" every 5 minutes per person
 
 function env(name) {
@@ -173,6 +183,16 @@ export default async (req) => {
   if (req.method === "DELETE") {
     if (!staffPass) return notConfigured();
     if (!isAdmin) return denied();
+    if (type === "fb") {                // test questionnaire answers and their photos (not the spreadsheet)
+      const ids = await fbIds(store);
+      for (const id of ids) {
+        let e = null; try { e = JSON.parse((await store.get("fb/" + id)) || "null"); } catch {}
+        for (const ph of (e && e.photos) || []) await delKey(store, "fbp/" + ph.id);
+        await delKey(store, "fb/" + id);
+      }
+      await store.set("fbidx", "[]"); await store.set("fbsynced", "{}");
+      return reply(headers, 200, { ok: true, cleared: type, removed: ids.length });
+    }
     if (type === "expenses") {          // every expense and its receipt files (needs the expenses password too)
       if (!isExp) return expDenied();
       let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
@@ -194,7 +214,7 @@ export default async (req) => {
   // ---------------- POST
   if (req.method === "POST") {
     const raw = await req.text();
-    if (raw.length > ((!type || type === "private") ? MAX_PUBLISH_BODY : type === "expense" ? MAX_EXPENSE_BODY : MAX_BODY)) return reply(headers, 413, { ok: false, error: "too large" });
+    if (raw.length > ((!type || type === "private") ? MAX_PUBLISH_BODY : type === "expense" ? MAX_EXPENSE_BODY : type === "fbphoto" ? FB_MAX_PHOTO : MAX_BODY)) return reply(headers, 413, { ok: false, error: "too large" });
     let parsed;
     try { parsed = JSON.parse(raw); } catch { return reply(headers, 400, { ok: false, error: "invalid JSON" }); }
 
@@ -293,6 +313,66 @@ export default async (req) => {
       let idx = []; try { idx = JSON.parse((await store.get("expidx")) || "[]"); } catch {}
       await store.set("expidx", JSON.stringify(idx.filter((x) => x !== id)));
       return reply(headers, 200, { ok: true, deleted: id });
+    }
+    // ---- Questionnaires on their own links (teachers and students). Anyone with the link can send one.
+    if (type === "fbphoto" || type === "feedback") {
+      if (!(await fbRateOk(store, ip))) return reply(headers, 429, { ok: false, error: "Too many sends from this connection. Try again in an hour." });
+    }
+    if (type === "fbphoto") {
+      const data = String((parsed && parsed.data) || "");
+      if (!/^data:image\/(jpeg|png|webp);base64,/.test(data)) return reply(headers, 400, { ok: false, error: "photos only" });
+      const id = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+      const rec = { id, at: Date.now(), kind: parsed.kind === "teacher" ? "teacher" : "student", name: String(parsed.name || "photo.jpg").replace(/[^\w .()-]/g, "_").slice(0, 80),
+        mime: data.slice(5, data.indexOf(";")), data, url: "" };
+      await store.set("fbp/" + id, JSON.stringify(rec));
+      // Straight to the Drive folder when the spreadsheet is connected (otherwise it's sent with the response later)
+      const tour = await fbTour(store);
+      const h = await hubPost({ action: "photo", id, name: rec.name, mime: rec.mime, data: data.slice(data.indexOf(",") + 1), tour: tour.name });
+      if (h && h.ok && h.url) { rec.url = h.url; await store.set("fbp/" + id, JSON.stringify(rec)); }
+      return reply(headers, 200, { ok: true, id });
+    }
+    if (type === "feedback") {
+      const kind = parsed && parsed.kind === "teacher" ? "teacher" : parsed && parsed.kind === "student" ? "student" : null;
+      const a = parsed && parsed.a;
+      if (!kind || !a || typeof a !== "object" || JSON.stringify(a).length > 30000) return reply(headers, 400, { ok: false, error: "bad answers" });
+      if (typeof a.r_overall !== "number" || a.r_overall < 1 || a.r_overall > 5) return reply(headers, 400, { ok: false, error: "Please give the trip an overall rating" });
+      if (!String(a.name || "").trim()) return reply(headers, 400, { ok: false, error: "Please put your name" });
+      const photos = (Array.isArray(parsed.photos) ? parsed.photos : []).slice(0, FB_MAX_PHOTOS)
+        .filter((x) => x && /^p[a-z0-9]{4,20}$/.test(String(x.id))).map((x) => ({ id: String(x.id), cap: String(x.cap || "").slice(0, 300) }));
+      for (const ph of photos) if (!(await store.get("fbp/" + ph.id))) return reply(headers, 400, { ok: false, error: "a photo didn't upload: remove it and add it again" });
+      if (photos.length && !["Yes", "No"].includes(a.photoOk)) return reply(headers, 400, { ok: false, error: "Please say whether we can post your photos" });
+      if (photos.length && a.photoOk === "Yes" && a.othersOk !== true) return reply(headers, 400, { ok: false, error: "Please tick the box about other people in your photos, or choose No" });
+      if (await fbCount(store) >= FB_MAX_RESPONSES) return reply(headers, 507, { ok: false, error: "too many responses" });
+      const tour = await fbTour(store);
+      const e = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), kind, ts: Date.now(), tour, a, photos,
+        source: String(parsed.source || "Link").slice(0, 40), test: !!parsed.test };
+      await store.set("fb/" + e.id, JSON.stringify(e));
+      let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
+      idx.push(e.id); await store.set("fbidx", JSON.stringify(idx));
+      // Send to the spreadsheet now if it's connected and every photo is already in Drive; otherwise TCA can send it later
+      let synced = false;
+      try { const r = await fbSyncStep(store, e); synced = !!r.done; } catch {}
+      return reply(headers, 200, { ok: true, id: e.id, synced });
+    }
+    if (type === "fbsync" || type === "fbdel" || type === "fbping") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
+      if (type === "fbping") {
+        const h = await hubPost({ action: "ping" });
+        if (h && h.ok && h.sheet) await store.set("fbsheet", String(h.sheet));
+        return reply(headers, 200, h || { ok: false, error: "no answer" });
+      }
+      const id = String((parsed && parsed.id) || "");
+      const e = await fbGet(store, id);
+      if (!e) return reply(headers, 404, { ok: false, error: "not found" });
+      if (type === "fbdel") {
+        if (id.startsWith("tq-")) { const all = safeObj(await store.get("tq")); delete all[e.tqKey]; await store.set("tq", JSON.stringify(all)); }
+        else { for (const ph of e.photos || []) await delKey(store, "fbp/" + ph.id); await delKey(store, "fb/" + id);
+          let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
+          await store.set("fbidx", JSON.stringify(idx.filter((x) => x !== id))); }
+        return reply(headers, 200, { ok: true });
+      }
+      const r = await fbSyncStep(store, e, true);
+      return reply(headers, r.ok === false ? 502 : 200, r);
     }
     // Post-tour teacher questionnaire: one entry per teacher; the server stamps the time
     if (type === "tq") {
@@ -430,6 +510,19 @@ export default async (req) => {
       const teachers = teacherNames(U).map((t) => row("t:" + t.name, { id: "t:" + t.name, name: t.name, group: t.group }));
       return reply(headers, 200, { ok: true, at: Date.now(), rows, teachers, state: await quizState(store) });
     }
+    if (type === "fb" || type === "fbrows") {
+      if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+      const all = await fbAll(store), synced = safeObj(await store.get("fbsynced"));
+      if (type === "fbrows") {
+        const tabs = {};
+        for (const e of all) { const t = await fbRows(store, e); Object.keys(t).forEach((k) => { (tabs[k] = tabs[k] || []).push(...t[k]); }); }
+        return reply(headers, 200, { ok: true, tabs });
+      }
+      let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
+      return reply(headers, 200, { ok: true, rows: all.map((e) => Object.assign({}, e, { synced: synced[e.id] || null })),
+        teachers: teacherNames(U).map((t) => t.name), hub: !!(env("FEEDBACK_HUB_URL") && env("FEEDBACK_HUB_TOKEN")),
+        sheet: env("FEEDBACK_SHEET_URL") || (await store.get("fbsheet")) || "" });
+    }
     if (type === "tq") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
       let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
@@ -491,6 +584,13 @@ export default async (req) => {
     return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
   if (type === "quizstate") return reply(headers, 200, await quizState(store));
+  if (type === "fbphoto") {   // a questionnaire photo: TCA/admin only
+    if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
+    const id = url.searchParams.get("id") || "";
+    if (!/^p[a-z0-9]{4,20}$/.test(id)) return reply(headers, 400, { ok: false, error: "bad id" });
+    const r = await store.get("fbp/" + id);
+    return r ? new Response(r, { headers }) : reply(headers, 404, { ok: false, error: "not found" });
+  }
   if (type === "quizme") {
     const who = await quizPlayer(store, { sid: url.searchParams.get("sid") || "", token: req.headers.get("x-device") || "", teacher: url.searchParams.get("teacher") || "" }, given, staffPass);
     if (!who) return reply(headers, 403, { ok: false, error: "sign in as a student or teacher first" });
@@ -521,6 +621,124 @@ async function quizPlayer(store, p, given, staffPass) {
   if (!name || !staffPass || !same(given, staffPass)) return null;   // the teacher password only (not TCA/admin)
   let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
   return teacherNames(U).some((t) => t.name === name) ? "t:" + name : null;
+}
+
+// ---------------- questionnaires -> the master Google Sheet ("feedback hub")
+const FB_MAX_PHOTOS = 6, FB_MAX_PHOTO = 3 * 1024 * 1024, FB_MAX_RESPONSES = 3000, FB_RATE = 400;
+async function fbRateOk(store, ip) {
+  let r = {}; try { r = JSON.parse((await store.get("fbrate")) || "{}"); } catch {}
+  const now = Date.now(); for (const k of Object.keys(r)) if (now - r[k].first > 3600000) delete r[k];
+  const cur = r[ip] || { n: 0, first: now }; cur.n++; r[ip] = cur; await store.set("fbrate", JSON.stringify(r));
+  return cur.n <= FB_RATE;
+}
+async function fbTour(store) {
+  let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
+  const t = (U && U.tour) || {};
+  return { name: t["Tour Name"] || "Holmfirth High · New York 2026", school: t["School"] || "Holmfirth High School",
+    destination: t["Destination"] || "New York City, USA", dates: t["Dates"] || "Sun 25 – Fri 30 October 2026" };
+}
+async function fbIds(store) {
+  let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
+  if (typeof store.list === "function") { try { const l = await store.list({ prefix: "fb/" }); (l.blobs || []).forEach((b) => { const id = b.key.slice(3); if (!idx.includes(id)) idx.push(id); }); } catch {} }
+  return idx;
+}
+async function fbCount(store) { return (await fbIds(store)).length; }
+/* Teacher answers sent from inside the app before the separate links existed (v22/v23) look like link answers */
+function fbFromTq(t, tour) {
+  return { id: "tq-" + String(t.key).replace(/[^A-Za-z0-9]/g, ""), tqKey: t.key, kind: "teacher", ts: t.ts, tour,
+    a: Object.assign({ name: t.teacher }, t.a || {}), photos: [], source: "App", test: !!t.test };
+}
+async function fbAll(store) {
+  const ids = await fbIds(store), tour = await fbTour(store);
+  const out = (await Promise.all(ids.map((id) => store.get("fb/" + id)))).map((x) => { try { return JSON.parse(x || "null"); } catch { return null; } }).filter(Boolean);
+  Object.values(safeObj(await store.get("tq"))).forEach((t) => out.push(fbFromTq(t, tour)));
+  return out.sort((a, b) => a.ts - b.ts);
+}
+async function fbGet(store, id) {
+  if (id.startsWith("tq-")) { const tour = await fbTour(store); const t = Object.values(safeObj(await store.get("tq"))).find((x) => "tq-" + String(x.key).replace(/[^A-Za-z0-9]/g, "") === id); return t ? fbFromTq(t, tour) : null; }
+  if (!/^f[a-z0-9]{4,20}$/.test(id)) return null;
+  try { return JSON.parse((await store.get("fb/" + id)) || "null"); } catch { return null; }
+}
+async function hubPost(body) {
+  const url = env("FEEDBACK_HUB_URL"), tok = env("FEEDBACK_HUB_TOKEN");
+  if (!url || !tok) return { ok: false, notConfigured: true, error: "The master spreadsheet isn't connected yet (FEEDBACK_HUB_URL / FEEDBACK_HUB_TOKEN)." };
+  try {
+    const r = await (globalThis.__HUB_FETCH__ || fetch)(url, { method: "POST", headers: { "content-type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ token: tok }, body)), redirect: "follow", signal: AbortSignal.timeout(9000) });
+    return await r.json();
+  } catch (err) { return { ok: false, error: "The spreadsheet didn't answer: " + String((err && err.message) || err).slice(0, 120) }; }
+}
+function fbCredit(e) {
+  const a = e.a || {}, q = String(a.quoteOk || ""), school = a.school || e.tour.school, dest = String(e.tour.destination || "").split(",")[0];
+  if (!/^Yes/.test(q)) return "";
+  if (e.kind === "student") return /first name/.test(q) ? String(a.name || "").trim().split(/\s+/)[0] + ", " + school : "A student on the " + dest + " trip";
+  if (/name and school/.test(q)) return [a.name, school].filter(Boolean).join(", ");
+  if (/school name only/.test(q)) return "A teacher at " + school;
+  return "A teacher on the " + dest + " trip";
+}
+const RATE = (v) => (v === "na" ? "n/a" : v == null ? "" : v);
+const LIST = (v) => (Array.isArray(v) ? v.join(", ") : v || "");
+/* One response laid out as the spreadsheet's tabs. Column names are the sheet's headers. */
+async function fbRows(store, e) {
+  const a = e.a || {}, t = e.tour, when = new Date(e.ts).toLocaleString("en-GB", { timeZone: "Europe/London" });
+  const base = { "Response ID": e.id, "Received": when, "Tour": t.name };
+  const who = e.kind === "teacher" ? "Teacher" : "Student";
+  const photos = [];
+  for (const ph of e.photos || []) { let rec = null; try { rec = JSON.parse((await store.get("fbp/" + ph.id)) || "null"); } catch {}
+    photos.push(Object.assign({}, base, { "Who": who, "Name": a.name || "", "Caption": ph.cap || "", "OK to post?": a.photoOk || "",
+      "Others in photo have consent?": a.photoOk === "Yes" ? (a.othersOk ? "Yes: confirmed by sender" : "") : "", "Photo": (rec && rec.url) || "In the tour app only", "Photo ID": ph.id })); }
+  const head = Object.assign({}, base, { "Destination": t.destination, "Tour dates": t.dates, "School / Organisation": a.school || t.school, "Name": a.name || "", "Source": e.source || "", "Test?": e.test ? "Yes" : "" });
+  const rows = {};
+  if (e.kind === "teacher") {
+    rows["Teachers"] = [Object.assign(head, {
+      "Overall, how satisfied were you with your TCA tour experience? (1 = Very Dissatisfied - 5 = Extremely satisfied)": RATE(a.r_overall),
+      "How satisfied are you that the tour achieved its objectives? (1–5)": RATE(a.r_objectives),
+      "How satisfied were you with our communication, organisation and on-tour support? (1–5)": RATE(a.r_support),
+      "What stood out about this tour for you and your players / students?": a.stoodOut || "",
+      "What was the biggest impact of this trip on your players / students?": a.impact || "",
+      "Would you recommend TCA Sports Tours to another school or club?": a.recommend || "",
+      "If yes, what would you say to another school / club considering this tour?": a.say || "",
+      "Summary of the trip & working with TCA Tours": a.summary || "",
+      "Are you happy for us to use your comments in our promotional material (website, social media, brochure, etc).?": a.quoteOk || "",
+      "Credit line": fbCredit(e),
+      "Do you have any additional comments or suggestions about the tour or your experience?": a.improve || "",
+      "Itinerary & pace (1–5)": RATE(a.r_itin), "Accommodation (1–5)": RATE(a.r_hostel), "Flights (1–5)": RATE(a.r_flights), "Coach transfers (1–5)": RATE(a.r_coach),
+      "Value for money (1–5)": RATE(a.r_value), "Tour app (1–5)": RATE(a.r_app), "Recommended spending money": a.spend || "",
+      "Book another trip?": a.again || "", "Where next": LIST(a.dests), "Other places": a.destsOther || "", "When": a.when || "",
+      "Photos sent": (e.photos || []).length || "", "Photos OK to post?": (e.photos || []).length ? a.photoOk || "" : "" })];
+  } else {
+    rows["Students"] = [Object.assign(head, {
+      "Overall rating (1–5)": RATE(a.r_overall), "Best bit of the trip": a.best || "", "What would you change?": a.change || "",
+      "Would you recommend this trip to a friend?": a.recommend || "", "How would you describe the trip to a friend?": a.summary || "",
+      "Permission to use comment": a.quoteOk || "", "Credit line": fbCredit(e),
+      "Photos sent": (e.photos || []).length || "", "Photos OK to post?": (e.photos || []).length ? a.photoOk || "" : "",
+      "Others in photos have consent?": a.photoOk === "Yes" ? (a.othersOk ? "Yes: confirmed by sender" : "") : "" })];
+  }
+  rows["Trip ratings"] = Object.keys(a.trips || {}).map((trip) => Object.assign({}, base, { "Who": who, "Name": a.name || "", "Trip": trip, "Rating (1–5)": a.trips[trip] === "na" ? "Didn't go" : a.trips[trip] }));
+  const quote = e.kind === "teacher" ? a.summary || a.say || a.stoodOut : a.summary || a.best;
+  if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk })];
+  if (photos.length) rows["Photos"] = photos;
+  return rows;
+}
+/* One step towards the spreadsheet: a photo still to go to Drive, else the rows. Called again until done. */
+async function fbSyncStep(store, e, manual) {
+  const synced = safeObj(await store.get("fbsynced"));
+  if (synced[e.id] && !manual) return { ok: true, done: true };
+  for (const ph of e.photos || []) {
+    let rec = null; try { rec = JSON.parse((await store.get("fbp/" + ph.id)) || "null"); } catch {}
+    if (rec && !rec.url) {
+      if (!manual) return { ok: true, done: false };       // leave photos for a TCA "Send" (keeps the student's wait short)
+      const h = await hubPost({ action: "photo", id: rec.id, name: rec.name, mime: rec.mime, data: rec.data.slice(rec.data.indexOf(",") + 1), tour: e.tour.name, caption: ph.cap });
+      if (!(h && h.ok && h.url)) return { ok: false, error: (h && h.error) || "photo not saved" };
+      rec.url = h.url; await store.set("fbp/" + rec.id, JSON.stringify(rec));
+      return { ok: true, done: false, step: "photo" };
+    }
+  }
+  const h = await hubPost({ action: "rows", id: e.id, rows: await fbRows(store, e) });
+  if (!(h && h.ok)) return { ok: false, error: (h && h.error) || "not saved" };
+  synced[e.id] = Date.now(); await store.set("fbsynced", JSON.stringify(synced));
+  if (h.sheet) await store.set("fbsheet", String(h.sheet));
+  return { ok: true, done: true, sheet: h.sheet || "" };
 }
 
 // ---------------- expenses
