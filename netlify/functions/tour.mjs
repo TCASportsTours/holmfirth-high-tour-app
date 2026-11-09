@@ -703,8 +703,11 @@ async function fbRows(store, e) {
   if (e.kind === "teacher") {
     rows["Teachers"] = [Object.assign(head, {
       "Overall, how satisfied were you with your TCA tour experience? (1 = Very Dissatisfied - 5 = Extremely satisfied)": RATE(a.r_overall),
+      "Overall: comment": a.cm_r_overall || "",
       "How satisfied are you that the tour achieved its objectives? (1–5)": RATE(a.r_objectives),
+      "Objectives: comment": a.cm_r_objectives || "",
       "How satisfied were you with our communication, organisation and on-tour support? (1–5)": RATE(a.r_support),
+      "Communication & support: comment": a.cm_r_support || "",
       "What stood out about this tour for you and your players / students?": a.stoodOut || "",
       "What was the biggest impact of this trip on your players / students?": a.impact || "",
       "Would you recommend TCA Sports Tours to another school or club?": a.recommend || "",
@@ -713,8 +716,13 @@ async function fbRows(store, e) {
       "Are you happy for us to use your comments in our promotional material (website, social media, brochure, etc).?": a.quoteOk || "",
       "Credit line": fbCredit(e),
       "Do you have any additional comments or suggestions about the tour or your experience?": a.improve || "",
-      "Itinerary & pace (1–5)": RATE(a.r_itin), "Accommodation (1–5)": RATE(a.r_hostel), "Flights (1–5)": RATE(a.r_flights), "Coach transfers (1–5)": RATE(a.r_coach),
-      "Value for money (1–5)": RATE(a.r_value), "Tour app (1–5)": RATE(a.r_app), "Recommended spending money": a.spend || "",
+      "Itinerary & pace (1–5)": RATE(a.r_itin), "Itinerary: comment": a.cm_r_itin || "",
+      "Accommodation (1–5)": RATE(a.r_hostel), "Accommodation: comment": a.cm_r_hostel || "",
+      "Flights (1–5)": RATE(a.r_flights), "Flights: comment": a.cm_r_flights || "",
+      "Coach transfers (1–5)": RATE(a.r_coach), "Coach transfers: comment": a.cm_r_coach || "",
+      "Value for money (1–5)": RATE(a.r_value), "Value for money: comment": a.cm_r_value || "",
+      "Tour app (1–5)": RATE(a.r_app), "Tour app: comment": a.cm_r_app || "",
+      "Recommended spending money": a.spend || "",
       "Book another trip?": a.again || "", "Where next": LIST(a.dests), "Other places": a.destsOther || "", "When": a.when || "",
       "Photos sent": (e.photos || []).length || "", "Photos OK to post?": (e.photos || []).length ? a.photoOk || "" : "" })];
   } else {
@@ -725,7 +733,8 @@ async function fbRows(store, e) {
       "Photos sent": (e.photos || []).length || "", "Photos OK to post?": (e.photos || []).length ? a.photoOk || "" : "",
       "Others in photos have consent?": a.photoOk === "Yes" ? (a.othersOk ? "Yes: confirmed by sender" : "") : "" })];
   }
-  rows["Trip ratings"] = Object.keys(a.trips || {}).map((trip) => Object.assign({}, base, { "Who": who, "Name": a.name || "", "Trip": trip, "Rating (1–5)": a.trips[trip] === "na" ? "Didn't go" : a.trips[trip] }));
+  rows["Trip ratings"] = Object.keys(a.trips || {}).map((trip) => Object.assign({}, base, { "Who": who, "Name": a.name || "", "Trip": trip, "Rating (1–5)": a.trips[trip] === "na" ? "Didn't go" : a.trips[trip],
+    "Comment": (a.tripComments && a.tripComments[trip]) || "" }));
   const quote = e.kind === "teacher" ? a.summary || a.say || a.stoodOut : a.summary || a.best;
   if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk })];
   if (photos.length) rows["Photos"] = photos;

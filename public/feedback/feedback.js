@@ -50,6 +50,13 @@ function stars(k,na){ var v=get(k), h='<div class="stars" data-k="'+k+'">';
   for(var i=1;i<=5;i++){ var on=typeof v==='number'&&v>=i; h+='<button type="button" data-s="'+i+'" aria-label="'+i+' out of 5" class="'+(on?'on':'')+'"><i class="ti ti-star'+(on?'-filled':'')+'"></i></button>'; }
   if(na) h+='<button type="button" data-s="na" class="na'+(v==='na'?' on':'')+'">'+esc(na)+'</button>';
   return h+'</div>'; }
+/* Teachers: an optional comment under a rating. Opens by itself for 1 or 2 stars. Saved as cm_<rating> (trips: cm_trip_<n>). */
+function cmKey(k){ return 'cm_'+String(k).replace(/\./g,'_'); }
+function cmt(k){ var ck=cmKey(k), v=get(ck)||'', low=typeof get(k)==='number'&&get(k)<=2, open=!!v||low;
+  return '<div class="cmt" data-for="'+k+'"><button type="button" class="cmtbtn" data-cmt="'+k+'"'+(open?' hidden':'')+'><i class="ti ti-message-plus"></i> Add a comment (optional)</button>'+
+    '<textarea class="field" data-t="'+ck+'" rows="2" maxlength="1000"'+(open?'':' hidden')+' placeholder="'+(low?'Sorry to hear that. What went wrong?':'Optional: anything you’d like to add?')+'">'+esc(v)+'</textarea></div>'; }
+function openCmt(k,low){ var box=document.querySelector('.cmt[data-for="'+k+'"]'); if(!box) return; var t=box.querySelector('textarea'), b=box.querySelector('button');
+  if(low) t.placeholder='Sorry to hear that. What went wrong?'; t.hidden=false; b.hidden=true; return t; }
 function chips(k,opts,multi){ var v=get(k); return '<div class="chips" data-k="'+k+'"'+(multi?' data-multi="1"':'')+'>'+opts.map(function(o){
   var on=multi?(Array.isArray(v)&&v.indexOf(o)>=0):v===o; return '<button type="button" class="'+(on?'on':'')+'" data-v="'+esc(o)+'">'+esc(o)+'</button>'; }).join('')+'</div>'; }
 function text(k,ph,rows){ var v=get(k)||''; return rows?'<textarea class="field" data-t="'+k+'" rows="'+rows+'" placeholder="'+esc(ph)+'">'+esc(v)+'</textarea>':'<input class="field" data-t="'+k+'" placeholder="'+esc(ph)+'" value="'+esc(v)+'">'; }
@@ -67,8 +74,8 @@ function render(){
     (TEST?'<p class="banner"><i class="ti ti-eye"></i> Preview: anything you send is marked as a test.</p>':'');
 
   if(KIND==='teacher'){
-    h+=card('ti-user','About you', q('Your name','As you’d like it shown if we quote you',true)+text('name','e.g. Erin Lees')+q('School','')+text('school','School name'));
-    h+=card('ti-star','Your rating','<p class="hint">1 = very dissatisfied, 5 = extremely satisfied.</p>'+CORE_T.map(function(r){ return q(r[1],r[2],r[3])+stars(r[0]); }).join(''),{id:'cRating'});
+    h+=card('ti-user','About you', q('Your name','As you’d like it shown if we quote you',true)+text('name','e.g. Alexander Hamilton')+q('School','')+text('school','School name'));
+    h+=card('ti-star','Your rating','<p class="hint">1 = very dissatisfied, 5 = extremely satisfied.</p>'+CORE_T.map(function(r){ return q(r[1],r[2],r[3])+stars(r[0])+cmt(r[0]); }).join(''),{id:'cRating'});
     h+=card('ti-school','The trip',q('What stood out about this trip for you and your students?','')+text('stoodOut','e.g. the business tour, the hockey game…',3)+
       q('What was the biggest impact of this trip on your students?','')+text('impact','What did they take away from it?',3));
     h+=card('ti-message-heart','Your review',q('Would you recommend TCA Tours to another school?','')+chips('recommend',['Yes','No'])+
@@ -76,8 +83,8 @@ function render(){
       q('Sum up the trip and working with TCA Tours in a few sentences','This is the comment we’d love to use on our website')+text('summary','Your thoughts on the trip, and on working with TCA Tours',5)+
       q('Are you happy for us to use your comments on our website and social media?','')+chips('quoteOk',QUOTE_T));
     h+=card('ti-adjustments','More detail','<p class="hint">For the TCA Tours team only: none of this goes on the website.</p>'+
-      DETAIL_T.map(function(r){ return q(r[1],'')+stars(r[0],'Not for me'); }).join('')+
-      (tl.length?q('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+stars('trip.'+i,'Didn’t go')+'</div>'; }).join(''):'')+
+      DETAIL_T.map(function(r){ return q(r[1],'')+stars(r[0],'Not for me')+cmt(r[0]); }).join('')+
+      (tl.length?q('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+stars('trip.'+i,'Didn’t go')+cmt('trip.'+i)+'</div>'; }).join(''):'')+
       q('How much spending money would you recommend for students next time?','For the whole trip')+chips('spend',['Under $100','$100–$200','$200–$300','$300–$400','Over $400'])+
       q('Any additional comments or suggestions?','Anything we could do better: it helps')+text('improve','Be honest',3)+
       q('Would you book another trip with TCA Tours?','')+chips('again',['Yes','Maybe','No'])+
@@ -85,7 +92,7 @@ function render(){
       '<div id="wDest">'+text('destsOther','Where would you like to go?')+'</div>'+
       q('When might that be?','')+chips('when',['2027–28','2028–29','Later','Not sure']),{optional:true});
   } else {
-    h+=card('ti-user','About you', q('Your name','First name and surname',true)+text('name','e.g. Lucy Avery')+q('School','')+text('school','School name'));
+    h+=card('ti-user','About you', q('Your name','First name and surname',true)+text('name','e.g. Alexander Hamilton')+q('School','')+text('school','School name'));
     h+=card('ti-star','The trip',q('How would you rate the trip overall?','1 = poor, 5 = amazing',true)+stars('r_overall')+
       (tl.length?q('Rate the trips and places you visited','Tap “Didn’t go” for any you missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+stars('trip.'+i,'Didn’t go')+'</div>'; }).join(''):'')+
       q('What was the best bit?','')+text('best','The thing you’ll remember most',3)+
@@ -156,10 +163,12 @@ function addFiles(files){
 function onClick(e){
   var b=e.target.closest('button'); if(!b) return;
   if(b.id==='send'){ submit(); return; }
+  if(b.hasAttribute('data-cmt')){ var tx=openCmt(b.getAttribute('data-cmt')); if(tx) tx.focus(); return; }
   if(b.hasAttribute('data-rm')){ PHOTOS.splice(Number(b.getAttribute('data-rm')),1); paintPhotos(); save(); return; }
   var box=b.parentNode, k=box.getAttribute('data-k'); if(!k) return;
   if(box.classList.contains('stars')){ var s=b.getAttribute('data-s'), v=s==='na'?'na':Number(s); set(k,get(k)===v?undefined:v); var cur=get(k);
-    [].forEach.call(box.querySelectorAll('button'),function(x){ var xs=x.getAttribute('data-s'), on=xs==='na'?cur==='na':(typeof cur==='number'&&cur>=Number(xs)); x.classList.toggle('on',on); var i=x.querySelector('i'); if(i) i.className='ti ti-star'+(on?'-filled':''); }); }
+    [].forEach.call(box.querySelectorAll('button'),function(x){ var xs=x.getAttribute('data-s'), on=xs==='na'?cur==='na':(typeof cur==='number'&&cur>=Number(xs)); x.classList.toggle('on',on); var i=x.querySelector('i'); if(i) i.className='ti ti-star'+(on?'-filled':''); });
+    if(typeof cur==='number'&&cur<=2) openCmt(k,true); }
   else if(box.classList.contains('chips')){ var val=b.getAttribute('data-v');
     if(box.getAttribute('data-multi')){ var arr=Array.isArray(get(k))?get(k).slice():[], i2=arr.indexOf(val); if(i2>=0) arr.splice(i2,1); else arr.push(val); set(k,arr); b.classList.toggle('on',i2<0); }
     else { var nv=get(k)===val?undefined:val; set(k,nv); [].forEach.call(box.querySelectorAll('button'),function(x){ x.classList.toggle('on',x.getAttribute('data-v')===nv); }); }
@@ -186,6 +195,9 @@ function submit(){
   if(ph.length && A.photoOk==='Yes' && !A.othersOk) return fail('Please tick the box about anyone else in your photos, or choose No.','phPerm');
   var a=JSON.parse(JSON.stringify(A)), tl=trips();
   var tr={}; Object.keys(a.trip||{}).forEach(function(i){ var v=a.trip[i]; if(tl[i]&&(v==='na'||typeof v==='number')) tr[tl[i].title]=v; }); a.trips=tr; delete a.trip;
+  var tc={}; Object.keys(a).forEach(function(k){ var m=k.match(/^cm_trip_(\d+)$/); if(m){ if(tl[m[1]]&&String(a[k]).trim()) tc[tl[m[1]].title]=String(a[k]).trim(); delete a[k]; } });
+  if(Object.keys(tc).length) a.tripComments=tc;
+  Object.keys(a).forEach(function(k){ if(/^cm_/.test(k)) a[k]=String(a[k]).trim(); });
   if(!(Array.isArray(a.dests)&&a.dests.indexOf('Other')>=0)) delete a.destsOther;
   if(a.recommend==='No') delete a.say;
   if(!ph.length){ delete a.photoOk; delete a.othersOk; } else if(a.photoOk!=='Yes') delete a.othersOk;

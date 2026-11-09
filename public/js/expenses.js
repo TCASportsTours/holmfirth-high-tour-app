@@ -20,7 +20,7 @@ function openExpenseForm(){
   var d=EXP.draft=EXP.draft||{name:lsGet('hny_expname')||'',currency:'USD',country:'United States',category:'Food & drink',paidBy:'Card',spentOn:expNYDate(),files:[],rate:'',rateInfo:null,rateEdited:false};
   var names=expStaffNames();
   var html='<p class="label">TCA Tours · tour expenses</p><h2>Add an <em>expense</em></h2>'+
-    '<label class="label" for="exName">Staff member\'s name *</label><input class="field" id="exName" list="exNames" autocomplete="name" placeholder="e.g. Tony Curtis" value="'+esc(d.name)+'" oninput="EXP.draft.name=this.value">'+
+    '<label class="label" for="exName">Staff member\'s name *</label><input class="field" id="exName" list="exNames" autocomplete="name" placeholder="e.g. Alexander Hamilton" value="'+esc(d.name)+'" oninput="EXP.draft.name=this.value">'+
     '<datalist id="exNames">'+names.map(function(n){return '<option value="'+esc(n)+'">';}).join('')+'</datalist>'+
     '<label class="label" for="exDesc" style="margin-top:14px">What was it for? *</label><input class="field" id="exDesc" placeholder="e.g. Subway top-up, water for the group" value="'+esc(d.desc||'')+'" oninput="EXP.draft.desc=this.value">'+
     '<div class="btnrow" style="margin-top:14px"><div style="flex:1"><label class="label" for="exCat">Type</label><select class="field" id="exCat" onchange="EXP.draft.category=this.value">'+EXP_CATS.map(function(c){return '<option'+(c===d.category?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select></div>'+

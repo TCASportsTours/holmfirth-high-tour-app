@@ -116,7 +116,10 @@ function fbPaint(keep){
           return '<tr><td>'+esc(x.t)+(x.s?'<div class="small muted">'+esc(x.s.work)+'</div>':'')+(x.na?'<div class="small muted">'+x.na+' didn’t go</div>':'')+'</td><td class="sc" style="text-align:right">'+(x.s?x.s.avg:'—')+'</td></tr>'; }).join('')+'</table>';
       /* every response */
       h+='<p class="label">Every response</p>'+rows.slice().reverse().map(function(r){ var a=r.a;
-        var bits=(r.kind==='teacher'?[['Sum up',a.summary],['Stood out',a.stoodOut],['Biggest impact',a.impact],['Would say to another school',a.say],['Comments & suggestions',a.improve]]
+        var rc=[['cm_r_overall','Overall'],['cm_r_objectives','Objectives'],['cm_r_support','Communication & support'],['cm_r_itin','Itinerary'],['cm_r_hostel','Accommodation'],['cm_r_flights','Flights'],['cm_r_coach','Coach transfers'],['cm_r_value','Value for money'],['cm_r_app','Tour app']]
+          .filter(function(x){return a[x[0]];}).map(function(x){ var rk=x[0].slice(3); return [x[1]+' ('+(a[rk]==='na'?'n/a':(a[rk]||'—'))+'/5)',a[x[0]]]; })
+          .concat(Object.keys(a.tripComments||{}).map(function(t){ var v=(a.trips||{})[t]; return [t+' ('+(v==='na'?'didn’t go':(v||'—'))+'/5)',a.tripComments[t]]; }));
+        var bits=(r.kind==='teacher'?[['Sum up',a.summary],['Stood out',a.stoodOut],['Biggest impact',a.impact],['Would say to another school',a.say],['Comments & suggestions',a.improve]].concat(rc)
           :[['Describe it to a friend',a.summary],['Best bit',a.best],['Would change',a.change]]).filter(function(x){return x[1];});
         return '<div class="card rule"><div class="cardhead"><h3 style="font-size:19px">'+esc(a.name||'—')+' <span class="tag">'+(r.kind==='teacher'?'Teacher':'Student')+'</span>'+(r.test?' <span class="tag">Test</span>':'')+'</h3><span class="small muted">'+esc(ago(r.ts))+'</span></div>'+
           '<p class="small muted">'+esc(['Overall '+(a.r_overall||'—')+'/5','Recommend: '+(a.recommend||'—'),'Quote: '+(a.quoteOk||'not answered'),(r.photos||[]).length?(r.photos.length+' photo'+(r.photos.length>1?'s':'')):'',r.source].filter(Boolean).join(' · '))+'</p>'+

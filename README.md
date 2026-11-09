@@ -215,3 +215,9 @@ Known limits (by design): students sign in without a password, so someone could 
 
 - The domain rules in `public/_redirects` are now **forced** (`200!`). Without that, Netlify served the app's own `index.html` at `/` and skipped the rule.
 - Backup: `index.html` sends anyone on feedback.tcatours.co.uk straight to `/sheet/`. This also covers a phone that has the app saved from an earlier visit.
+
+## v31: rating comments for teachers; example names
+
+- **Teacher questionnaire:** every star rating (the three main ratings, the optional detail ratings and each trip) has **"Add a comment (optional)"** underneath. The box opens by itself for 1 or 2 stars ("Sorry to hear that. What went wrong?").
+- Comments show next to their rating: a "…: comment" column on the Teachers tab, a **Comment** column on Trip ratings, and in the app's Questionnaire results.
+- Example names in empty boxes are now **Alexander Hamilton** (teacher and student forms, and the expense form), not real people.
