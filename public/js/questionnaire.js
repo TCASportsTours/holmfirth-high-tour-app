@@ -8,6 +8,18 @@
    Uses helpers from index.html: API, LS, lsGet, lsSet, esc, jsArg, $, toast, openPage, rerenderPage, openModal, closeModal, me, isTeacher, isTcaStaff, ago. */
 'use strict';
 var FB_TEACH = '/feedback/teachers/', FB_STUD = '/feedback/students/';
+/* The generic TCA Tours address for feedback (a domain alias of this site). Used once it's live; until then, this site's own links. */
+var FB_HOME = 'https://feedback.tcatours.co.uk', FB_LIVE = null;
+function fbCheckHome(cb){
+  if(location.origin===FB_HOME) FB_LIVE=true;
+  if(FB_LIVE!==null){ if(cb) cb(FB_LIVE); return; }
+  fetch(FB_HOME+'/feedback/feedback.css',{mode:'no-cors',cache:'no-store'}).then(function(){ FB_LIVE=true; },function(){ FB_LIVE=false; }).then(function(){ if(cb) cb(FB_LIVE); });
+}
+function fbLink(kind){ /* 'teachers' | 'students' | 'results' */
+  if(FB_LIVE) return FB_HOME+'/'+(kind==='results'?'':kind);
+  return location.origin+(kind==='results'?'/sheet':'/feedback/'+kind+'/');
+}
+function openFbResults(){ fbCheckHome(function(){ window.open(fbLink('results'),'_blank','noopener'); }); }
 
 function tqWho(){ return isTeacher()&&me()?me():(isTcaStaff()?'TCA Tours (test)':''); }
 function tqKey(k){ return 'hny_tq_'+k+'_'+(tqWho()||'x'); }
@@ -30,16 +42,19 @@ function maybeAskQuestionnaire(){
 }
 
 /* ---------- the two links (TCA Tours staff) ---------- */
-function openFbLinks(){
-  var o=location.origin, row=function(title,sub,path){ var u=o+path;
+function openFbLinks(){ fbCheckHome(fbPaintLinks); }
+function fbPaintLinks(){
+  var row=function(title,sub,kind){ var u=fbLink(kind), path=u;
     return '<div class="card rule"><h3 style="font-size:21px">'+esc(title)+'</h3><p class="small muted" style="margin-top:4px">'+esc(sub)+'</p>'+
       '<p class="small" style="margin-top:8px;overflow-wrap:anywhere"><b>'+esc(u)+'</b></p>'+
       '<div class="btnrow" style="margin-top:10px"><button class="btn dark" onclick="tqCopy('+jsArg(u)+',\'Link copied\')"><i class="ti ti-copy"></i> Copy link</button>'+
-      '<a class="btn line" href="'+esc(path)+'?test=1"><i class="ti ti-eye"></i> Preview</a></div></div>'; };
+      (kind==='results'?'<a class="btn line" href="'+esc(path)+'" target="_blank" rel="noopener"><i class="ti ti-lock-open"></i> Open</a>':'<a class="btn line" href="'+esc(path)+'?test=1" target="_blank" rel="noopener"><i class="ti ti-eye"></i> Preview</a>')+'</div></div>'; };
   openPage('<p class="label">TCA Tours · feedback</p><h2>Questionnaire <em>links</em></h2>'+
     '<p class="small muted">Send these to the school. No sign-in needed.</p>'+
-    row('Teachers','About 3 minutes, plus optional detail. Built on the TCA feedback form; asks permission to use their review on the website.',FB_TEACH)+
-    row('Students','About 2 minutes: overall rating, each trip, best bit, a comment, and optional photos with permission to post.',FB_STUD)+
+    (FB_LIVE?'':'<p class="small" style="background:var(--stone);padding:8px 10px;margin-top:8px"><i class="ti ti-info-circle"></i> The TCA Tours address <b>feedback.tcatours.co.uk</b> isn’t live yet, so these are this site’s links. They’ll switch automatically once it is.</p>')+
+    row('Teachers','About 3 minutes, plus optional detail. Built on the TCA feedback form; asks permission to use their review on the website.','teachers')+
+    row('Students','About 2 minutes: overall rating, each trip, best bit, a comment, and optional photos with permission to post.','students')+
+    row('Results (password)','Every tour’s answers, photos and Download as Excel. For TCA Tours only.','results')+
     '<p class="small muted">Preview sends are marked as tests and left out of the results. Everything is collected at /sheet (password), with Download as Excel.</p>');
 }
 
@@ -71,7 +86,7 @@ function fbPaint(keep){
     var answered={}; T_.forEach(function(r){ answered[String(r.a.name||'')]=1; });
     h+='<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+T_.length+'</b><span>teacher'+(T_.length===1?'':'s')+' answered</span></div>'+
       '<div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+S_.length+'</b><span>student'+(S_.length===1?'':'s')+' answered</span></div></div>';
-    h+='<a class="btn dark" href="/sheet" target="_blank" rel="noopener" style="margin-top:4px"><i class="ti ti-table"></i> Full results: every tour + Excel</a>';
+    h+='<button class="btn dark" onclick="openFbResults()" style="margin-top:4px"><i class="ti ti-table"></i> Full results: every tour + Excel</button>';
     h+='<div class="seg" style="margin-top:6px">'+[['all','Everyone'],['teacher','Teachers'],['student','Students']].map(function(x){ return '<button class="'+(FBF.kind===x[0]?'on':'')+'" onclick="FBF.kind=\''+x[0]+'\';fbPaint(true)">'+x[1]+'</button>'; }).join('')+'</div>';
     var tests=(j.rows||[]).filter(function(r){return r.test;}).length;
     if(tests) h+='<p class="small"><label><input type="checkbox" '+(FBF.test?'checked':'')+' onchange="FBF.test=this.checked;fbPaint(true)"> Include '+tests+' test answer'+(tests>1?'s':'')+'</label></p>';
@@ -140,6 +155,7 @@ function fbExport(){
 
 /* This script loads after the app has started, so ask now if a teacher is already signed in */
 if(!$('app').classList.contains('locked')) maybeAskQuestionnaire();
+if(isTcaStaff()) fbCheckHome();
 document.addEventListener('visibilitychange',function(){
   if(document.hidden){ window._tqHiddenAt=Date.now(); return; }
   if(window._tqHiddenAt && Date.now()-window._tqHiddenAt>10*60000){ TQ_LATER=0; maybeAskQuestionnaire(); }
