@@ -1,5 +1,5 @@
 /**
- * TCA Tours — Tour Feedback Hub, v1
+ * TCA Tours — Tour Feedback Hub, v2 (v2: read + photoget, for the password-protected results page)
  * ---------------------------------
  * Paste this into the MASTER feedback Google Sheet (Extensions → Apps Script), then Deploy → New deployment →
  * Web app (Execute as: Me · Who has access: Anyone). Every tour app sends its questionnaire answers here, so all
@@ -11,6 +11,8 @@
  *   rows  -> { id, rows: { "<tab name>": [ { "<column>": value, ... } ] } } adds the rows to each tab.
  *            New columns are added at the end of a tab automatically, so future questionnaires can ask new
  *            questions without breaking anything. A response already in a tab (same Response ID) isn't added twice.
+ *   read     -> every tab's rows, so the tour site's password-protected results page (/sheet) can show them
+ *   photoget -> { id } one photo from the Drive folder, as base64, for that page
  *
  * TOKEN must match FEEDBACK_HUB_TOKEN in each tour site's Netlify environment variables. Keep it private:
  * don't put the real value in a public repository.
@@ -36,6 +38,8 @@ function doPost(e) {
     if (b.action === 'ping') { setup_(); return out_({ ok: true, sheet: SpreadsheetApp.getActive().getUrl() }); }
     if (b.action === 'photo') return out_(savePhoto_(b));
     if (b.action === 'rows') return out_(saveRows_(b));
+    if (b.action === 'read') return out_(readAll_());
+    if (b.action === 'photoget') return out_(getPhoto_(b));
     return out_({ ok: false, error: 'unknown action' });
   } catch (err) {
     return out_({ ok: false, error: String(err) });
@@ -43,7 +47,7 @@ function doPost(e) {
     lock.releaseLock();
   }
 }
-function doGet() { return out_({ ok: true, hub: 'TCA Tours feedback hub v1' }); }
+function doGet() { return out_({ ok: true, hub: 'TCA Tours feedback hub v2' }); }
 
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
 
@@ -107,4 +111,33 @@ function savePhoto_(b) {
   var f = dir.createFile(blob);
   if (b.caption) f.setDescription(String(b.caption).slice(0, 500));
   return { ok: true, url: f.getUrl(), fileId: f.getId() };
+}
+
+/* Every tab as rows of { column: value }, for the results page. Photo links come back as their URL. */
+function readAll_() {
+  setup_();
+  var ss = SpreadsheetApp.getActive(), tabs = {};
+  ss.getSheets().forEach(function (sh) {
+    var n = sh.getLastRow(), c = sh.getLastColumn();
+    if (n < 1 || c < 1) { tabs[sh.getName()] = []; return; }
+    var rng = sh.getRange(1, 1, n, c), vals = rng.getDisplayValues(), forms = rng.getFormulas(), head = vals[0];
+    tabs[sh.getName()] = vals.slice(1).map(function (row, i) {
+      var o = {};
+      head.forEach(function (h, j) {
+        var f = forms[i + 1][j], m = f && f.match(/HYPERLINK\("([^"]+)"/i);
+        o[h] = m ? m[1] : row[j];
+      });
+      return o;
+    });
+  });
+  return { ok: true, tabs: tabs, sheet: ss.getUrl() };
+}
+/* One photo by its Photo ID (the file name starts with it), as base64 */
+function getPhoto_(b) {
+  var id = String(b.id || '').replace(/[^A-Za-z0-9]/g, '');
+  if (!id) return { ok: false, error: 'missing id' };
+  var it = DriveApp.searchFiles('title contains "' + id + '_" and trashed = false');
+  if (!it.hasNext()) return { ok: false, error: 'not found' };
+  var f = it.next(), blob = f.getBlob();
+  return { ok: true, mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()), name: f.getName() };
 }

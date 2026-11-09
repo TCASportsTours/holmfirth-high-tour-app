@@ -30,8 +30,10 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=fbsync {id}    -> TCA/admin: send one response to the spreadsheet (one step per call: a photo, then the rows)
 //   POST /tour?type=fbping         -> TCA/admin: check the spreadsheet link; creates its tabs
 //   POST /tour?type=fbdel {id}     -> TCA/admin: delete a response here (not from the spreadsheet)
-//   The master Google Sheet is set by FEEDBACK_HUB_URL + FEEDBACK_HUB_TOKEN (see hub/TCA_Feedback_Hub_v1.gs).
-//   GET  /tour?type=sheet          -> redirects to the master feedback spreadsheet (short link: /sheet)
+//   The master Google Sheet is set by FEEDBACK_HUB_URL + FEEDBACK_HUB_TOKEN (see hub/TCA_Feedback_Hub_v2.gs).
+//   RESULTS PAGE (/sheet): header x-sheet-key = FEEDBACK_VIEW_PASSWORD (no Google account needed)
+//   GET  /tour?type=sheetdata      -> every tab of the master spreadsheet (every tour); this tour's own copy if it isn't connected
+//   GET  /tour?type=sheetphoto&id= -> one questionnaire photo (from the app, else from the Drive folder)
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -142,7 +144,7 @@ export default async (req) => {
     "cache-control": "no-store",
     "access-control-allow-origin": "*",
     "access-control-allow-methods": "GET, POST, OPTIONS, DELETE",
-    "access-control-allow-headers": "content-type, x-staff-key, x-device, x-expenses-key",
+    "access-control-allow-headers": "content-type, x-staff-key, x-device, x-expenses-key, x-sheet-key",
   };
   if (req.method === "OPTIONS") return new Response("", { headers });
 
@@ -162,23 +164,26 @@ export default async (req) => {
   const expPass = env("EXPENSES_PASSWORD"), expGiven = req.headers.get("x-expenses-key") || "";
   const isExp = isAdmin && !!expPass && same(expGiven, expPass);
   const expDenied = () => reply(headers, expPass ? 401 : 503, { ok: false, error: expPass ? "expenses password required" : "EXPENSES_PASSWORD is not set in Netlify environment variables" });
+  // Results page for the master feedback spreadsheet: its own password, no Google account
+  const sheetPass = env("FEEDBACK_VIEW_PASSWORD"), sheetGiven = req.headers.get("x-sheet-key") || "";
+  const isSheet = !!sheetPass && same(sheetGiven, sheetPass);
   const notConfigured = () => reply(headers, 503, { ok: false, error: "STAFF_PASSWORD is not set in Netlify environment variables" });
   const denied = () => reply(headers, 401, { ok: false, error: "staff password required" });
 
   // ---- lockout: too many wrong passwords from one connection
   const ip = clientIp(req);
   let fails = {};
-  const tried = given || expGiven;
+  const tried = given || expGiven || sheetGiven;
   if (tried) { try { fails = JSON.parse((await store.get("authfails")) || "{}"); } catch { fails = {}; } }
   const f = fails[ip];
   if (tried && f && f.n >= LOCK_AFTER && Date.now() - f.first < LOCK_WINDOW_MS)
     return reply(headers, 429, { ok: false, error: "Too many wrong passwords. Try again in 15 minutes." });
-  if ((given && staffPass && !isStaff) || (expGiven && expPass && !same(expGiven, expPass))) {
+  if ((given && staffPass && !isStaff) || (expGiven && expPass && !same(expGiven, expPass)) || (sheetGiven && sheetPass && !isSheet)) {
     const cur = f && Date.now() - f.first < LOCK_WINDOW_MS ? f : { n: 0, first: Date.now() };
     cur.n++; fails[ip] = cur;
     for (const k of Object.keys(fails)) if (Date.now() - fails[k].first > LOCK_WINDOW_MS) delete fails[k];
     await store.set("authfails", JSON.stringify(fails));
-  } else if (given && isStaff && f && !(expGiven && !isExp)) { delete fails[ip]; await store.set("authfails", JSON.stringify(fails)); }
+  } else if (f && ((given && isStaff && !(expGiven && !isExp)) || (isSheet && !given && !expGiven))) { delete fails[ip]; await store.set("authfails", JSON.stringify(fails)); }
 
   // ---------------- DELETE (admin): clear a live/test slot
   if (req.method === "DELETE") {
@@ -585,11 +590,24 @@ export default async (req) => {
     return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
   if (type === "quizstate") return reply(headers, 200, await quizState(store));
-  // Short link to the master feedback spreadsheet (/sheet). The sheet itself stays private: Google asks you to sign in.
-  if (type === "sheet") {
-    const to = env("FEEDBACK_SHEET_URL") || (await store.get("fbsheet")) || "";
-    if (!/^https:\/\/docs\.google\.com\//.test(to)) return new Response("The feedback spreadsheet link isn't set yet (FEEDBACK_SHEET_URL).", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
-    return new Response("", { status: 302, headers: { location: to, "cache-control": "no-store" } });
+  // ---- Results page (/sheet): the master feedback spreadsheet behind its own password
+  if (type === "sheetdata" || type === "sheetphoto") {
+    if (!sheetPass) return reply(headers, 503, { ok: false, error: "The results page password isn't set (FEEDBACK_VIEW_PASSWORD)." });
+    if (!isSheet) return reply(headers, 401, { ok: false, error: "That password isn't right." });
+    if (type === "sheetphoto") {
+      const id = url.searchParams.get("id") || "";
+      if (!/^p[a-z0-9]{4,20}$/.test(id)) return reply(headers, 400, { ok: false, error: "bad id" });
+      const local = await store.get("fbp/" + id);
+      if (local) { try { const r = JSON.parse(local); return reply(headers, 200, { ok: true, data: r.data }); } catch {} }
+      const h = await hubPost({ action: "photoget", id });
+      return h && h.ok ? reply(headers, 200, { ok: true, data: "data:" + (h.mime || "image/jpeg") + ";base64," + h.data }) : reply(headers, 404, { ok: false, error: (h && h.error) || "not found" });
+    }
+    const h = await hubPost({ action: "read" });
+    if (h && h.ok && h.tabs) return reply(headers, 200, { ok: true, source: "sheet", tabs: h.tabs, sheet: h.sheet || env("FEEDBACK_SHEET_URL") || "" });
+    // Not connected yet: this tour's own answers, laid out the same way
+    const tabs = {};
+    for (const e of await fbAll(store)) { const t = await fbRows(store, e); Object.keys(t).forEach((k) => { (tabs[k] = tabs[k] || []).push(...t[k]); }); }
+    return reply(headers, 200, { ok: true, source: "app", note: (h && h.error) || "", tabs, sheet: env("FEEDBACK_SHEET_URL") || "" });
   }
   if (type === "fbphoto") {   // a questionnaire photo: TCA/admin only
     if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });

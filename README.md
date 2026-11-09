@@ -192,7 +192,7 @@ Known limits (by design): students sign in without a password, so someone could 
 
 ### The master spreadsheet (all tours in one place)
 
-`hub/TCA_Feedback_Hub_v1.gs` is a Google Apps Script that lives inside ONE master Google Sheet. Every tour app sends its questionnaires to it.
+`hub/TCA_Feedback_Hub_v2.gs` is a Google Apps Script that lives inside ONE master Google Sheet. Every tour app sends its questionnaires to it.
 
 - **Tabs:**
   - **Website reviews:** only comments with permission, ready to use
@@ -209,6 +209,18 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Every future tour site** built from this app gets the same two variables, so its answers land in the same sheet with its own tour name. Answers sent before the sheet is connected are kept in the app; press **Send** on Questionnaire results to add them.
 - Admin → Clear test data can clear `fb` (answers and photos in the app; not the spreadsheet).
 
+## v26: feedback results page behind a password (no Google account)
+
+- **https://holmfirthnyc.tcatours.co.uk/sheet** is a results page for the master feedback spreadsheet, locked with its own password (`FEEDBACK_VIEW_PASSWORD` in Netlify; not in this repo). Nobody needs a Google account. The Google Sheet itself stays private to its owner.
+- **What it shows:**
+  - every tour, with a **tour filter** and **search**
+  - totals and average overall ratings, with the working
+  - tabs: **Website reviews** (with Copy), **Teachers**, **Students**, **Trip ratings** (averages per trip, with the working) and **Photos** (marked *OK to post* / *TCA Tours only*, with downloads)
+  - **Download as Excel**
+  - "Open in Google Sheets" for the owner
+- **Where the data comes from:** read live from the spreadsheet by the hub script (**v2** adds the `read` and `photoget` actions, so paste the v2 script). Until the spreadsheet is connected, the page shows this tour's own answers.
+- Wrong passwords count towards the 15-minute lockout. The password is remembered only for that browser tab; **Lock** clears it.
+- **Links:** the app (TCA → More → **Feedback results**) and admin.html → **Open feedback results**.
 ## v25: one-tap link to the feedback spreadsheet
 
 - **https://holmfirthnyc.tcatours.co.uk/sheet** goes straight to the master feedback Google Sheet (set by `FEEDBACK_SHEET_URL`). The sheet stays private: Google asks you to sign in with an account that has access.
