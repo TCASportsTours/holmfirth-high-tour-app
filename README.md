@@ -202,15 +202,11 @@ Known limits (by design): students sign in without a password, so someone could 
 - Photos stay in the app's store and are viewed and downloaded on /sheet or in the app's Questionnaire results.
 - Netlify variables no longer used: `FEEDBACK_HUB_URL`, `FEEDBACK_HUB_TOKEN`, `FEEDBACK_SHEET_URL`. Still used: `FEEDBACK_VIEW_PASSWORD`.
 
-## v28: generic address feedback.tcatours.co.uk
+## v28: generic address for the results: feedback.tcatours.co.uk
 
-- The feedback system is a master for every tour, so it gets a TCA Tours address instead of the Holmfirth one:
-  - **feedback.tcatours.co.uk**: results (password)
-  - **feedback.tcatours.co.uk/teachers**: teacher questionnaire
-  - **feedback.tcatours.co.uk/students**: student questionnaire
-- Routed by `public/_redirects` (domain rules). The Holmfirth addresses (`/sheet`, `/feedback/teachers/`, `/feedback/students/`) keep working.
+- The results page is a master for every tour, so it gets a TCA Tours address: **feedback.tcatours.co.uk** (password). It's routed by `public/_redirects` (domain rule) to `/sheet`, which keeps working too.
+- The **teacher and student questionnaires stay on the tour's own address**: `/feedback/teachers/` and `/feedback/students/`.
 - **To switch it on (once):**
   1. Netlify → this site → Domain management → **Add a domain alias**: `feedback.tcatours.co.uk`.
   2. At the DNS provider for tcatours.co.uk, add **CNAME** `feedback` → `holmfirth-nyc-2026.netlify.app`. This step isn't needed if the domain's DNS is on Netlify.
-  3. Netlify issues the HTTPS certificate automatically.
-- The app's Questionnaire links page and the Feedback results button use the new address automatically once it answers, and this site's links until then. The in-app teacher pop-up stays on this site, so the app knows when a teacher has sent it.
+- The app's Questionnaire links page and its Feedback results button use the new address automatically once it answers.

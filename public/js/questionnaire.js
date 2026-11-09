@@ -8,7 +8,8 @@
    Uses helpers from index.html: API, LS, lsGet, lsSet, esc, jsArg, $, toast, openPage, rerenderPage, openModal, closeModal, me, isTeacher, isTcaStaff, ago. */
 'use strict';
 var FB_TEACH = '/feedback/teachers/', FB_STUD = '/feedback/students/';
-/* The generic TCA Tours address for feedback (a domain alias of this site). Used once it's live; until then, this site's own links. */
+/* The generic TCA Tours address for the RESULTS page (a domain alias of this site). Used once it's live; until then, this site's /sheet.
+   The teacher and student questionnaires stay on this tour's own address. */
 var FB_HOME = 'https://feedback.tcatours.co.uk', FB_LIVE = null;
 function fbCheckHome(cb){
   if(location.origin===FB_HOME) FB_LIVE=true;
@@ -16,8 +17,8 @@ function fbCheckHome(cb){
   fetch(FB_HOME+'/feedback/feedback.css',{mode:'no-cors',cache:'no-store'}).then(function(){ FB_LIVE=true; },function(){ FB_LIVE=false; }).then(function(){ if(cb) cb(FB_LIVE); });
 }
 function fbLink(kind){ /* 'teachers' | 'students' | 'results' */
-  if(FB_LIVE) return FB_HOME+'/'+(kind==='results'?'':kind);
-  return location.origin+(kind==='results'?'/sheet':'/feedback/'+kind+'/');
+  if(kind!=='results') return location.origin+'/feedback/'+kind+'/';
+  return FB_LIVE?FB_HOME+'/':location.origin+'/sheet';
 }
 function openFbResults(){ fbCheckHome(function(){ window.open(fbLink('results'),'_blank','noopener'); }); }
 
@@ -51,7 +52,7 @@ function fbPaintLinks(){
       (kind==='results'?'<a class="btn line" href="'+esc(path)+'" target="_blank" rel="noopener"><i class="ti ti-lock-open"></i> Open</a>':'<a class="btn line" href="'+esc(path)+'?test=1" target="_blank" rel="noopener"><i class="ti ti-eye"></i> Preview</a>')+'</div></div>'; };
   openPage('<p class="label">TCA Tours · feedback</p><h2>Questionnaire <em>links</em></h2>'+
     '<p class="small muted">Send these to the school. No sign-in needed.</p>'+
-    (FB_LIVE?'':'<p class="small" style="background:var(--stone);padding:8px 10px;margin-top:8px"><i class="ti ti-info-circle"></i> The TCA Tours address <b>feedback.tcatours.co.uk</b> isn’t live yet, so these are this site’s links. They’ll switch automatically once it is.</p>')+
+    (FB_LIVE?'':'<p class="small" style="background:var(--stone);padding:8px 10px;margin-top:8px"><i class="ti ti-info-circle"></i> The results address <b>feedback.tcatours.co.uk</b> isn’t live yet, so the results link below is this site’s. It switches automatically once it is.</p>')+
     row('Teachers','About 3 minutes, plus optional detail. Built on the TCA feedback form; asks permission to use their review on the website.','teachers')+
     row('Students','About 2 minutes: overall rating, each trip, best bit, a comment, and optional photos with permission to post.','students')+
     row('Results (password)','Every tour’s answers, photos and Download as Excel. For TCA Tours only.','results')+
