@@ -145,14 +145,17 @@ function tqSubmit(){
 }
 
 /* Pop-up for teachers: on opening the app, at most once a day, until they've sent it */
+/* Shows straight away every time a teacher opens the app, until they've sent it. "Later" hides it until the next open
+   (the app coming back after more than 10 minutes in the background counts as opening it again). */
+var TQ_LATER=0;
 function maybeAskQuestionnaire(){
   if(!isTeacher()||!me()||tqDone()) return;
-  var last=Number(lsGet('hny_tq_asked')||0); if(Date.now()-last<20*3600000) return;
+  if(TQ_LATER && Date.now()-TQ_LATER<10*60000) return;
   if($('modal').classList.contains('on')) return;
-  lsSet('hny_tq_asked',String(Date.now()));
+  if($('s-page').classList.contains('active') && $('tqWrap')) return;   /* already filling it in */
   openModal('<p class="label">Thank you for travelling with us</p><h2 style="font-size:28px">Tour <em>questionnaire</em></h2>'+
     '<p class="small muted" style="margin:8px 0 14px">How did New York go? A few minutes of feedback from each teacher helps us make the next trip even better.</p>'+
-    '<button class="btn gold" onclick="closeModal();openQuestionnaire()"><i class="ti ti-pencil"></i> Start · about 3 minutes</button><button class="btn ghost" onclick="closeModal()">Later</button>');
+    '<button class="btn gold" onclick="closeModal();openQuestionnaire()"><i class="ti ti-pencil"></i> Start · about 3 minutes</button><button class="btn ghost" onclick="TQ_LATER=Date.now();closeModal()">Later</button>');
 }
 
 /* ---------- results (TCA Tours staff) ---------- */
@@ -246,3 +249,10 @@ function tqExport(){
   };
   if(window.XLSX) go(); else { var s2=document.createElement('script'); s2.src='vendor/xlsx-0.18.5.full.min.js'; s2.onload=go; s2.onerror=function(){ toast('Couldn’t load the spreadsheet maker'); }; document.head.appendChild(s2); }
 }
+
+/* This script loads after the app has started, so ask now if a teacher is already signed in */
+if(!$('app').classList.contains('locked')) maybeAskQuestionnaire();
+document.addEventListener('visibilitychange',function(){
+  if(document.hidden){ window._tqHiddenAt=Date.now(); return; }
+  if(window._tqHiddenAt && Date.now()-window._tqHiddenAt>10*60000){ TQ_LATER=0; maybeAskQuestionnaire(); }
+});

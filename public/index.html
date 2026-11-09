@@ -328,7 +328,7 @@
 <script src="js/tour-default.js"></script>
 <script>
 'use strict';
-var BUILD = 'v22 · 7 Nov 2026';
+var BUILD = 'v23 · 9 Nov 2026';
 /* Bump this to send every phone back to the launch page on its next open (students, teachers, TCA). */
 var RESET_VERSION = '2026-10-15';
 var API = '/.netlify/functions/tour';
@@ -708,7 +708,7 @@ function signOut(){
   lsSet(LS.sid,null); lsSet(LS.sname,null); lsSet(LS.role,null); lsSet(LS.kind,null); lsSet(LS.me,null); lsSet(LS.key,null); lsSet(LS.priv,null); P=null; role=null; LIVE={roomnums:{},register:{}};
   show('s-signin'); renderSignin();
 }
-function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(quizPlays()) loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); setTimeout(maybeAskAlerts,1200); setTimeout(function(){ if(typeof maybeAskQuestionnaire==='function') maybeAskQuestionnaire(); },2500); }
+function enter(){ $('app').classList.remove('locked'); showQuizTab(); if(quizPlays()) loadQuizState(); go('today'); window._helloAt=0; loadAlerts(); if(typeof maybeAskQuestionnaire==='function') maybeAskQuestionnaire(); setTimeout(maybeAskAlerts,1200); }
 /* ---------- teacher accounts: each teacher picks who they are once; registers then default to their own group ---------- */
 function isTeacher(){ return isStaff() && lsGet(LS.kind)!=='tca'; }
 function teacherList(){ return (T.staff||[]).filter(function(x){ return /teacher/i.test(x.role) && x.group; }); }
@@ -717,7 +717,7 @@ function myGroup(){ var n=me(); if(!n)return null; var t=teacherList().filter(fu
 function teacherButtons(){ return teacherList().map(function(t){
     return '<button class="who" onclick="pickTeacher('+jsArg(t.name)+')"><span class="ic"><i class="ti ti-user"></i></span><span><b>'+esc(t.name)+'</b><span>'+esc(t.group)+'</span></span><i class="ti ti-chevron-right arr"></i></button>'; }).join(''); }
 function pickTeacherScreen(){ $('staffBox').innerHTML='<p class="label">Which teacher are you?</p>'+teacherButtons(); }
-function pickTeacher(n){ var was=$('app').classList.contains('locked'); lsSet(LS.me,n); closeModal(); if(was) enter(); else { showQuizTab(); renderQuiz(); } }
+function pickTeacher(n){ var was=$('app').classList.contains('locked'); lsSet(LS.me,n); closeModal(); if(was) enter(); else { showQuizTab(); renderQuiz(); if(typeof maybeAskQuestionnaire==='function') maybeAskQuestionnaire(); } }
 
 /* ================= TODAY ================= */
 function renderToday(){

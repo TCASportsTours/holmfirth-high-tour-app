@@ -174,3 +174,8 @@ Known limits (by design): students sign in without a password, so someone could 
   - then ratings with the working, and every response
   - **Export to Excel:** sheet 1 has the Google Form's exact columns (plus summary, credit line, test), then Detail and Trips sheets
 - More → **Preview questionnaire** shows it as teachers see it; anything TCA sends is marked as a test. Stored in `?type=tq`. Admin → Clear test data can clear it.
+
+## v23: questionnaire pop-up on every open
+
+- Teachers see the questionnaire pop-up **as soon as the app opens**, every time, until they've sent it. This includes straight after signing in, and coming back to the app after more than 10 minutes away.
+- "Later" hides it only until the next time they open the app. Once it's sent it never appears again. Students and TCA staff never get it.
