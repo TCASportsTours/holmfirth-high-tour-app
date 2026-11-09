@@ -210,3 +210,8 @@ Known limits (by design): students sign in without a password, so someone could 
   1. Netlify → this site → Domain management → **Add a domain alias**: `feedback.tcatours.co.uk`.
   2. At the DNS provider for tcatours.co.uk, add **CNAME** `feedback` → `holmfirth-nyc-2026.netlify.app`. This step isn't needed if the domain's DNS is on Netlify.
 - The app's Questionnaire links page and its Feedback results button use the new address automatically once it answers.
+
+## v30: feedback.tcatours.co.uk opens the results page
+
+- The domain rules in `public/_redirects` are now **forced** (`200!`). Without that, Netlify served the app's own `index.html` at `/` and skipped the rule.
+- Backup: `index.html` sends anyone on feedback.tcatours.co.uk straight to `/sheet/`. This also covers a phone that has the app saved from an earlier visit.

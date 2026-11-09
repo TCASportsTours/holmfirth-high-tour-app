@@ -1,6 +1,6 @@
 # TCA Tours feedback results: the generic address feedback.tcatours.co.uk (a domain alias on this Netlify site)
 #   feedback.tcatours.co.uk/  -> the results page (password). The teacher and student questionnaires stay on the tour's own address.
-https://feedback.tcatours.co.uk/            /sheet/   200
-https://feedback.tcatours.co.uk/results     /sheet/   200
+https://feedback.tcatours.co.uk/            /sheet/   200!
+https://feedback.tcatours.co.uk/results     /sheet/   200!
 # Old short link
 /feedback/sheet   /sheet/   301
