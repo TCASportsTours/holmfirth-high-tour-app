@@ -1,0 +1,3 @@
+# TCA Tours: short link to the master feedback spreadsheet (the function sends you on to Google Sheets)
+/sheet            /.netlify/functions/tour?type=sheet  200
+/feedback/sheet   /.netlify/functions/tour?type=sheet  200

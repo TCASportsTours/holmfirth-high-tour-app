@@ -31,6 +31,7 @@ import { getStore } from "@netlify/blobs";
 //   POST /tour?type=fbping         -> TCA/admin: check the spreadsheet link; creates its tabs
 //   POST /tour?type=fbdel {id}     -> TCA/admin: delete a response here (not from the spreadsheet)
 //   The master Google Sheet is set by FEEDBACK_HUB_URL + FEEDBACK_HUB_TOKEN (see hub/TCA_Feedback_Hub_v1.gs).
+//   GET  /tour?type=sheet          -> redirects to the master feedback spreadsheet (short link: /sheet)
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -584,6 +585,12 @@ export default async (req) => {
     return reply(headers, 200, { ok: true, kickedAt: (sid && kicked[sid]) || null, resetAt: Number(r) || null });
   }
   if (type === "quizstate") return reply(headers, 200, await quizState(store));
+  // Short link to the master feedback spreadsheet (/sheet). The sheet itself stays private: Google asks you to sign in.
+  if (type === "sheet") {
+    const to = env("FEEDBACK_SHEET_URL") || (await store.get("fbsheet")) || "";
+    if (!/^https:\/\/docs\.google\.com\//.test(to)) return new Response("The feedback spreadsheet link isn't set yet (FEEDBACK_SHEET_URL).", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
+    return new Response("", { status: 302, headers: { location: to, "cache-control": "no-store" } });
+  }
   if (type === "fbphoto") {   // a questionnaire photo: TCA/admin only
     if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
     const id = url.searchParams.get("id") || "";

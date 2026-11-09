@@ -208,3 +208,8 @@ Known limits (by design): students sign in without a password, so someone could 
   4. Copy the web-app URL into Netlify as `FEEDBACK_HUB_URL`, with the same token as `FEEDBACK_HUB_TOKEN` (and optionally `FEEDBACK_SHEET_URL` = the sheet's own link). Redeploy.
 - **Every future tour site** built from this app gets the same two variables, so its answers land in the same sheet with its own tour name. Answers sent before the sheet is connected are kept in the app; press **Send** on Questionnaire results to add them.
 - Admin → Clear test data can clear `fb` (answers and photos in the app; not the spreadsheet).
+
+## v25: one-tap link to the feedback spreadsheet
+
+- **https://holmfirthnyc.tcatours.co.uk/sheet** goes straight to the master feedback Google Sheet (set by `FEEDBACK_SHEET_URL`). The sheet stays private: Google asks you to sign in with an account that has access.
+- Also in the app (TCA Tours staff → More → **Feedback spreadsheet**) and at the top of admin.html (**Feedback spreadsheet**, with previews of both forms).
