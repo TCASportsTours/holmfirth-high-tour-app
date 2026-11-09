@@ -159,9 +159,18 @@ Known limits (by design): students sign in without a password, so someone could 
 - If someone leaves part-way and starts again, they can still finish, but the leaderboard marks them **Restarted 1×** (the server counts every start), so Tony can see it.
 - Teacher scores need the teacher password plus a teacher name from the published Staff tab; the TCA and admin passwords can't post teacher scores.
 
-## v22: teacher questionnaire (questionnaire v1), modelled on the GCS Tour App v48/v49
+## v22: teacher questionnaire (questionnaire v2)
 
-- **Teachers**: a pop-up on opening the app (at most once a day, until they've sent it) and a **Tour questionnaire** tile at the top of More → Staff only. About five minutes. Only "The tour overall" is required. A draft is kept on the phone; sending again replaces their earlier answers.
-- **Sections**: About you (role, first TCA trip, how the school heard about TCA Tours) · Before the trip (5 ratings) · The tour (8 ratings) · The trips (every activity, event and dinner venue on the itinerary, or "Didn't go") · The students (3 ratings, recommended spending money, curriculum notes) · The app (parts used, what's missing) · Last few (best moment, do better, book again, 0–10 recommend, where next, when, permission to quote).
-- **TCA Tours staff**: More → **Questionnaire results**, with the working beside every average and the NPS, counts, comments, delete, and **Export to Excel** (Responses + Trips sheets). More → **Preview questionnaire** shows it as teachers see it; anything TCA sends is marked as a test.
-- Stored in the backend slot `?type=tq`, one entry per teacher. Admin → Clear test data can clear it (`tq`).
+- **Purpose:** reviews for the TCA Tours website. Built on TCA's own feedback Google Form (the Skinners' and Wycombe Abbey responses), with optional detail modelled on the GCS Tour App v48/v49 questionnaire.
+- **Teachers** get a pop-up on opening the app (at most once a day, until they've sent it) and a **Tour questionnaire** tile at the top of More → Staff only. Only "Overall satisfaction" is required. A draft is kept on the phone, and sending again replaces their earlier answers.
+- **Sections:**
+  - **Your rating:** the Google Form's three 1–5 ratings: overall, objectives, communication and on-tour support
+  - **The trip:** what stood out, and the biggest impact on students
+  - **Your review:** recommend to another school? what would you say to them? a summary of the trip and working with TCA Tours; permission to use it (name and school / school only / anonymous / no); name and school
+  - **More detail (optional, TCA only):** itinerary, hostel, flights, coaches, value, app, each trip, spending money, comments
+  - **Next time:** book again? where next (New York again, or Other with a text box), when
+- **TCA Tours staff:** More → **Questionnaire results**:
+  - **For the website** first: each cleared review with its credit line and a Copy button
+  - then ratings with the working, and every response
+  - **Export to Excel:** sheet 1 has the Google Form's exact columns (plus summary, credit line, test), then Detail and Trips sheets
+- More → **Preview questionnaire** shows it as teachers see it; anything TCA sends is marked as a test. Stored in `?type=tq`. Admin → Clear test data can clear it.

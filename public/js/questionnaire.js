@@ -1,22 +1,24 @@
-/* TCA Tours — post-tour TEACHER questionnaire, v1 (app v22). Modelled on the GCS Tour App v48/v49 questionnaire.
+/* TCA Tours — post-tour TEACHER questionnaire, v2 (app v22). Built on TCA's own Google Form (Skinners' / Wycombe Abbey feedback)
+   plus optional detail modelled on the GCS Tour App v48/v49 questionnaire. Main purpose: reviews for the TCA Tours website.
    Teachers: More → Tour questionnaire (and a pop-up, at most once a day, until they send it).
    TCA Tours staff: More → Questionnaire results, with the working beside every number, and Export to Excel.
    Answers go to the backend slot ?type=tq, one entry per teacher (sending again replaces it).
    Only "The tour overall" is required. A draft is kept on the phone, so half-finished answers survive closing the app.
    Uses helpers from index.html: API, lsGet, lsSet, esc, jsArg, $, toast, openPage, rerenderPage, openModal, closeModal, T, NY, me, isTeacher, isTcaStaff, isStaff, ago. */
 'use strict';
-var TQ_VERSION = 1;
+var TQ_VERSION = 2;
 var TQ = {};   // the answers being filled in
 
-var TQ_HEARD = ['We\'ve used TCA Tours before','Recommended by another school','A colleague','Google / web search','Social media','Education show or event','TCA Tours got in touch','Other'];
-var TQ_BEFORE = [['p_quote','Enquiry, quote & booking'],['p_comms','Communication before we travelled'],['p_info','Information & paperwork (itinerary, documents)'],['p_parents','Help with information for parents'],['p_value','Value for money']];
-var TQ_TOUR = [['r_overall','The tour overall'],['r_itin','The itinerary & pace of each day'],['r_hostel','Accommodation: HI New York City Hostel'],['r_flights','Flights'],['r_coach','Coach transfers'],['r_support','TCA Tours support on tour'],['r_safety','Safety & safeguarding arrangements'],['r_app','The tour app']];
-var TQ_STUDENTS = [['s_enjoy','How much the students enjoyed it'],['s_learn','Business & educational value'],['s_behave','How well the plans worked with the group (timings, walking, free time)']];
+/* The three ratings from TCA's Google Form (1 = very dissatisfied, 5 = extremely satisfied) */
+var TQ_CORE = [['r_overall','Overall, how satisfied were you with your TCA Tours experience?',''],
+  ['r_objectives','How satisfied are you that the trip achieved its objectives?','For example student development, business learning, cultural experiences'],
+  ['r_support','How satisfied were you with our communication, organisation and on-tour support?','']];
+/* Optional detail */
+var TQ_DETAIL = [['r_itin','The itinerary & pace of each day'],['r_hostel','Accommodation: HI New York City Hostel'],['r_flights','Flights'],['r_coach','Coach transfers'],['r_value','Value for money'],['r_app','The tour app']];
 var TQ_SPEND = ['Under $100','$100–$200','$200–$300','$300–$400','Over $400'];
-var TQ_APP = ['Itinerary','Registers','Rooms','Medical, dietary & SEND','Tickets & entry','Alerts','Live subway status','Getting around','What to take','NYC Quiz'];
-var TQ_DESTS = ['New York again','Washington DC','Boston','Iceland','Berlin','Paris','Barcelona','Rome','Amsterdam','Ski trip','Sports tour','Not sure yet'];
 var TQ_WHEN = ['2027–28','2028–29','Later','Not sure'];
-var TQ_QUOTE = ['Yes, with my name and school','Yes, but anonymously','No thanks'];
+var TQ_QUOTE = ['Yes, with my name and school','Yes, with the school name only','Yes, but anonymously','No thanks'];
+var TQ_SCHOOL = 'Holmfirth High School';
 
 function tqWho(){ return isTeacher()&&me()?me():(isTcaStaff()?'TCA Tours (test)':''); }
 function tqKey(k){ return 'hny_tq_'+k+'_'+(tqWho()||'x'); }
@@ -59,46 +61,42 @@ function tqNps(k){ var v=tqGet(k), h='<div class="tqnps" data-k="'+k+'">'; for(v
 function openQuestionnaire(){
   if(!tqWho()){ toast('Sign in as a teacher first'); return; }
   TQ={}; try{ TQ=JSON.parse(lsGet(tqKey('draft'))||lsGet(tqKey('sent'))||'{}')||{}; }catch(e){ TQ={}; }
+  if(TQ.v!==TQ_VERSION) TQ={v:TQ_VERSION};
+  if(TQ.name==null) TQ.name=isTeacher()?(me()||''):''; if(TQ.school==null) TQ.school=TQ_SCHOOL;
   var trips=tqTrips(), h='';
   h+='<p class="label">Holmfirth High · New York 2026</p><h2>Tour <em>questionnaire</em></h2>'+
-    '<p class="small muted" style="margin:6px 0 4px">For the teachers on the trip. About five minutes. Only the starred question is needed; skip anything you like. Your answers go to TCA Tours only.</p>'+
+    '<p class="small muted" style="margin:6px 0 4px">For the teachers on the trip. The first page takes about three minutes; the optional details another two. Only the starred question is needed.</p>'+
     (isTcaStaff()?'<p class="small" style="background:var(--stone);padding:8px 10px;margin-top:8px"><i class="ti ti-eye"></i> TCA preview: anything you send is marked as a test.</p>':'');
 
-  h+=tqCard('ti-user','About you',
-    '<div class="tqmeta"><span>'+esc(tqWho())+'</span><span>Holmfirth High</span></div>'+
-    tqQ('Your role on this trip','')+tqChips('role',['Trip leader','Accompanying teacher'])+
-    tqQ('Is this your first trip with TCA Tours?','')+tqChips('first',['First trip with TCA','My 2nd','3rd or more'])+
-    tqQ('How did your school first hear about TCA Tours?','Pick the one that got you here first')+tqChips('heard',TQ_HEARD)+
-    '<div id="tqHeardOther">'+tqQ('Where was that?','')+tqText('heardOther','Tell us')+'</div>');
+  h+=tqCard('ti-star','Your rating',
+    '<p class="tqhint">1 = very dissatisfied, 5 = extremely satisfied.</p>'+
+    TQ_CORE.map(function(r){ return tqQ(r[1],r[2],r[0]==='r_overall')+tqStars(r[0]); }).join(''),'tqTourCard');
 
-  h+=tqCard('ti-calendar-event','Before the trip',
-    '<p class="tqhint">1 star = poor, 5 stars = excellent.</p>'+TQ_BEFORE.map(function(r){ return tqQ(r[1],'')+tqStars(r[0],'Not for me'); }).join(''));
+  h+=tqCard('ti-school','The trip',
+    tqQ('What stood out about this trip for you and your students?','')+tqText('stoodOut','e.g. the Hershey’s business tour, the Rangers game…',3)+
+    tqQ('What was the biggest impact of this trip on your students?','')+tqText('impact','What did they take away from it?',3));
 
-  h+=tqCard('ti-star','The tour',
-    TQ_TOUR.map(function(r){ return tqQ(r[1],'',r[0]==='r_overall')+tqStars(r[0],r[0]==='r_overall'?null:'Not for me'); }).join(''),'tqTourCard');
+  h+=tqCard('ti-message-heart','Your review',
+    tqQ('Would you recommend TCA Tours to another school?','')+tqChips('recommend',['Yes','No'])+
+    '<div id="tqSayWrap">'+tqQ('What would you say to another school considering this trip?','')+tqText('say','e.g. Use TCA Tours because…',3)+'</div>'+
+    tqQ('Sum up the trip and working with TCA Tours in a few sentences','This is the comment we’d love to use on our website')+tqText('summary','Your thoughts on the trip, and on working with TCA Tours',5)+
+    tqQ('Are you happy for us to use your comments on our website and social media?','')+tqChips('quoteOk',TQ_QUOTE)+
+    '<div id="tqNameWrap">'+tqQ('Your name, as you’d like it shown','')+tqText('name','e.g. Erin Lees')+'</div>'+
+    '<div id="tqSchoolWrap">'+tqQ('School','')+tqText('school','School name')+'</div>');
 
-  h+=tqCard('ti-map-pin','The trips',
-    tqQ('Rate each trip and venue on the itinerary','Tap “Didn’t go” for any your group missed')+
+  h+=tqCard('ti-adjustments','More detail (optional)',
+    '<p class="tqhint">For the TCA Tours team only: none of this goes on the website.</p>'+
+    TQ_DETAIL.map(function(r){ return tqQ(r[1],'')+tqStars(r[0],'Not for me'); }).join('')+
+    tqQ('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+
     trips.map(function(x,i){ return '<div class="tqtrip"><p class="tqtripname">'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+tqStars('trip.'+i,'Didn’t go')+'</div>'; }).join('')+
-    tqQ('Anything you’d add, drop or swap next time?','')+tqText('tripsNote','e.g. more time at…, swap … for …',3));
+    tqQ('How much spending money would you recommend for students next time?','For the whole trip')+tqChips('spend',TQ_SPEND)+
+    tqQ('Any additional comments or suggestions?','Anything we could do better: it helps')+tqText('improve','Be honest',3));
 
-  h+=tqCard('ti-school','The students',
-    TQ_STUDENTS.map(function(r){ return tqQ(r[1],'')+tqStars(r[0]); }).join('')+
-    tqQ('How much spending money would you recommend for students next time?','For the whole trip, not counting meals already included')+tqChips('spend',TQ_SPEND)+
-    tqQ('Anything that worked especially well for the curriculum?','Optional')+tqText('learnNote','e.g. the Hershey’s business tour',2));
-
-  h+=tqCard('ti-device-mobile','The app',
-    tqQ('Which parts of the app did you use?','Pick any')+tqChips('appUsed',TQ_APP,true)+
-    tqQ('Anything missing, or that didn’t work?','')+tqText('appNote','Be honest: it helps',2));
-
-  h+=tqCard('ti-message-heart','Last few',
-    tqQ('Best moment of the trip','')+tqText('best','The thing the group will still be talking about',3)+
-    tqQ('One thing we could do better','')+tqText('improve','Be honest: it helps',3)+
+  h+=tqCard('ti-plane-departure','Next time',
     tqQ('Would you book another trip with TCA Tours?','')+tqChips('again',['Yes','Maybe','No'])+
-    tqQ('How likely are you to recommend TCA Tours to a colleague at another school?','0 = not at all, 10 = definitely')+tqNps('nps')+
-    tqQ('Where might your school like to go next?','Pick any')+tqChips('dests',TQ_DESTS,true)+
-    tqQ('When might that be?','')+tqChips('when',TQ_WHEN)+
-    tqQ('Can we quote your comments on our website or social media?','')+tqChips('quoteOk',TQ_QUOTE));
+    tqQ('Where might your school like to go next?','Pick New York, or tell us where')+tqChips('dests',['New York again','Other'],true)+
+    '<div id="tqDestOther">'+tqText('destsOther','Where would you like to go?')+'</div>'+
+    tqQ('When might that be?','')+tqChips('when',TQ_WHEN));
 
   h+='<div class="err" id="tqErr"></div><button class="btn gold" id="tqSend" style="margin:14px 0 26px" onclick="tqSubmit()"><i class="ti ti-send"></i> Send my answers</button>';
   openPage('<div id="tqWrap">'+h+'</div>');
@@ -117,17 +115,23 @@ function tqClick(e){
   tqSave(); tqConditionals();
 }
 function tqInput(e){ var k=e.target.getAttribute('data-t'); if(!k) return; tqSetV(k,String(e.target.value||'')); tqSave(); }
-function tqConditionals(){ var o=$('tqHeardOther'); if(o) o.style.display=TQ.heard==='Other'?'':'none'; }
+function tqConditionals(){
+  var show=function(id,on){ var o=$(id); if(o) o.style.display=on?'':'none'; };
+  show('tqSayWrap',TQ.recommend!=='No'); show('tqDestOther',Array.isArray(TQ.dests)&&TQ.dests.indexOf('Other')>=0);
+  show('tqNameWrap',!TQ.quoteOk||TQ.quoteOk==='Yes, with my name and school');
+  show('tqSchoolWrap',!TQ.quoteOk||/school/.test(TQ.quoteOk));
+}
 
 function tqSubmit(){
   [].forEach.call(document.querySelectorAll('#tqWrap [data-t]'),function(el){ tqSetV(el.getAttribute('data-t'),String(el.value||'')); });
   var err=$('tqErr'); err.classList.remove('on');
   if(typeof TQ.r_overall!=='number'){ err.textContent='Please give the tour an overall rating (in “The tour”).'; err.classList.add('on'); var c=$('tqTourCard'); if(c) c.scrollIntoView({behavior:'smooth',block:'center'}); return; }
   var a=JSON.parse(JSON.stringify(TQ)), trips=tqTrips();
-  if(a.heard!=='Other') delete a.heardOther;
+  if(!(Array.isArray(a.dests)&&a.dests.indexOf('Other')>=0)) delete a.destsOther;
+  if(a.recommend==='No') delete a.say;
   var tr={}; Object.keys(a.trip||{}).forEach(function(i){ var v=a.trip[i]; if(trips[i]&&(v==='na'||typeof v==='number')) tr[trips[i].title]=v; }); a.trips=tr; delete a.trip;
   Object.keys(a).forEach(function(k){ if(a[k]===''||a[k]==null||(Array.isArray(a[k])&&!a[k].length)) delete a[k]; });
-  var body={v:TQ_VERSION, teacher:isTeacher()?me():'', a:a};
+  a.v=TQ_VERSION; var body={v:TQ_VERSION, teacher:isTeacher()?me():'', a:a};
   var btn=$('tqSend'); btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Sending…';
   fetch(API+'?type=tq',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify(body)})
     .then(function(r){ return r.json().then(function(j){ return {r:r,j:j}; }); }).then(function(x){
@@ -147,44 +151,55 @@ function maybeAskQuestionnaire(){
   if($('modal').classList.contains('on')) return;
   lsSet('hny_tq_asked',String(Date.now()));
   openModal('<p class="label">Thank you for travelling with us</p><h2 style="font-size:28px">Tour <em>questionnaire</em></h2>'+
-    '<p class="small muted" style="margin:8px 0 14px">How did New York go? Five minutes of feedback from each teacher helps us make the next trip even better.</p>'+
-    '<button class="btn gold" onclick="closeModal();openQuestionnaire()"><i class="ti ti-pencil"></i> Start · about 5 minutes</button><button class="btn ghost" onclick="closeModal()">Later</button>');
+    '<p class="small muted" style="margin:8px 0 14px">How did New York go? A few minutes of feedback from each teacher helps us make the next trip even better.</p>'+
+    '<button class="btn gold" onclick="closeModal();openQuestionnaire()"><i class="ti ti-pencil"></i> Start · about 3 minutes</button><button class="btn ghost" onclick="closeModal()">Later</button>');
 }
 
 /* ---------- results (TCA Tours staff) ---------- */
 var TQR=null;
 function openTqResults(){ TQR=null; tqPaintResults(false); fetch(API+'?type=tq',{headers:{'x-staff-key':lsGet(LS.key)||''},cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ TQR=j; if($('tqRes')) tqPaintResults(true); }).catch(function(){ TQR={ok:false,error:'Needs signal to load the answers.'}; if($('tqRes')) tqPaintResults(true); }); }
-function tqLabel(k){ var all=TQ_BEFORE.concat(TQ_TOUR,TQ_STUDENTS); for(var i=0;i<all.length;i++) if(all[i][0]===k) return all[i][1]; return k; }
+function tqLabel(k){ var all=TQ_CORE.concat(TQ_DETAIL); for(var i=0;i<all.length;i++) if(all[i][0]===k) return all[i][1]; return k; }
 /* Average with the working shown: "4.5 — (5 + 4) ÷ 2" */
 function tqAvg(vals){ var n=vals.filter(function(v){return typeof v==='number';}); if(!n.length) return null; var t=n.reduce(function(a,b){return a+b;},0); return {avg:Math.round(t/n.length*10)/10, n:n.length, work:'('+n.join(' + ')+') ÷ '+n.length+' = '+(Math.round(t/n.length*100)/100)}; }
 function tqRows(){ var j=TQR||{}; return (j.rows||[]).filter(function(r){ return TQR.showTest||!r.test; }); }
+/* How a review is credited on the website, from the teacher's own permission answer */
+function tqCredit(a){ var q=a.quoteOk||''; if(/name and school/.test(q)) return [a.name,a.school].filter(Boolean).join(', ');
+  if(/school name only/.test(q)) return 'A teacher at '+(a.school||TQ_SCHOOL); if(/anonymous/.test(q)) return 'A teacher on the New York trip'; return ''; }
+function tqCanUse(a){ return /^Yes/.test(a.quoteOk||''); }
 function tqPaintResults(keep){
   var j=TQR, h='<p class="label">TCA Tours · teachers</p><h2>Questionnaire <em>results</em></h2><div id="tqRes">';
   if(!j) h+='<div class="card"><p class="small muted">Loading…</p></div>';
   else if(!j.ok) h+='<div class="card"><p class="small">'+esc(j.error||'Not allowed')+'</p></div>';
   else {
     var rows=tqRows(), teachers=j.teachers||[], answered={}; rows.forEach(function(r){ answered[r.teacher]=1; });
-    var tests=(j.rows||[]).filter(function(r){return r.test;}).length;
-    h+='<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+rows.filter(function(r){return !r.test;}).length+' of '+teachers.length+'</b><span>teachers answered</span></div>'+
-      '<div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+(tqNpsScore(rows)||'—')+'</b><span>Net Promoter Score</span></div></div>';
+    var tests=(j.rows||[]).filter(function(r){return r.test;}).length, real=rows.filter(function(r){return !r.test;}).length;
+    var rec=rows.filter(function(r){return r.a.recommend;}), recYes=rec.filter(function(r){return r.a.recommend==='Yes';}).length;
+    h+='<div class="tiles" style="grid-template-columns:1fr 1fr"><div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+real+' of '+teachers.length+'</b><span>teachers answered</span></div>'+
+      '<div class="tile" style="min-height:0"><b class="num" style="font-size:28px">'+(rec.length?recYes+' of '+rec.length:'—')+'</b><span>would recommend us</span></div></div>';
     var waiting=teachers.filter(function(t){return !answered[t];}); if(waiting.length) h+='<p class="small muted">Waiting for: '+waiting.map(esc).join(', ')+'</p>';
     if(tests) h+='<p class="small"><label><input type="checkbox" '+(j.showTest?'checked':'')+' onchange="TQR.showTest=this.checked;tqPaintResults(true)"> Include '+tests+' TCA test answer'+(tests>1?'s':'')+'</label></p>';
     if(rows.length){
-      h+='<button class="btn dark" style="margin:10px 0" onclick="tqExport()"><i class="ti ti-table-down"></i> Export to Excel</button>';
-      var npsW=tqNpsWork(rows); if(npsW) h+='<p class="small muted">NPS working: '+esc(npsW)+'</p>';
-      [['Before the trip',TQ_BEFORE],['The tour',TQ_TOUR],['The students',TQ_STUDENTS]].forEach(function(sec){
-        h+='<p class="label">'+sec[0]+'</p><table class="lb">'+sec[1].map(function(q){ var vals=rows.map(function(r){return r.a[q[0]];}), s=tqAvg(vals), na=vals.filter(function(v){return v==='na';}).length;
+      h+='<button class="btn dark" style="margin:10px 0" onclick="tqExport()"><i class="ti ti-table-down"></i> Export to Excel</button>'+
+        '<p class="small muted">The first sheet has the same columns as the TCA feedback Google Form, so it pastes straight under the Skinners’ and Wycombe Abbey rows.</p>';
+      /* Website reviews first: the main purpose */
+      var ok=rows.filter(function(r){ return tqCanUse(r.a)&&(r.a.summary||r.a.say||r.a.stoodOut); });
+      h+='<p class="label">For the website · '+ok.length+'</p>';
+      h+=ok.length?ok.map(function(r){ var a=r.a, quote=a.summary||a.say||a.stoodOut;
+          return '<div class="card rule"><p style="font-family:var(--display);font-size:19px;line-height:1.35">“'+esc(quote)+'”</p><p class="small" style="margin-top:8px"><b>— '+esc(tqCredit(a))+'</b></p>'+
+            '<p class="small muted" style="margin-top:4px">'+esc(a.quoteOk)+(r.test?' · TEST':'')+'</p><p style="margin-top:8px"><button class="linkbtn" onclick="tqCopy('+jsArg('“'+quote+'”\n— '+tqCredit(a))+')"><i class="ti ti-copy"></i> Copy review</button></p></div>'; }).join('')
+        :'<div class="card"><p class="small">No reviews cleared for the website yet.</p></div>';
+      h+='<p class="label">Ratings · 1 to 5</p><table class="lb">'+TQ_CORE.concat(TQ_DETAIL.map(function(x){return [x[0],x[1]];})).map(function(q){
+          var vals=rows.map(function(r){return r.a[q[0]];}), s=tqAvg(vals), na=vals.filter(function(v){return v==='na';}).length;
           return '<tr><td>'+esc(q[1])+(s?'<div class="small muted">'+esc(s.work)+'</div>':'')+(na?'<div class="small muted">'+na+' not for me</div>':'')+'</td><td class="sc" style="text-align:right">'+(s?s.avg+'<div class="small muted">'+s.n+' answer'+(s.n>1?'s':'')+'</div>':'—')+'</td></tr>'; }).join('')+'</table>';
-      });
       var tnames=[]; rows.forEach(function(r){ Object.keys(r.a.trips||{}).forEach(function(t){ if(tnames.indexOf(t)<0) tnames.push(t); }); });
       if(tnames.length){ h+='<p class="label">The trips</p><table class="lb">'+tnames.map(function(t){ var vals=rows.map(function(r){return (r.a.trips||{})[t];}), s=tqAvg(vals), na=vals.filter(function(v){return v==='na';}).length;
           return {t:t,s:s,na:na}; }).sort(function(a,b){ return ((b.s&&b.s.avg)||0)-((a.s&&a.s.avg)||0); }).map(function(x){
           return '<tr><td>'+esc(x.t)+(x.s?'<div class="small muted">'+esc(x.s.work)+'</div>':'')+(x.na?'<div class="small muted">'+x.na+' didn’t go</div>':'')+'</td><td class="sc" style="text-align:right">'+(x.s?x.s.avg:'—')+'</td></tr>'; }).join('')+'</table>'; }
-      h+=tqCountBlock('How they heard about TCA Tours',rows,'heard')+tqCountBlock('Book again?',rows,'again')+tqCountBlock('Recommended spending money',rows,'spend')+
-        tqCountBlock('Where next?',rows,'dests',true)+tqCountBlock('When?',rows,'when')+tqCountBlock('App: parts used',rows,'appUsed',true);
-      h+='<p class="label">Comments</p>'+rows.map(function(r){ var a=r.a, bits=[['Best moment',a.best],['Do better',a.improve],['Trips',a.tripsNote],['Curriculum',a.learnNote],['The app',a.appNote]].filter(function(x){return x[1];});
+      h+=tqCountBlock('Book again?',rows,'again')+tqCountBlock('Recommended spending money',rows,'spend')+tqCountBlock('Where next?',rows,'dests',true)+tqCountBlock('When?',rows,'when');
+      var other=rows.filter(function(r){return r.a.destsOther;}); if(other.length) h+='<div class="card"><p class="small"><b>Other places:</b> '+other.map(function(r){ return esc(r.a.destsOther)+' <span class="muted">('+esc(r.teacher)+')</span>'; }).join('; ')+'</p></div>';
+      h+='<p class="label">Every response</p>'+rows.map(function(r){ var a=r.a, bits=[['Sum up',a.summary],['Stood out',a.stoodOut],['Biggest impact',a.impact],['Would say to another school',a.say],['Comments & suggestions',a.improve]].filter(function(x){return x[1];});
         return '<div class="card rule"><div class="cardhead"><h3 style="font-size:19px">'+esc(r.teacher)+(r.test?' <span class="tag">Test</span>':'')+'</h3><span class="small muted">'+esc(ago(r.ts))+'</span></div>'+
-          '<p class="small muted">'+esc([a.role,a.first,a.quoteOk?'Quote: '+a.quoteOk:'Quote: not answered'].filter(Boolean).join(' · '))+'</p>'+
+          '<p class="small muted">'+esc(['Overall '+(a.r_overall||'—')+'/5','Recommend: '+(a.recommend||'—'),'Quote: '+(a.quoteOk||'not answered')].join(' · '))+'</p>'+
           (bits.length?bits.map(function(x){ return '<p class="small" style="margin-top:6px"><b>'+esc(x[0])+':</b> '+esc(x[1])+'</p>'; }).join(''):'<p class="small muted">No comments.</p>')+
           '<p style="margin-top:8px"><button class="linkbtn" onclick="tqDelete('+jsArg(r.key)+','+jsArg(r.teacher)+')">Delete this response</button></p></div>'; }).join('');
     } else h+='<div class="card"><p class="small">No answers yet. Teachers see the questionnaire under More, and a reminder when they open the app.</p></div>';
@@ -193,15 +208,11 @@ function tqPaintResults(keep){
   h+='</div>';
   if(keep) rerenderPage(h); else openPage(h,openTqResults);
 }
+function tqCopy(t){ try{ navigator.clipboard.writeText(t).then(function(){ toast('Review copied'); },function(){ prompt('Copy this review:',t); }); }catch(e){ prompt('Copy this review:',t); } }
 function tqCountBlock(title,rows,k,multi){
   var c={}, n=0; rows.forEach(function(r){ var v=r.a[k]; if(v==null) return; n++; (multi?v:[v]).forEach(function(x){ c[x]=(c[x]||0)+1; }); });
   if(!n) return ''; return '<p class="label">'+esc(title)+'</p><div class="card"><p class="small">'+Object.keys(c).sort(function(a,b){return c[b]-c[a];}).map(function(x){ return esc(x)+' <b>'+c[x]+'</b>'; }).join(' · ')+'</p><p class="small muted">from '+n+' answer'+(n>1?'s':'')+'</p></div>';
 }
-/* Net Promoter Score = % promoters (9–10) − % detractors (0–6) */
-function tqNpsParts(rows){ var v=rows.map(function(r){return r.a.nps;}).filter(function(x){return typeof x==='number';}); if(!v.length) return null;
-  var p=v.filter(function(x){return x>=9;}).length, d=v.filter(function(x){return x<=6;}).length; return {n:v.length,p:p,d:d,score:Math.round((p-d)/v.length*100)}; }
-function tqNpsScore(rows){ var x=tqNpsParts(rows); return x?String(x.score):null; }
-function tqNpsWork(rows){ var x=tqNpsParts(rows); if(!x) return ''; return x.p+' promoters (9–10) − '+x.d+' detractors (0–6), out of '+x.n+': ('+x.p+' − '+x.d+') ÷ '+x.n+' × 100 = '+x.score; }
 function tqDelete(key,name){
   if(!confirm('Delete '+name+'’s answers? They can send them again.')) return;
   fetch(API+'?type=tqdel',{method:'POST',headers:{'content-type':'application/json','x-staff-key':lsGet(LS.key)||''},body:JSON.stringify({key:key})})
@@ -209,19 +220,29 @@ function tqDelete(key,name){
 }
 function tqExport(){
   var rows=tqRows(); if(!rows.length) return;
-  var s=document.createElement('script'); s.src='vendor/xlsx-0.18.5.full.min.js';
   var go=function(){
-    var X=window.XLSX, qs=TQ_BEFORE.concat(TQ_TOUR,TQ_STUDENTS);
-    var head=['Teacher','Sent (UK)','Test?','Role','First TCA trip?','Heard about TCA','Heard: other'].concat(qs.map(function(q){return q[1]+' (1–5)';}),['NPS (0–10)','Book again?','Spending money','Used in app','App comments','Best moment','Do better','Trips: add/drop/swap','Curriculum','Where next','When','Quote OK?']);
-    var aoa=[head].concat(rows.map(function(r){ var a=r.a; return [r.teacher,new Date(r.ts).toLocaleString('en-GB',{timeZone:'Europe/London'}),r.test?'Yes':'',a.role||'',a.first||'',a.heard||'',a.heardOther||'']
-      .concat(qs.map(function(q){ var v=a[q[0]]; return v==='na'?'n/a':(v==null?'':v); }),[a.nps==null?'':a.nps,a.again||'',a.spend||'',(a.appUsed||[]).join(', '),a.appNote||'',a.best||'',a.improve||'',a.tripsNote||'',a.learnNote||'',(a.dests||[]).join(', '),a.when||'',a.quoteOk||'']); }));
+    var X=window.XLSX;
+    /* Sheet 1: the same columns, in the same order, as TCA's feedback Google Form */
+    var head=['Timestamp','Overall, how satisfied were you with your TCA tour experience? (1 = Very Dissatisfied - 5 = Extremely satisfied)',
+      'How satisfied are you that the tour achieved its objectives? For example, player / student development, cultural experiences etc. (1 = Very Dissatisfied - 5 = Extremely satisfied)',
+      'How satisfied were you with our communication, organisation and on-tour support? (1 = Very Dissatisfied - 5 = Very Satisfied)',
+      'What stood out about this tour for you and your players / students?','What was the biggest impact of this trip on your players / students?',
+      'Would you recommend TCA Sports Tours to another school or club?','If yes, what would you say to another school / club considering this tour?',
+      'Do you have any additional comments or suggestions about the tour or your experience?',
+      'Are you happy for us to use your comments in our promotional material (website, social media, brochure, etc).?','Name','School / Organisation',
+      'Summary of the trip and working with TCA Tours (website review)','Credit line for the website','Test?'];
+    var aoa=[head].concat(rows.map(function(r){ var a=r.a; return [new Date(r.ts).toLocaleString('en-GB',{timeZone:'Europe/London'}),a.r_overall||'',a.r_objectives||'',a.r_support||'',
+      a.stoodOut||'',a.impact||'',a.recommend||'',a.say||'',a.improve||'',a.quoteOk||'',a.name||r.teacher,a.school||'',a.summary||'',tqCanUse(a)?tqCredit(a):'Not for the website',r.test?'Yes':'']; }));
+    /* Sheet 2: the optional detail */
+    var det=[['Teacher'].concat(TQ_DETAIL.map(function(q){return q[1]+' (1–5)';}),['Spending money','Book again?','Where next','Other places','When'])].concat(rows.map(function(r){ var a=r.a;
+      return [r.teacher].concat(TQ_DETAIL.map(function(q){ var v=a[q[0]]; return v==='na'?'n/a':(v==null?'':v); }),[a.spend||'',a.again||'',(a.dests||[]).join(', '),a.destsOther||'',a.when||'']); }));
     var tnames=[]; rows.forEach(function(r){ Object.keys(r.a.trips||{}).forEach(function(t){ if(tnames.indexOf(t)<0) tnames.push(t); }); });
     var trips=[['Trip'].concat(rows.map(function(r){return r.teacher;}),['Average','Working'])].concat(tnames.map(function(t){
       var vals=rows.map(function(r){ var v=(r.a.trips||{})[t]; return v==='na'?'Didn’t go':(v==null?'':v); }), s=tqAvg(rows.map(function(r){return (r.a.trips||{})[t];}));
       return [t].concat(vals,[s?s.avg:'',s?s.work:'']); }));
-    var wb=X.utils.book_new(); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(aoa),'Responses'); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(trips),'Trips');
+    var wb=X.utils.book_new(); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(aoa),'Form Responses'); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(det),'Detail'); X.utils.book_append_sheet(wb,X.utils.aoa_to_sheet(trips),'Trips');
     var v=(parseInt(lsGet('hny_tqdl'),10)||0)+1; lsSet('hny_tqdl',String(v));
     X.writeFile(wb,'Holmfirth_NYC_Teacher_Questionnaire_v'+v+'.xlsx');
   };
-  if(window.XLSX) go(); else { s.onload=go; s.onerror=function(){ toast('Couldn’t load the spreadsheet maker'); }; document.head.appendChild(s); }
+  if(window.XLSX) go(); else { var s2=document.createElement('script'); s2.src='vendor/xlsx-0.18.5.full.min.js'; s2.onload=go; s2.onerror=function(){ toast('Couldn’t load the spreadsheet maker'); }; document.head.appendChild(s2); }
 }
