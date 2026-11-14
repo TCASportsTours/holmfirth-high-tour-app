@@ -228,3 +228,4 @@ Known limits (by design): students sign in without a password, so someone could 
 - Same questions as the Holmfirth forms (feedback.js v2). Answers go to the same master results page (feedback.tcatours.co.uk), filed under the tour **"Sally Nook · New York"**, so they can be picked in the All tours filter and exported.
 - How it works: the page sets `window.FB_PAST = {key, tour, trips}` and sends `tourKey`; the backend only accepts keys listed in `PAST_TOURS` in `netlify/functions/tour.mjs`. Another past tour = copy `public/sallynook/`, change the key, add it to `PAST_TOURS`.
 - No trip list yet (`trips: []`), so the "rate the trips" question is skipped until one is added.
+- There was no tour app on the Sally Nook trip, so `noApp: true` leaves out the "The tour app" rating.

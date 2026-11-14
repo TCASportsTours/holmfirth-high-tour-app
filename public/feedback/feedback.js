@@ -6,7 +6,7 @@
    A draft is kept on the device, so half-finished answers survive closing the page.
    Link options: ?t=<teacher name> (from inside the tour app: fills in the name and marks it done in the app),
    ?test=1 (TCA preview: marked as a test).
-   v2: past tours get their own links (e.g. /sallynook/teachers/). The page sets window.FB_PAST = {key, tour, trips}
+   v2: past tours get their own links (e.g. /sallynook/teachers/). The page sets window.FB_PAST = {key, tour, trips, noApp}
    and the answers are filed under that tour in the same master results (feedback.tcatours.co.uk). */
 (function(){
 'use strict';
@@ -86,7 +86,7 @@ function render(){
       q('Sum up the trip and working with TCA Tours in a few sentences','This is the comment we’d love to use on our website')+text('summary','Your thoughts on the trip, and on working with TCA Tours',5)+
       q('Are you happy for us to use your comments on our website and social media?','')+chips('quoteOk',QUOTE_T));
     h+=card('ti-adjustments','More detail','<p class="hint">For the TCA Tours team only: none of this goes on the website.</p>'+
-      DETAIL_T.map(function(r){ return q(r[1],'')+stars(r[0],'Not for me')+cmt(r[0]); }).join('')+
+      DETAIL_T.filter(function(r){ return !(PAST&&PAST.noApp&&r[0]==='r_app'); }).map(function(r){ return q(r[1],'')+stars(r[0],'Not for me')+cmt(r[0]); }).join('')+
       (tl.length?q('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+(x.day?'<span>Day '+esc(x.day)+'</span>':'')+'</p>'+stars('trip.'+i,'Didn’t go')+cmt('trip.'+i)+'</div>'; }).join(''):'')+
       q('How much spending money would you recommend for students next time?','For the whole trip')+chips('spend',['Under $100','$100–$200','$200–$300','$300–$400','Over $400'])+
       q('Any additional comments or suggestions?','Anything we could do better: it helps')+text('improve','Be honest',3)+
