@@ -221,3 +221,10 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Teacher questionnaire:** every star rating (the three main ratings, the optional detail ratings and each trip) has **"Add a comment (optional)"** underneath. The box opens by itself for 1 or 2 stars ("Sorry to hear that. What went wrong?").
 - Comments show next to their rating: a "…: comment" column on the Teachers tab, a **Comment** column on Trip ratings, and in the app's Questionnaire results.
 - Example names in empty boxes are now **Alexander Hamilton** (teacher and student forms, and the expense form), not real people.
+
+## v32: Sally Nook New York questionnaires (past tour, same forms)
+
+- **Teachers:** `https://feedback.tcatours.co.uk/sallynook/teachers/` · **Students:** `https://feedback.tcatours.co.uk/sallynook/students/` (they also work on holmfirthnyc.tcatours.co.uk).
+- Same questions as the Holmfirth forms (feedback.js v2). Answers go to the same master results page (feedback.tcatours.co.uk), filed under the tour **"Sally Nook · New York"**, so they can be picked in the All tours filter and exported.
+- How it works: the page sets `window.FB_PAST = {key, tour, trips}` and sends `tourKey`; the backend only accepts keys listed in `PAST_TOURS` in `netlify/functions/tour.mjs`. Another past tour = copy `public/sallynook/`, change the key, add it to `PAST_TOURS`.
+- No trip list yet (`trips: []`), so the "rate the trips" question is skipped until one is added.

@@ -342,7 +342,9 @@ export default async (req) => {
       if (photos.length && !["Yes", "No"].includes(a.photoOk)) return reply(headers, 400, { ok: false, error: "Please say whether we can post your photos" });
       if (photos.length && a.photoOk === "Yes" && a.othersOk !== true) return reply(headers, 400, { ok: false, error: "Please tick the box about other people in your photos, or choose No" });
       if (await fbCount(store) >= FB_MAX_RESPONSES) return reply(headers, 507, { ok: false, error: "too many responses" });
-      const tour = await fbTour(store);
+      /* A past tour's own questionnaire link (e.g. /sallynook/teachers/) names its tour; only tours listed in PAST_TOURS are accepted */
+      const pastKey = String((parsed && parsed.tourKey) || "");
+      const tour = Object.prototype.hasOwnProperty.call(PAST_TOURS, pastKey) ? Object.assign({ key: pastKey }, PAST_TOURS[pastKey]) : await fbTour(store);
       const e = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), kind, ts: Date.now(), tour, a, photos,
         source: String(parsed.source || "Link").slice(0, 40), test: !!parsed.test };
       await store.set("fb/" + e.id, JSON.stringify(e));
@@ -631,6 +633,11 @@ async function fbRateOk(store, ip) {
   const cur = r[ip] || { n: 0, first: now }; cur.n++; r[ip] = cur; await store.set("fbrate", JSON.stringify(r));
   return cur.n <= FB_RATE;
 }
+/* Past tours with their own questionnaire links on this site (public/<key>/teachers/ and public/<key>/students/).
+   Their answers land in the same master results (feedback.tcatours.co.uk), filed under the tour named here. */
+const PAST_TOURS = {
+  sallynook: { name: "Sally Nook · New York", school: "Sally Nook", destination: "New York City, USA", dates: "" },
+};
 async function fbTour(store) {
   let U = null; try { U = JSON.parse((await store.get("current")) || "null"); } catch {}
   const t = (U && U.tour) || {};
