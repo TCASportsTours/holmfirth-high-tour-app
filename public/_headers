@@ -13,3 +13,6 @@
 /feedback/*
   Cache-Control: no-store, max-age=0, must-revalidate
   X-Robots-Tag: noindex, nofollow
+/embed/*
+  Cache-Control: public, max-age=300
+  Access-Control-Allow-Origin: *

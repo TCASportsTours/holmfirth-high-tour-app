@@ -221,3 +221,22 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Teacher questionnaire:** every star rating (the three main ratings, the optional detail ratings and each trip) has **"Add a comment (optional)"** underneath. The box opens by itself for 1 or 2 stars ("Sorry to hear that. What went wrong?").
 - Comments show next to their rating: a "…: comment" column on the Teachers tab, a **Comment** column on Trip ratings, and in the app's Questionnaire results.
 - Example names in empty boxes are now **Alexander Hamilton** (teacher and student forms, and the expense form), not real people.
+
+## v32: testimonials and photos onto tcatours.co.uk
+
+- **Results page (feedback.tcatours.co.uk):**
+  - **Website reviews** and **Photos** each have **Add to website** / **Remove** per item, and **Add all N to the website**.
+  - Only items with permission can go on. Testimonials need "Yes" to using their comment. Photos need "Yes, you can post them" **and** the tick confirming everyone in them has permission. The server checks this; test answers can't go on.
+  - Photos ask for a confirm first: check them against the school's photo consent list.
+- **On tcatours.co.uk (once):** add an HTML / embed block and paste:
+
+  ```html
+  <div data-tca-testimonials></div>
+  <div data-tca-photos></div>
+  <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
+  ```
+
+  Anything added on the results page then shows there automatically (within about 2 minutes), in TCA styling. Use `data-limit="6"` to cap the number shown. The code is also on the results page, under "Website code".
+- **Public feed:** `?type=pubreviews`, `?type=pubphotos`, `?type=pubphoto&id=`. Only what's been added: quote, agreed credit line, tour name, and photo caption. No student names with photos.
+- Deleting a response also takes it off the website. Admin → Clear test data (`fb`) clears the website list too.
+- The dev server now passes binary responses (photos) through unchanged.
