@@ -240,3 +240,22 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Public feed:** `?type=pubreviews`, `?type=pubphotos`, `?type=pubphoto&id=`. Only what's been added: quote, agreed credit line, tour name, and photo caption. No student names with photos.
 - Deleting a response also takes it off the website. Admin → Clear test data (`fb`) clears the website list too.
 - The dev server now passes binary responses (photos) through unchanged.
+
+## v33: embed hides empty sections
+
+- `tca-feedback.js` shows a wrapper marked `data-tca-block` only once there's a testimonial or photo inside it. This lets the website have its own heading for each without ever showing an empty one.
+- **For tcatours.co.uk (tca-tours-site):** paste into `testimonials.html`, just above `<section class="section-stone" id="notebooks">`:
+
+  ```html
+  <section data-tca-block style="display:none"><div class="wrap">
+      <p class="eyebrow">Latest feedback</p>
+      <h2>From our most recent groups</h2>
+      <div data-tca-testimonials></div>
+  </div></section>
+  <section data-tca-block style="display:none"><div class="wrap">
+      <p class="eyebrow">On tour</p>
+      <h2>Photos from our groups</h2>
+      <div data-tca-photos></div>
+  </div></section>
+  <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
+  ```

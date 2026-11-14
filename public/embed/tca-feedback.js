@@ -6,7 +6,9 @@
      <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
 
    Whatever TCA adds on the feedback results page ("Add to website") shows here automatically; "Remove" takes it off.
-   Options on the divs: data-limit="6" (how many to show). Styles are scoped to .tcafb-* so they don't affect the site. */
+   Options on the divs: data-limit="6" (how many to show). Styles are scoped to .tcafb-* so they don't affect the site.
+   A wrapper marked data-tca-block (e.g. a section with a heading, starting style="display:none") is shown only once
+   there's something in it, so the page never shows an empty heading. */
 (function(){
   'use strict';
   var me = document.currentScript || [].slice.call(document.getElementsByTagName('script')).filter(function(s){ return /tca-feedback\.js/.test(s.src); })[0];
@@ -31,14 +33,15 @@
     document.head.appendChild(st);
   }
   function load(type,cb){ fetch(API+'?type='+type,{cache:'no-cache'}).then(function(r){return r.json();}).then(function(j){ cb((j&&j.items)||[]); }).catch(function(){ cb([]); }); }
+  function reveal(el,has){ var b=el.closest&&el.closest('[data-tca-block]'); if(b&&has) b.style.display=''; }
   function lim(el,list){ var n=parseInt(el.getAttribute('data-limit'),10); return n>0?list.slice(0,n):list; }
   var T=[].slice.call(document.querySelectorAll('[data-tca-testimonials]')), P=[].slice.call(document.querySelectorAll('[data-tca-photos]'));
   if(!T.length && !P.length) return;
   css();
   if(T.length) load('pubreviews',function(items){ T.forEach(function(el){ var l=lim(el,items);
     el.innerHTML=l.length?'<div class="tcafb-grid">'+l.map(function(x){
-      return '<figure class="tcafb-q"><blockquote>“'+esc(x.quote)+'”</blockquote><figcaption>'+esc(x.credit)+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; }); });
+      return '<figure class="tcafb-q"><blockquote>“'+esc(x.quote)+'”</blockquote><figcaption>'+esc(x.credit)+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
   if(P.length) load('pubphotos',function(items){ P.forEach(function(el){ var l=lim(el,items);
     el.innerHTML=l.length?'<div class="tcafb-ph">'+l.map(function(x){
-      return '<figure><img src="'+esc(x.src)+'" alt="'+esc(x.caption||('Photo from '+(x.tour||'a TCA Tours trip')))+'" loading="lazy"><figcaption>'+esc(x.caption||'')+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; }); });
+      return '<figure><img src="'+esc(x.src)+'" alt="'+esc(x.caption||('Photo from '+(x.tour||'a TCA Tours trip')))+'" loading="lazy"><figcaption>'+esc(x.caption||'')+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
 })();
