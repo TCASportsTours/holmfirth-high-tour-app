@@ -32,7 +32,8 @@ import { getStore } from "@netlify/blobs";
 //   GET  /tour?type=sheetdata      -> every response as spreadsheet tabs (Website reviews, Teachers, Students, Trip ratings, Photos)
 //   GET  /tour?type=sheetphoto&id= -> one questionnaire photo
 //   POST /tour?type=fbpublish      -> { kind: "review"|"photo", id, on } put a testimonial or photo on (or take it off) the website;
-//                                     { kind, all: true } publishes every one that has permission
+//                                     { kind, all: true } publishes every one that has permission; { stars: true } shows the
+//                                     person's overall star rating with a testimonial; { kind:"review", id, setStars:true, stars } changes it later
 //   WEBSITE (public, for tcatours.co.uk via /embed/tca-feedback.js):
 //   GET  /tour?type=pubreviews     -> published testimonials   GET /tour?type=pubphotos -> published photos
 //   GET  /tour?type=pubphoto&id=   -> one published photo as an image
@@ -363,7 +364,17 @@ export default async (req) => {
       const all = await fbAll(store), done = [];
       const okReview = (e) => !e.test && !!fbCredit(e) && !!fbQuote(e);
       const okPhoto = (e) => !e.test && e.a && e.a.photoOk === "Yes" && e.a.othersOk === true;
-      const addReview = (e) => { pub.reviews[e.id] = { quote: fbQuote(e), credit: fbCredit(e), who: e.kind === "teacher" ? "Teacher" : "Student", tour: fbPublicTour(e), at: Date.now() }; done.push(e.id); };
+      // Star rating: the person's own overall rating (1-5), shown only if TCA chooses to
+      const stars = (e) => (typeof e.a.r_overall === "number" && e.a.r_overall >= 1 && e.a.r_overall <= 5 ? e.a.r_overall : null);
+      const addReview = (e) => { pub.reviews[e.id] = { quote: fbQuote(e), credit: fbCredit(e), who: e.kind === "teacher" ? "Teacher" : "Student", tour: fbPublicTour(e), at: Date.now(),
+        stars: parsed.stars ? stars(e) : null }; done.push(e.id); };
+      if (kind === "review" && parsed.setStars) {   // show or hide the stars on a testimonial already on the website
+        const id = String(parsed.id || ""), e = all.find((x) => x.id === id);
+        if (!pub.reviews[id] || !e) return reply(headers, 404, { ok: false, error: "That testimonial isn't on the website." });
+        pub.reviews[id].stars = parsed.stars ? stars(e) : null;
+        await store.set("fbpub", JSON.stringify(pub));
+        return reply(headers, 200, { ok: true, added: 0, pub });
+      }
       const addPhoto = (e, ph) => { pub.photos[ph.id] = { caption: ph.cap || "", tour: fbPublicTour(e), who: e.kind === "teacher" ? "Teacher" : "Student", at: Date.now() }; done.push(ph.id); };
       if (parsed.all) {
         for (const e of all) {
@@ -792,7 +803,7 @@ async function fbRows(store, e) {
   rows["Trip ratings"] = Object.keys(a.trips || {}).map((trip) => Object.assign({}, base, { "Who": who, "Name": a.name || "", "Trip": trip, "Rating (1–5)": a.trips[trip] === "na" ? "Didn't go" : a.trips[trip],
     "Comment": (a.tripComments && a.tripComments[trip]) || "" }));
   const quote = e.kind === "teacher" ? a.summary || a.say || a.stoodOut : a.summary || a.best;
-  if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk })];
+  if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk, "Overall rating (1–5)": RATE(a.r_overall) })];
   if (photos.length) rows["Photos"] = photos;
   return rows;
 }

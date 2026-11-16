@@ -23,6 +23,8 @@
       '.tcafb-q{background:#fff;border:1px solid #DDDCDC;padding:22px 20px;position:relative;margin:0}'+
       '.tcafb-q:before{content:"";position:absolute;left:-1px;top:-1px;width:3px;height:52px;background:#EFCA50}'+
       '.tcafb-q blockquote{margin:0;font-family:"Cormorant Garamond",Garamond,Georgia,serif;font-size:21px;line-height:1.35;color:#414042;font-style:italic}'+
+      '.tcafb-stars{color:#EFCA50;font-size:20px;letter-spacing:3px;line-height:1;margin:0 0 10px}'+
+      '.tcafb-stars .o{color:#DDDCDC}'+
       '.tcafb-q figcaption{margin-top:12px;font-family:"Work Sans",system-ui,Arial,sans-serif;font-size:14px;font-weight:600;color:#414042}'+
       '.tcafb-q figcaption span{display:block;font-weight:400;font-size:12.5px;color:#6E6D70;margin-top:2px}'+
       '.tcafb-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}'+
@@ -40,7 +42,8 @@
   css();
   if(T.length) load('pubreviews',function(items){ T.forEach(function(el){ var l=lim(el,items);
     el.innerHTML=l.length?'<div class="tcafb-grid">'+l.map(function(x){
-      return '<figure class="tcafb-q"><blockquote>“'+esc(x.quote)+'”</blockquote><figcaption>'+esc(x.credit)+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
+      var st=Math.round(Number(x.stars)||0), stars=st>=1&&st<=5?'<p class="tcafb-stars" role="img" aria-label="Rated '+st+' out of 5">'+'★★★★★'.slice(0,st)+'<span class="o">'+'★★★★★'.slice(0,5-st)+'</span></p>':'';
+      return '<figure class="tcafb-q">'+stars+'<blockquote>“'+esc(x.quote)+'”</blockquote><figcaption>'+esc(x.credit)+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
   if(P.length) load('pubphotos',function(items){ P.forEach(function(el){ var l=lim(el,items);
     el.innerHTML=l.length?'<div class="tcafb-ph">'+l.map(function(x){
       return '<figure><img src="'+esc(x.src)+'" alt="'+esc(x.caption||('Photo from '+(x.tour||'a TCA Tours trip')))+'" loading="lazy"><figcaption>'+esc(x.caption||'')+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });

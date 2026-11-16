@@ -259,3 +259,11 @@ Known limits (by design): students sign in without a password, so someone could 
   </div></section>
   <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
   ```
+
+## v34: star ratings on website testimonials (optional)
+
+- **Results page → Website reviews:**
+  - Each card shows the person's overall rating.
+  - A tick box, **"Show the person's star rating with testimonials I add"** (on by default; remembered in that browser), decides whether new testimonials go on with stars.
+  - Each testimonial already on the website has **Show stars** / **Hide stars**.
+- **On the website,** the stars appear in gold above the quote (e.g. ★★★★★), with "Rated 5 out of 5" for screen readers. The rating is always the person's own overall rating, never typed in.
