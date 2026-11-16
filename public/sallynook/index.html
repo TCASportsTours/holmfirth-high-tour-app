@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<!-- TCA Tours — Sally Nook New York: Student questionnaire, v2 (no tour app question). Same form as Holmfirth; answers go to the master results at feedback.tcatours.co.uk, filed under "Sally Nook · New York". -->
+<!-- TCA Tours — Sally Nook New York: feedback form, v3. Name, school and five questions (v1/v2 were separate teacher and student forms).
+     Answers go to the master results at feedback.tcatours.co.uk, filed under "Sally Nook · New York". -->
 <html lang="en-GB">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Student questionnaire · Sally Nook · TCA Tours</title>
+<title>Sally Nook feedback · TCA Tours</title>
 <meta name="description" content="Tell TCA Tours about your New York trip.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#2A292B">
@@ -16,19 +17,18 @@
 <link rel="stylesheet" href="/feedback/feedback.css">
 </head>
 <body>
-<header><div class="in"><img src="/img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Student questionnaire</span></div></header>
+<header><div class="in"><img src="/img/tca-logo-horizontal-white.png" alt="TCA Tours"><span>Trip feedback</span></div></header>
 <main id="main"><p class="intro">Loading…</p></main>
 <footer>TCA Tours · your answers go to the TCA Tours team only</footer>
 <script>
-/* The tour these answers are filed under. The key must match PAST_TOURS in netlify/functions/tour.mjs.
-   trips: the visits to rate (leave empty to skip the "rate the trips" question). */
+/* The tour these answers are filed under. The key must match PAST_TOURS in netlify/functions/tour.mjs. */
 window.FB_PAST = {
   key: 'sallynook',
   tour: { 'Tour Name': 'Sally Nook · New York', 'School': 'Sally Nook', 'Destination': 'New York City, USA' },
   trips: [],
-  noApp: true   /* no tour app on this trip, so the "The tour app" rating is left out */
+  short: true   /* name, school and five questions only */
 };
-window.FB_KIND = 'student';
+window.FB_KIND = 'teacher';
 </script>
 <script src="/feedback/feedback.js"></script>
 </body>

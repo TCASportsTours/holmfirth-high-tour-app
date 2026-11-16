@@ -222,10 +222,10 @@ Known limits (by design): students sign in without a password, so someone could 
 - Comments show next to their rating: a "…: comment" column on the Teachers tab, a **Comment** column on Trip ratings, and in the app's Questionnaire results.
 - Example names in empty boxes are now **Alexander Hamilton** (teacher and student forms, and the expense form), not real people.
 
-## v32: Sally Nook New York questionnaires (past tour, same forms)
+## v32: Sally Nook New York feedback form (past tour)
 
-- **Teachers:** `https://feedback.tcatours.co.uk/sallynook/teachers/` · **Students:** `https://feedback.tcatours.co.uk/sallynook/students/` (they also work on holmfirthnyc.tcatours.co.uk).
-- Same questions as the Holmfirth forms (feedback.js v2). Answers go to the same master results page (feedback.tcatours.co.uk), filed under the tour **"Sally Nook · New York"**, so they can be picked in the All tours filter and exported.
-- How it works: the page sets `window.FB_PAST = {key, tour, trips}` and sends `tourKey`; the backend only accepts keys listed in `PAST_TOURS` in `netlify/functions/tour.mjs`. Another past tour = copy `public/sallynook/`, change the key, add it to `PAST_TOURS`.
-- No trip list yet (`trips: []`), so the "rate the trips" question is skipped until one is added.
-- There was no tour app on the Sally Nook trip, so `noApp: true` leaves out the "The tour app" rating.
+- **One link:** `https://feedback.tcatours.co.uk/sallynook/` (also works on holmfirthnyc.tcatours.co.uk). Name, school, then five questions:
+  1. How many stars (1–5, required) · 2. Highlights of the New York trip and visits · 3. Recommend Tony's New York trips to other schools? (Yes/No)
+  · 4. What would you say about Tony's New York trips? (used on the website) · 5. Happy for the quote to be used? (the Holmfirth teacher options)
+- No photos, no detail section, no tour app question. Saved as a teacher answer under the same names as the teacher form (highlights = "What stood out", Q4 = "Summary"), so it shows on the Teachers and Website reviews tabs of feedback.tcatours.co.uk, filed under **"Sally Nook · New York"**.
+- How it works: the page sets `window.FB_PAST = {key, tour, short: true}` and sends `tourKey`; the backend only accepts keys listed in `PAST_TOURS` in `netlify/functions/tour.mjs`. Another past tour = copy `public/sallynook/`, change the key, add it to `PAST_TOURS`.
