@@ -8,7 +8,10 @@
    Whatever TCA adds on the feedback results page ("Add to website") shows here automatically; "Remove" takes it off.
    Options on the divs: data-limit="6" (how many to show). Styles are scoped to .tcafb-* so they don't affect the site.
    A wrapper marked data-tca-block (e.g. a section with a heading, starting style="display:none") is shown only once
-   there's something in it, so the page never shows an empty heading. */
+   there's something in it, so the page never shows an empty heading.
+   Group leaders: <div data-tca-leaders></div> adds teacher reviews TCA has put in "Group leaders", using the page's own
+   review layout (article.review). Mark the scores list data-tca-scores and its note data-tca-scores-note, and they update
+   to include those leaders (with the working); with none added, the page is left exactly as written. */
 (function(){
   'use strict';
   var me = document.currentScript || [].slice.call(document.getElementsByTagName('script')).filter(function(s){ return /tca-feedback\.js/.test(s.src); })[0];
@@ -27,9 +30,9 @@
       '.tcafb-stars .o{color:#DDDCDC}'+
       '.tcafb-q figcaption{margin-top:12px;font-family:"Work Sans",system-ui,Arial,sans-serif;font-size:14px;font-weight:600;color:#414042}'+
       '.tcafb-q figcaption span{display:block;font-weight:400;font-size:12.5px;color:#6E6D70;margin-top:2px}'+
-      '.tcafb-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}'+
+      '.tcafb-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:start}'+
       '.tcafb-ph figure{margin:0;background:#fff;border:1px solid #DDDCDC}'+
-      '.tcafb-ph img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#F4F3F1}'+
+      '.tcafb-ph img{display:block;width:100%;height:auto;background:#F4F3F1}'+
       '.tcafb-ph figcaption{font-family:"Work Sans",system-ui,Arial,sans-serif;font-size:13px;color:#414042;padding:8px 10px}'+
       '.tcafb-ph figcaption span{display:block;color:#6E6D70;font-size:12px}';
     document.head.appendChild(st);
@@ -38,6 +41,18 @@
   function reveal(el,has){ var b=el.closest&&el.closest('[data-tca-block]'); if(b&&has) b.style.display=''; }
   function lim(el,list){ var n=parseInt(el.getAttribute('data-limit'),10); return n>0?list.slice(0,n):list; }
   var T=[].slice.call(document.querySelectorAll('[data-tca-testimonials]')), P=[].slice.call(document.querySelectorAll('[data-tca-photos]'));
+  var L=[].slice.call(document.querySelectorAll('[data-tca-leaders]')), S=document.querySelector('[data-tca-scores]'), SN=document.querySelector('[data-tca-scores-note]');
+  if(L.length||S) fetch(API+'?type=publeaders',{cache:'no-cache'}).then(function(r){return r.json();}).then(function(j){
+    var items=(j&&j.items)||[]; if(!items.length) return;     /* nothing added: leave the page exactly as written */
+    var paras=function(list){ return (list||[]).map(function(t){ return '<p>'+esc(t)+'</p>'; }).join(''); };
+    L.forEach(function(el){ el.innerHTML=items.map(function(x){
+      return '<article class="review"><div><blockquote><p>&ldquo;'+esc(x.pull)+'&rdquo;</p></blockquote><div class="who"><b>'+esc(x.school)+'</b><span>'+esc(x.who)+'</span></div></div>'+
+        '<dl>'+(x.blocks||[]).map(function(b){ return '<div><dt>'+esc(b.label)+'</dt><dd>'+paras(b.paras)+'</dd></div>'; }).join('')+'</dl></article>'; }).join(''); });
+    var sc=j.scores||{}, keys=['overall','objectives','support'];
+    if(S){ var dds=S.querySelectorAll('dd'); keys.forEach(function(k,i){ if(dds[i]&&sc[k]) dds[i].textContent=sc[k].avg+' / 5'; }); }
+    if(SN && sc.overall) SN.textContent='Each score is the average of the '+sc.overall.n+' group leader responses received, rated 1 = very dissatisfied to 5 = extremely satisfied. '+
+      'Overall satisfaction: '+sc.overall.work+'. '+(sc.objectives?'Tour met its objectives: '+sc.objectives.work+'. ':'')+(sc.support?'Communication, organisation & on-tour support: '+sc.support.work+'.':'');
+  }).catch(function(){});
   if(!T.length && !P.length) return;
   css();
   if(T.length) load('pubreviews',function(items){ T.forEach(function(el){ var l=lim(el,items);

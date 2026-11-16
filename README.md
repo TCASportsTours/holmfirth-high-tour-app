@@ -267,3 +267,13 @@ Known limits (by design): students sign in without a password, so someone could 
   - A tick box, **"Show the person's star rating with testimonials I add"** (on by default; remembered in that browser), decides whether new testimonials go on with stars.
   - Each testimonial already on the website has **Show stars** / **Hide stars**.
 - **On the website,** the stars appear in gold above the quote (e.g. ★★★★★), with "Rated 5 out of 5" for screen readers. The rating is always the person's own overall rating, never typed in.
+
+## v35: teachers into "Group leaders" on tcatours.co.uk; photos no longer cropped
+
+- **Results page → Teachers:** each teacher response has **Add to Group leaders on the website**. Their full review joins the Wycombe Abbey and Skinners' ones on /testimonials, in the same layout:
+  - their best line set large (what they'd say to another school, else their summary)
+  - "What stood out", "Biggest impact on our students", "What we'd say to another school" and "Further comments", without repeating the large line
+- **Permission needed:** "Yes, with my name and school" (named) or "Yes, with the school name only" (school named, not them). The optional "TCA only" answers never go on.
+- **Scores above the reviews:** with any added, the three scores and the note under them update to cover every group leader, with the working, e.g. "Overall satisfaction: (5 + 5 + 4 + 5) ÷ 4 = 4.8". With none added, the page shows exactly what's written in it.
+- **testimonials.html needs v4** (it marks the scores and adds `<div data-tca-leaders>` after the Skinners review).
+- **Photos on the website now show whole** (portrait and landscape) in a grid, instead of cropped to a landscape shape. The results page and app preview show the whole photo too.

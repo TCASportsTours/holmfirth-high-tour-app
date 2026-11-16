@@ -105,6 +105,22 @@ function setWeb(kind,id,on,all){
       D.pub=j.pub; paint(); flash(all?('Added '+j.added+' to the website'):(on?'Added to the website':'Removed from the website'));
     }).catch(function(){ flash('No connection'); });
 }
+/* "Group leaders" on tcatours.co.uk (beside Wycombe Abbey and Skinners): a teacher's whole review */
+var PERM_T='Are you happy for us to use your comments in our promotional material (website, social media, brochure, etc).?';
+function leaderBtn(x){
+  var id=x['Response ID'], p=String(x[PERM_T]||''), h='<div class="card" style="background:var(--stone);border:0;padding:10px 12px;margin:10px 0 0">';
+  if(/^g-/.test(id)) return h+'<span class="meta"><i class="ti ti-world-check"></i> Already in “Group leaders” on the website (written into the page)</span></div>';
+  if(String(x['Test?'])==='Yes') return '';
+  if(pub().leaders&&pub().leaders[id]) return h+'<span class="tag gold" style="margin:0"><i class="ti ti-world-check"></i> In Group leaders on the website</span> <button class="lnk" data-leader="'+esc(id)+'" data-on="0">Remove</button></div>';
+  if(!/^Yes, with (my name and school|the school name only)/.test(p)) return h+'<span class="meta">Can’t go in Group leaders: they didn’t agree to their school being named.</span></div>';
+  return h+'<button class="lnk" data-leader="'+esc(id)+'" data-on="1"><i class="ti ti-world-upload"></i> Add to Group leaders on the website</button> <span class="meta">(beside Wycombe Abbey and Skinners; their full review'+(/school name only/.test(p)?', school named, not them':'')+')</span></div>';
+}
+function setLeader(id,on){
+  if(on&&!confirm('Add this teacher’s full review to “Group leaders” on tcatours.co.uk? The scores at the top of that section will update to include it.')) return;
+  fetch(API+'?type=fbpublish',{method:'POST',headers:{'content-type':'application/json','x-sheet-key':key()},body:JSON.stringify({kind:'leader',id:id,on:on})})
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j||!j.ok) return flash((j&&j.error)||'Not changed'); D.pub=j.pub; paint(); flash(on?'Added to Group leaders':'Removed from Group leaders'); })
+    .catch(function(){ flash('No connection'); });
+}
 function setStars(id,on){
   fetch(API+'?type=fbpublish',{method:'POST',headers:{'content-type':'application/json','x-sheet-key':key()},body:JSON.stringify({kind:'review',id:id,setStars:true,stars:on})})
     .then(function(r){ return r.json(); }).then(function(j){ if(!j||!j.ok) return flash((j&&j.error)||'Not changed'); D.pub=j.pub; paint(); flash(on?'Stars shown on the website':'Stars hidden on the website'); })
@@ -119,7 +135,7 @@ function view(){
       '<p class="meta">'+esc([x['Who'],x['Tour'],x['Permission']].filter(Boolean).join(' · '))+'</p><p class="row" style="margin-top:8px"><button class="lnk" data-copy="'+esc(t)+'"><i class="ti ti-copy"></i> Copy review</button>'+webBtn('review',x['Response ID'],on,true)+'</p></div>'; }).join('');
   if(VIEW==='Teachers') return r.slice().reverse().map(function(x){
     return card(x,'<p style="margin-top:8px"><span class="tag gold">Overall '+esc(x[OVERALL_T]||'—')+'/5</span> <span class="tag">'+esc(x['School / Organisation']||'')+'</span></p>'+
-      (x['Summary of the trip & working with TCA Tours']?'<p class="quote" style="font-size:18px;margin-top:8px">“'+esc(x['Summary of the trip & working with TCA Tours'])+'”</p>':''),[]); }).join('');
+      (x['Summary of the trip & working with TCA Tours']?'<p class="quote" style="font-size:18px;margin-top:8px">“'+esc(x['Summary of the trip & working with TCA Tours'])+'”</p>':'')+leaderBtn(x),[]); }).join('');
   if(VIEW==='Students') return r.slice().reverse().map(function(x){
     return card(x,'<p style="margin-top:8px"><span class="tag gold">Overall '+esc(x['Overall rating (1–5)']||'—')+'/5</span> <span class="tag">'+esc(x['School / Organisation']||'')+'</span></p>'+
       (x['Best bit of the trip']?'<p style="margin-top:8px"><b>Best bit:</b> '+esc(x['Best bit of the trip'])+'</p>':''),[]); }).join('');
@@ -144,6 +160,7 @@ function thumbs(){ [].forEach.call(document.querySelectorAll('img[data-ph]'),fun
 document.addEventListener('click',function(e){
   var w=e.target.closest('[data-web]'); if(w){ setWeb(w.getAttribute('data-web'),w.getAttribute('data-id'),w.getAttribute('data-on')==='1'); return; }
   var wa=e.target.closest('[data-weball]'); if(wa){ setWeb(wa.getAttribute('data-weball'),null,true,true); return; }
+  var wl=e.target.closest('[data-leader]'); if(wl){ setLeader(wl.getAttribute('data-leader'),wl.getAttribute('data-on')==='1'); return; }
   var ws=e.target.closest('[data-stars]'); if(ws){ setStars(ws.getAttribute('data-id'),ws.getAttribute('data-stars')==='1'); return; }
   var c=e.target.closest('[data-copy]'); if(c){ copy(c.getAttribute('data-copy')); return; }
   var d=e.target.closest('[data-dl]'); if(d){ var id=d.getAttribute('data-dl'); if(!IMG[id]){ flash('Still loading'); return; } var a=document.createElement('a'); a.href=IMG[id]; a.download=String(d.getAttribute('data-name')).replace(/[^\w-]+/g,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
