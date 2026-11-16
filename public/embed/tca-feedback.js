@@ -1,0 +1,65 @@
+/* TCA Tours — testimonials & photos for tcatours.co.uk, v1.
+   Paste once into the website, where they should appear:
+
+     <div data-tca-testimonials></div>
+     <div data-tca-photos></div>
+     <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
+
+   Whatever TCA adds on the feedback results page ("Add to website") shows here automatically; "Remove" takes it off.
+   Options on the divs: data-limit="6" (how many to show). Styles are scoped to .tcafb-* so they don't affect the site.
+   A wrapper marked data-tca-block (e.g. a section with a heading, starting style="display:none") is shown only once
+   there's something in it, so the page never shows an empty heading.
+   Group leaders: <div data-tca-leaders></div> adds teacher reviews TCA has put in "Group leaders", using the page's own
+   review layout (article.review). Mark the scores list data-tca-scores and its note data-tca-scores-note, and they update
+   to include those leaders (with the working); with none added, the page is left exactly as written. */
+(function(){
+  'use strict';
+  var me = document.currentScript || [].slice.call(document.getElementsByTagName('script')).filter(function(s){ return /tca-feedback\.js/.test(s.src); })[0];
+  var ORIGIN = me ? new URL(me.src).origin : 'https://feedback.tcatours.co.uk';
+  var API = ORIGIN + '/.netlify/functions/tour';
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function css(){
+    if(document.getElementById('tcafb-css')) return;
+    var st=document.createElement('style'); st.id='tcafb-css';
+    st.textContent=
+      '.tcafb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin:0;padding:0}'+
+      '.tcafb-q{background:#fff;border:1px solid #DDDCDC;padding:22px 20px;position:relative;margin:0}'+
+      '.tcafb-q:before{content:"";position:absolute;left:-1px;top:-1px;width:3px;height:52px;background:#EFCA50}'+
+      '.tcafb-q blockquote{margin:0;font-family:"Cormorant Garamond",Garamond,Georgia,serif;font-size:21px;line-height:1.35;color:#414042;font-style:italic}'+
+      '.tcafb-stars{color:#EFCA50;font-size:20px;letter-spacing:3px;line-height:1;margin:0 0 10px}'+
+      '.tcafb-stars .o{color:#DDDCDC}'+
+      '.tcafb-q figcaption{margin-top:12px;font-family:"Work Sans",system-ui,Arial,sans-serif;font-size:14px;font-weight:600;color:#414042}'+
+      '.tcafb-q figcaption span{display:block;font-weight:400;font-size:12.5px;color:#6E6D70;margin-top:2px}'+
+      '.tcafb-ph{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;align-items:start}'+
+      '.tcafb-ph figure{margin:0;background:#fff;border:1px solid #DDDCDC}'+
+      '.tcafb-ph img{display:block;width:100%;height:auto;background:#F4F3F1}'+
+      '.tcafb-ph figcaption{font-family:"Work Sans",system-ui,Arial,sans-serif;font-size:13px;color:#414042;padding:8px 10px}'+
+      '.tcafb-ph figcaption span{display:block;color:#6E6D70;font-size:12px}';
+    document.head.appendChild(st);
+  }
+  function load(type,cb){ fetch(API+'?type='+type,{cache:'no-cache'}).then(function(r){return r.json();}).then(function(j){ cb((j&&j.items)||[]); }).catch(function(){ cb([]); }); }
+  function reveal(el,has){ var b=el.closest&&el.closest('[data-tca-block]'); if(b&&has) b.style.display=''; }
+  function lim(el,list){ var n=parseInt(el.getAttribute('data-limit'),10); return n>0?list.slice(0,n):list; }
+  var T=[].slice.call(document.querySelectorAll('[data-tca-testimonials]')), P=[].slice.call(document.querySelectorAll('[data-tca-photos]'));
+  var L=[].slice.call(document.querySelectorAll('[data-tca-leaders]')), S=document.querySelector('[data-tca-scores]'), SN=document.querySelector('[data-tca-scores-note]');
+  if(L.length||S) fetch(API+'?type=publeaders',{cache:'no-cache'}).then(function(r){return r.json();}).then(function(j){
+    var items=(j&&j.items)||[]; if(!items.length) return;     /* nothing added: leave the page exactly as written */
+    var paras=function(list){ return (list||[]).map(function(t){ return '<p>'+esc(t)+'</p>'; }).join(''); };
+    L.forEach(function(el){ el.innerHTML=items.map(function(x){
+      return '<article class="review"><div><blockquote><p>&ldquo;'+esc(x.pull)+'&rdquo;</p></blockquote><div class="who"><b>'+esc(x.school)+'</b><span>'+esc(x.who)+'</span></div></div>'+
+        '<dl>'+(x.blocks||[]).map(function(b){ return '<div><dt>'+esc(b.label)+'</dt><dd>'+paras(b.paras)+'</dd></div>'; }).join('')+'</dl></article>'; }).join(''); });
+    var sc=j.scores||{}, keys=['overall','objectives','support'];
+    if(S){ var dds=S.querySelectorAll('dd'); keys.forEach(function(k,i){ if(dds[i]&&sc[k]) dds[i].textContent=sc[k].avg+' / 5'; }); }
+    if(SN && sc.overall) SN.textContent='Each score is the average of the '+sc.overall.n+' group leader responses received, rated 1 = very dissatisfied to 5 = extremely satisfied. '+
+      'Overall satisfaction: '+sc.overall.work+'. '+(sc.objectives?'Tour met its objectives: '+sc.objectives.work+'. ':'')+(sc.support?'Communication, organisation & on-tour support: '+sc.support.work+'.':'');
+  }).catch(function(){});
+  if(!T.length && !P.length) return;
+  css();
+  if(T.length) load('pubreviews',function(items){ T.forEach(function(el){ var l=lim(el,items);
+    el.innerHTML=l.length?'<div class="tcafb-grid">'+l.map(function(x){
+      var st=Math.round(Number(x.stars)||0), stars=st>=1&&st<=5?'<p class="tcafb-stars" role="img" aria-label="Rated '+st+' out of 5">'+'★★★★★'.slice(0,st)+'<span class="o">'+'★★★★★'.slice(0,5-st)+'</span></p>':'';
+      return '<figure class="tcafb-q">'+stars+'<blockquote>“'+esc(x.quote)+'”</blockquote><figcaption>'+esc(x.credit)+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
+  if(P.length) load('pubphotos',function(items){ P.forEach(function(el){ var l=lim(el,items);
+    el.innerHTML=l.length?'<div class="tcafb-ph">'+l.map(function(x){
+      return '<figure><img src="'+esc(x.src)+'" alt="'+esc(x.caption||('Photo from '+(x.tour||'a TCA Tours trip')))+'" loading="lazy"><figcaption>'+esc(x.caption||'')+(x.tour?'<span>'+esc(x.tour)+'</span>':'')+'</figcaption></figure>'; }).join('')+'</div>':''; reveal(el,l.length>0); }); });
+})();

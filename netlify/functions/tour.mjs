@@ -31,6 +31,14 @@ import { getStore } from "@netlify/blobs";
 //   RESULTS PAGE (/sheet): header x-sheet-key = FEEDBACK_VIEW_PASSWORD
 //   GET  /tour?type=sheetdata      -> every response as spreadsheet tabs (Website reviews, Teachers, Students, Trip ratings, Photos)
 //   GET  /tour?type=sheetphoto&id= -> one questionnaire photo
+//   POST /tour?type=fbpublish      -> { kind: "review"|"photo", id, on } put a testimonial or photo on (or take it off) the website;
+//                                     { kind, all: true } publishes every one that has permission; { stars: true } shows the
+//                                     person's overall star rating with a testimonial; { kind:"review", id, setStars:true, stars } changes it later
+//   WEBSITE (public, for tcatours.co.uk via /embed/tca-feedback.js):
+//   GET  /tour?type=pubreviews     -> published testimonials   GET /tour?type=pubphotos -> published photos
+//   GET  /tour?type=pubphoto&id=   -> one published photo as an image
+//   GET  /tour?type=publeaders     -> teacher reviews added to "Group leaders", + the three average scores with the working
+//   (POST fbpublish { kind: "leader", id, on } adds a teacher's review to "Group leaders")
 //   GET  /tour?type=quizme         -> has this player already done it? (?sid= + x-device, or teacher key + ?teacher=)
 //   GET  /tour?type=quiz           -> TCA/admin: quiz leaderboard
 //   GET  /tour?type=quizstate      -> is the quiz open? { open, mode, opensAt }
@@ -193,7 +201,7 @@ export default async (req) => {
         for (const ph of (e && e.photos) || []) await delKey(store, "fbp/" + ph.id);
         await delKey(store, "fb/" + id);
       }
-      await store.set("fbidx", "[]");
+      await store.set("fbidx", "[]"); await store.set("fbpub", "{}");
       return reply(headers, 200, { ok: true, cleared: type, removed: ids.length });
     }
     if (type === "expenses") {          // every expense and its receipt files (needs the expenses password too)
@@ -342,7 +350,7 @@ export default async (req) => {
       if (photos.length && !["Yes", "No"].includes(a.photoOk)) return reply(headers, 400, { ok: false, error: "Please say whether we can post your photos" });
       if (photos.length && a.photoOk === "Yes" && a.othersOk !== true) return reply(headers, 400, { ok: false, error: "Please tick the box about other people in your photos, or choose No" });
       if (await fbCount(store) >= FB_MAX_RESPONSES) return reply(headers, 507, { ok: false, error: "too many responses" });
-      /* A past tour's own questionnaire link (e.g. /sallynook/teachers/) names its tour; only tours listed in PAST_TOURS are accepted */
+      /* A past tour's own questionnaire link (e.g. /sallynook/) names its tour; only tours listed in PAST_TOURS are accepted */
       const pastKey = String((parsed && parsed.tourKey) || "");
       const tour = Object.prototype.hasOwnProperty.call(PAST_TOURS, pastKey) ? Object.assign({ key: pastKey }, PAST_TOURS[pastKey]) : await fbTour(store);
       const e = { id: "f" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), kind, ts: Date.now(), tour, a, photos,
@@ -352,11 +360,63 @@ export default async (req) => {
       idx.push(e.id); await store.set("fbidx", JSON.stringify(idx));
       return reply(headers, 200, { ok: true, id: e.id });
     }
+    // Website: testimonials and photos go on tcatours.co.uk only with permission (checked here, not in the page)
+    if (type === "fbpublish") {
+      if (!sheetPass || !isSheet) return reply(headers, 401, { ok: false, error: "results page password required" });
+      const kind = parsed && (parsed.kind === "photo" || parsed.kind === "leader") ? parsed.kind : "review";
+      const pub = fbPubGet(await store.get("fbpub"));
+      const all = await fbAll(store), done = [];
+      const okReview = (e) => !e.test && !!fbCredit(e) && !!fbQuote(e);
+      const okPhoto = (e) => !e.test && e.a && e.a.photoOk === "Yes" && e.a.othersOk === true;
+      // Star rating: the person's own overall rating (1-5), shown only if TCA chooses to
+      const stars = (e) => (typeof e.a.r_overall === "number" && e.a.r_overall >= 1 && e.a.r_overall <= 5 ? e.a.r_overall : null);
+      const addReview = (e) => { pub.reviews[e.id] = { quote: fbQuote(e), credit: fbCredit(e), who: e.kind === "teacher" ? "Teacher" : "Student", tour: fbPublicTour(e), at: Date.now(),
+        stars: parsed.stars ? stars(e) : null }; done.push(e.id); };
+      if (kind === "review" && parsed.setStars) {   // show or hide the stars on a testimonial already on the website
+        const id = String(parsed.id || ""), e = all.find((x) => x.id === id);
+        if (!pub.reviews[id] || !e) return reply(headers, 404, { ok: false, error: "That testimonial isn't on the website." });
+        pub.reviews[id].stars = parsed.stars ? stars(e) : null;
+        await store.set("fbpub", JSON.stringify(pub));
+        return reply(headers, 200, { ok: true, added: 0, pub });
+      }
+      // Group leaders (the "In their own words" section): a teacher's full review, laid out like Wycombe Abbey / Skinners.
+      // Needs their permission with the school named; the Google Form ones are already written into the page.
+      if (kind === "leader") {
+        const id = String(parsed.id || "");
+        if (!parsed.on) { delete pub.leaders[id]; await store.set("fbpub", JSON.stringify(pub)); return reply(headers, 200, { ok: true, added: 0, pub }); }
+        const e = all.find((x) => x.id === id);
+        if (!e || e.kind !== "teacher" || e.test || id.startsWith("g-")) return reply(headers, 403, { ok: false, error: "Only a teacher's own response can go in Group leaders (Wycombe Abbey and Skinners are already there)." });
+        const L = fbLeader(e);
+        if (!L) return reply(headers, 403, { ok: false, error: "They need to have said yes to their comments being used with their school named." });
+        pub.leaders[id] = Object.assign(L, { at: Date.now() });
+        await store.set("fbpub", JSON.stringify(pub));
+        return reply(headers, 200, { ok: true, added: 1, pub });
+      }
+      const addPhoto = (e, ph) => { pub.photos[ph.id] = { caption: ph.cap || "", tour: fbPublicTour(e), who: e.kind === "teacher" ? "Teacher" : "Student", at: Date.now() }; done.push(ph.id); };
+      if (parsed.all) {
+        for (const e of all) {
+          if (kind === "review" && okReview(e) && !pub.reviews[e.id]) addReview(e);
+          if (kind === "photo" && okPhoto(e)) for (const ph of e.photos || []) if (!pub.photos[ph.id]) addPhoto(e, ph);
+        }
+      } else {
+        const id = String(parsed.id || "");
+        if (kind === "review") {
+          if (!parsed.on) delete pub.reviews[id];
+          else { const e = all.find((x) => x.id === id); if (!e || !okReview(e)) return reply(headers, 403, { ok: false, error: "No permission to use this comment on the website." }); addReview(e); }
+        } else {
+          if (!parsed.on) delete pub.photos[id];
+          else { const e = all.find((x) => (x.photos || []).some((p) => p.id === id)); if (!e || !okPhoto(e)) return reply(headers, 403, { ok: false, error: "No permission to post this photo." }); addPhoto(e, e.photos.find((p) => p.id === id)); }
+        }
+      }
+      await store.set("fbpub", JSON.stringify(pub));
+      return reply(headers, 200, { ok: true, added: done.length, pub });
+    }
     if (type === "fbdel") {
       if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can do this" });
       const id = String((parsed && parsed.id) || "");
       const e = await fbGet(store, id);
       if (!e) return reply(headers, 404, { ok: false, error: "not found" });   // (the Google Form history can't be deleted)
+      { const pub = fbPubGet(await store.get("fbpub")); delete pub.reviews[id]; delete pub.leaders[id]; (e.photos || []).forEach((ph) => delete pub.photos[ph.id]); await store.set("fbpub", JSON.stringify(pub)); }
       if (id.startsWith("tq-")) { const all = safeObj(await store.get("tq")); delete all[e.tqKey]; await store.set("tq", JSON.stringify(all)); }
       else { for (const ph of e.photos || []) await delKey(store, "fbp/" + ph.id); await delKey(store, "fb/" + id);
         let idx = []; try { idx = JSON.parse((await store.get("fbidx")) || "[]"); } catch {}
@@ -584,7 +644,29 @@ export default async (req) => {
     }
     const tabs = {};
     for (const e of await fbAll(store)) { const t = await fbRows(store, e); Object.keys(t).forEach((k) => { (tabs[k] = tabs[k] || []).push(...t[k]); }); }
-    return reply(headers, 200, { ok: true, tabs });
+    return reply(headers, 200, { ok: true, tabs, pub: fbPubGet(await store.get("fbpub")) });
+  }
+  // ---- Public feed for tcatours.co.uk: only what TCA has put on the website (no names beyond the agreed credit line)
+  if (type === "publeaders") {
+    const pub = fbPubGet(await store.get("fbpub"));
+    const items = Object.values(pub.leaders).sort((a, b) => a.at - b.at).map((l) => ({ school: l.school, who: l.who, pull: l.pull, blocks: l.blocks, tour: l.tour }));
+    return new Response(JSON.stringify({ ok: true, items, scores: fbLeaderScores(pub) }), { headers: Object.assign({}, headers, { "cache-control": "public, max-age=120" }) });
+  }
+  if (type === "pubreviews" || type === "pubphotos") {
+    const pub = fbPubGet(await store.get("fbpub")), h2 = Object.assign({}, headers, { "cache-control": "public, max-age=120" });
+    const list = type === "pubreviews"
+      ? Object.values(pub.reviews).sort((a, b) => b.at - a.at)
+      : Object.keys(pub.photos).map((id) => Object.assign({ id, src: url.origin + "/.netlify/functions/tour?type=pubphoto&id=" + id }, pub.photos[id])).sort((a, b) => b.at - a.at);
+    return new Response(JSON.stringify({ ok: true, items: list }), { headers: h2 });
+  }
+  if (type === "pubphoto") {
+    const id = url.searchParams.get("id") || "";
+    const pub = fbPubGet(await store.get("fbpub"));
+    if (!/^p[a-z0-9]{4,20}$/.test(id) || !pub.photos[id]) return new Response("not found", { status: 404 });
+    let r = null; try { r = JSON.parse((await store.get("fbp/" + id)) || "null"); } catch {}
+    if (!r || !r.data) return new Response("not found", { status: 404 });
+    const bin = Buffer.from(r.data.slice(r.data.indexOf(",") + 1), "base64");
+    return new Response(bin, { headers: { "content-type": r.mime || "image/jpeg", "cache-control": "public, max-age=86400", "access-control-allow-origin": "*" } });
   }
   if (type === "fbphoto") {   // a questionnaire photo: TCA/admin only
     if (!isTca) return reply(headers, 403, { ok: false, error: "only TCA Tours staff can see this" });
@@ -682,10 +764,41 @@ async function fbAll(store) {
   return out.sort((a, b) => a.ts - b.ts);
 }
 async function fbGet(store, id) {
+  if (id.startsWith("g-")) return fbHistory().find((x) => x.id === id) || null;
   if (id.startsWith("tq-")) { const tour = await fbTour(store); const t = Object.values(safeObj(await store.get("tq"))).find((x) => "tq-" + String(x.key).replace(/[^A-Za-z0-9]/g, "") === id); return t ? fbFromTq(t, tour) : null; }
   if (!/^f[a-z0-9]{4,20}$/.test(id)) return null;
   try { return JSON.parse((await store.get("fb/" + id)) || "null"); } catch { return null; }
 }
+/* The tour name as shown on the public website (no internal notes in brackets) */
+function fbPublicTour(e) { return String((e.tour && e.tour.name) || "").replace(/\s*\([^)]*\)\s*$/, ""); }
+function fbPubGet(raw) { let p = {}; try { p = JSON.parse(raw || "{}") || {}; } catch {} p.reviews = p.reviews || {}; p.photos = p.photos || {}; p.leaders = p.leaders || {}; return p; }
+/* A teacher's response as a "Group leaders" review (same layout as the Wycombe Abbey / Skinners ones on tcatours.co.uk).
+   Only with permission naming the school: "name and school" shows their name, "school name only" doesn't. The optional
+   "for TCA only" answers (suggestions, detail ratings) never go on. */
+function fbLeader(e) {
+  const a = e.a || {}, q = String(a.quoteOk || ""), school = String(a.school || e.tour.school || "").trim();
+  if (!/^Yes, with (my name and school|the school name only)/.test(q) || !school) return null;
+  const named = /name and school/.test(q), name = String(a.name || "").trim();
+  const paras = (t) => String(t || "").split(/\n\s*\n|\n/).map((x) => x.trim()).filter(Boolean);
+  const pull = String(a.say || a.summary || a.stoodOut || "").trim();
+  // (the line set large isn't repeated underneath)
+  const blocks = [["What stood out", a.stoodOut], ["Biggest impact on our students", a.impact], ["What we'd say to another school", a.say], ["Further comments", a.summary]]
+    .filter((b) => String(b[1] || "").trim() && String(b[1]).trim() !== pull).map((b) => ({ label: b[0], paras: paras(b[1]) }));
+  if (!pull) return null;
+  const n = (v) => (typeof v === "number" && v >= 1 && v <= 5 ? v : null);
+  return { school, who: (named && name ? name + ", " : "") + "group leader", pull, blocks, tour: fbPublicTour(e),
+    scores: { overall: n(a.r_overall), objectives: n(a.r_objectives), support: n(a.r_support) } };
+}
+/* The three scores above the group leader reviews: every leader on the page (the Google Form ones + any added), with the working */
+function fbLeaderScores(pub) {
+  const rows = FB_HISTORY.map((h) => ({ overall: h.overall, objectives: h.objectives, support: h.support }))
+    .concat(Object.values(pub.leaders).map((l) => l.scores || {}));
+  const one = (k) => { const v = rows.map((r) => r[k]).filter((x) => typeof x === "number"); if (!v.length) return null;
+    const t = v.reduce((x, y) => x + y, 0), avg = Math.round((t / v.length) * 10) / 10;
+    return { avg: avg.toFixed(1), n: v.length, work: "(" + v.join(" + ") + ") ÷ " + v.length + " = " + avg.toFixed(1) }; };
+  return { overall: one("overall"), objectives: one("objectives"), support: one("support"), leaders: rows.length };
+}
+function fbQuote(e) { const a = e.a || {}; return e.kind === "teacher" ? a.summary || a.say || a.stoodOut || "" : a.summary || a.best || ""; }
 function fbCredit(e) {
   const a = e.a || {}, q = String(a.quoteOk || ""), school = a.school || e.tour.school, dest = String(e.tour.destination || "").split(",")[0];
   if (!/^Yes/.test(q)) return "";
@@ -743,7 +856,7 @@ async function fbRows(store, e) {
   rows["Trip ratings"] = Object.keys(a.trips || {}).map((trip) => Object.assign({}, base, { "Who": who, "Name": a.name || "", "Trip": trip, "Rating (1–5)": a.trips[trip] === "na" ? "Didn't go" : a.trips[trip],
     "Comment": (a.tripComments && a.tripComments[trip]) || "" }));
   const quote = e.kind === "teacher" ? a.summary || a.say || a.stoodOut : a.summary || a.best;
-  if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk })];
+  if (quote && fbCredit(e) && !e.test) rows["Website reviews"] = [Object.assign({}, base, { "Who": who, "Review": quote, "Credit line": fbCredit(e), "Permission": a.quoteOk, "Overall rating (1–5)": RATE(a.r_overall) })];
   if (photos.length) rows["Photos"] = photos;
   return rows;
 }

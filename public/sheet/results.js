@@ -71,15 +71,71 @@ function card(r,lead,skip){
   return '<div class="card"><h3>'+esc(r['Name']||'—')+'</h3><p class="meta">'+esc(meta)+'</p>'+lead+
     '<details><summary>Every answer</summary><dl>'+all.map(function(k){ return '<dt>'+esc(k)+'</dt><dd>'+esc(r[k])+'</dd>'; }).join('')+'</dl></details></div>';
 }
+/* ---------- the website (tcatours.co.uk) ---------- */
+function pub(){ return (D&&D.pub)||{reviews:{},photos:{}}; }
+var SNIP='<div data-tca-testimonials></div>\n<div data-tca-photos></div>\n<script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async><\/script>';
+/* Show star ratings with testimonials? The default for new ones (remembered in this browser); each can be changed later. */
+function starsDefault(v){ try{ if(v===undefined) return localStorage.getItem('tca_web_stars')!=='0'; localStorage.setItem('tca_web_stars',v?'1':'0'); }catch(e){ return true; } }
+function starTxt(n){ n=Math.round(Number(n)||0); return n>=1&&n<=5?'★★★★★'.slice(0,n)+'☆☆☆☆☆'.slice(0,5-n):''; }
+function webBtn(kind,id,on,can){
+  if(on&&kind==='review'){ var cur=pub().reviews[id]||{};
+    return '<span class="tag gold" style="margin:0"><i class="ti ti-world-check"></i> On the website</span> <button class="lnk" data-web="review" data-id="'+esc(id)+'" data-on="0">Remove</button> · '+
+      (cur.stars?'<span class="meta">Stars shown '+starTxt(cur.stars)+'</span> <button class="lnk" data-stars="0" data-id="'+esc(id)+'">Hide stars</button>'
+        :'<span class="meta">No stars</span> <button class="lnk" data-stars="1" data-id="'+esc(id)+'">Show stars</button>'); }
+  if(on) return '<span class="tag gold" style="margin:0"><i class="ti ti-world-check"></i> On the website</span> <button class="lnk" data-web="'+kind+'" data-id="'+esc(id)+'" data-on="0">Remove</button>';
+  if(!can) return '<span class="meta">Can’t go on the website: no permission</span>';
+  return '<button class="lnk" data-web="'+kind+'" data-id="'+esc(id)+'" data-on="1"><i class="ti ti-world-upload"></i> Add to website</button>';
+}
+function webBar(kind,r){
+  var p=pub(), waiting=kind==='review'?r.filter(function(x){ return !p.reviews[x['Response ID']]; }).length
+    :r.filter(function(x){ return x['OK to post?']==='Yes'&&x['Others in photo have consent?']&&!p.photos[x['Photo ID']]; }).length;
+  var live=Object.keys(kind==='review'?p.reviews:p.photos).length;
+  return '<div class="card" style="padding:14px 16px"><div class="row" style="justify-content:space-between"><span><b>'+live+'</b> '+(kind==='review'?'testimonial':'photo')+(live===1?'':'s')+' on tcatours.co.uk</span>'+
+    (waiting?'<button class="btn gold" style="width:auto;padding:11px 16px" data-weball="'+kind+'"><i class="ti ti-world-upload"></i> Add all '+waiting+' to the website</button>':'<span class="meta">Everything with permission is on the website.</span>')+'</div>'+
+    (kind==='review'?'<label class="meta" style="display:flex;gap:8px;align-items:center;margin-top:8px;cursor:pointer"><input type="checkbox" id="starsDef"'+(starsDefault()?' checked':'')+'> Show the person’s star rating with testimonials I add (you can change each one afterwards)</label>':'')+
+    (kind==='photo'?'<p class="meta" style="margin-top:6px">Only photos where the sender said yes <b>and</b> confirmed everyone in them has permission. Check against the school’s photo consent list first.</p>':'')+
+    '<details style="margin-top:6px"><summary>Website code (paste once into tcatours.co.uk)</summary><p class="meta" style="margin-top:6px">Add an HTML / embed block where the testimonials and photos should appear, and paste this in. Anything you add here then shows on the website automatically.</p>'+
+    '<pre style="white-space:pre-wrap;background:var(--stone);padding:10px;font-size:12.5px;margin-top:6px">'+esc(SNIP)+'</pre><button class="lnk" data-copy="'+esc(SNIP)+'"><i class="ti ti-copy"></i> Copy code</button></details></div>';
+}
+function setWeb(kind,id,on,all){
+  if(kind==='photo'&&(on||all)&&!confirm('Put '+(all?'these photos':'this photo')+' on the public website? Make sure the school’s photo consent covers everyone in '+(all?'them':'it')+'.')) return;
+  fetch(API+'?type=fbpublish',{method:'POST',headers:{'content-type':'application/json','x-sheet-key':key()},body:JSON.stringify(all?{kind:kind,all:true,stars:starsDefault()}:{kind:kind,id:id,on:on,stars:starsDefault()})})
+    .then(function(r){ return r.json(); }).then(function(j){
+      if(!j||!j.ok) return flash((j&&j.error)||'Not changed');
+      D.pub=j.pub; paint(); flash(all?('Added '+j.added+' to the website'):(on?'Added to the website':'Removed from the website'));
+    }).catch(function(){ flash('No connection'); });
+}
+/* "Group leaders" on tcatours.co.uk (beside Wycombe Abbey and Skinners): a teacher's whole review */
+var PERM_T='Are you happy for us to use your comments in our promotional material (website, social media, brochure, etc).?';
+function leaderBtn(x){
+  var id=x['Response ID'], p=String(x[PERM_T]||''), h='<div class="card" style="background:var(--stone);border:0;padding:10px 12px;margin:10px 0 0">';
+  if(/^g-/.test(id)) return h+'<span class="meta"><i class="ti ti-world-check"></i> Already in “Group leaders” on the website (written into the page)</span></div>';
+  if(String(x['Test?'])==='Yes') return '';
+  if(pub().leaders&&pub().leaders[id]) return h+'<span class="tag gold" style="margin:0"><i class="ti ti-world-check"></i> In Group leaders on the website</span> <button class="lnk" data-leader="'+esc(id)+'" data-on="0">Remove</button></div>';
+  if(!/^Yes, with (my name and school|the school name only)/.test(p)) return h+'<span class="meta">Can’t go in Group leaders: they didn’t agree to their school being named.</span></div>';
+  return h+'<button class="lnk" data-leader="'+esc(id)+'" data-on="1"><i class="ti ti-world-upload"></i> Add to Group leaders on the website</button> <span class="meta">(beside Wycombe Abbey and Skinners; their full review'+(/school name only/.test(p)?', school named, not them':'')+')</span></div>';
+}
+function setLeader(id,on){
+  if(on&&!confirm('Add this teacher’s full review to “Group leaders” on tcatours.co.uk? The scores at the top of that section will update to include it.')) return;
+  fetch(API+'?type=fbpublish',{method:'POST',headers:{'content-type':'application/json','x-sheet-key':key()},body:JSON.stringify({kind:'leader',id:id,on:on})})
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j||!j.ok) return flash((j&&j.error)||'Not changed'); D.pub=j.pub; paint(); flash(on?'Added to Group leaders':'Removed from Group leaders'); })
+    .catch(function(){ flash('No connection'); });
+}
+function setStars(id,on){
+  fetch(API+'?type=fbpublish',{method:'POST',headers:{'content-type':'application/json','x-sheet-key':key()},body:JSON.stringify({kind:'review',id:id,setStars:true,stars:on})})
+    .then(function(r){ return r.json(); }).then(function(j){ if(!j||!j.ok) return flash((j&&j.error)||'Not changed'); D.pub=j.pub; paint(); flash(on?'Stars shown on the website':'Stars hidden on the website'); })
+    .catch(function(){ flash('No connection'); });
+}
+document.addEventListener('change',function(e){ if(e.target&&e.target.id==='starsDef') starsDefault(e.target.checked); });
 function view(){
   var r=rows(VIEW);
   if(!r.length) return '<div class="card"><p class="hint" style="font-size:14px">Nothing here yet'+(TOUR||FIND?' for this filter':'')+'.</p></div>';
-  if(VIEW==='Website reviews') return r.slice().reverse().map(function(x){ var t='“'+x['Review']+'”\n— '+x['Credit line'];
-    return '<div class="card"><p class="quote">“'+esc(x['Review'])+'”</p><p style="margin-top:8px;font-weight:600">— '+esc(x['Credit line'])+'</p>'+
-      '<p class="meta">'+esc([x['Who'],x['Tour'],x['Permission']].filter(Boolean).join(' · '))+'</p><p style="margin-top:8px"><button class="lnk" data-copy="'+esc(t)+'"><i class="ti ti-copy"></i> Copy review</button></p></div>'; }).join('');
+  if(VIEW==='Website reviews') return webBar('review',r)+r.slice().reverse().map(function(x){ var t='“'+x['Review']+'”\n— '+x['Credit line'], on=!!pub().reviews[x['Response ID']];
+    return '<div class="card">'+(x['Overall rating (1–5)']?'<p style="color:#C9A227;letter-spacing:2px" title="Their overall rating">'+starTxt(x['Overall rating (1–5)'])+' <span class="meta" style="letter-spacing:0">'+esc(x['Overall rating (1–5)'])+'/5</span></p>':'')+'<p class="quote">“'+esc(x['Review'])+'”</p><p style="margin-top:8px;font-weight:600">— '+esc(x['Credit line'])+'</p>'+
+      '<p class="meta">'+esc([x['Who'],x['Tour'],x['Permission']].filter(Boolean).join(' · '))+'</p><p class="row" style="margin-top:8px"><button class="lnk" data-copy="'+esc(t)+'"><i class="ti ti-copy"></i> Copy review</button>'+webBtn('review',x['Response ID'],on,true)+'</p></div>'; }).join('');
   if(VIEW==='Teachers') return r.slice().reverse().map(function(x){
     return card(x,'<p style="margin-top:8px"><span class="tag gold">Overall '+esc(x[OVERALL_T]||'—')+'/5</span> <span class="tag">'+esc(x['School / Organisation']||'')+'</span></p>'+
-      (x['Summary of the trip & working with TCA Tours']?'<p class="quote" style="font-size:18px;margin-top:8px">“'+esc(x['Summary of the trip & working with TCA Tours'])+'”</p>':''),[]); }).join('');
+      (x['Summary of the trip & working with TCA Tours']?'<p class="quote" style="font-size:18px;margin-top:8px">“'+esc(x['Summary of the trip & working with TCA Tours'])+'”</p>':'')+leaderBtn(x),[]); }).join('');
   if(VIEW==='Students') return r.slice().reverse().map(function(x){
     return card(x,'<p style="margin-top:8px"><span class="tag gold">Overall '+esc(x['Overall rating (1–5)']||'—')+'/5</span> <span class="tag">'+esc(x['School / Organisation']||'')+'</span></p>'+
       (x['Best bit of the trip']?'<p style="margin-top:8px"><b>Best bit:</b> '+esc(x['Best bit of the trip'])+'</p>':''),[]); }).join('');
@@ -90,11 +146,11 @@ function view(){
     return '<table><tr><th>Trip</th><th>Tour</th><th style="text-align:right">Average</th></tr>'+list.map(function(o){
       return '<tr><td><b>'+esc(o.trip)+'</b><div class="meta">'+(o.a?esc(o.a.work):'No ratings')+(o.na?' · '+o.na+' didn’t go':'')+' · '+o.t+' teacher'+(o.t===1?'':'s')+', '+o.s+' student'+(o.s===1?'':'s')+'</div></td><td class="meta">'+esc(o.tour)+'</td><td class="n">'+(o.a?o.a.avg:'—')+'</td></tr>'; }).join('')+'</table>';
   }
-  if(VIEW==='Photos') return '<div class="grid">'+r.slice().reverse().map(function(x){ var ok=x['OK to post?']==='Yes';
+  if(VIEW==='Photos') return webBar('photo',r)+'<div class="grid">'+r.slice().reverse().map(function(x){ var ok=x['OK to post?']==='Yes', can=ok&&!!x['Others in photo have consent?'], on=!!pub().photos[x['Photo ID']];
     return '<div class="pc"><img data-ph="'+esc(x['Photo ID'])+'" alt="">'+
       '<span class="tag '+(ok?'gold':'')+'">'+(ok?'OK to post':'TCA Tours only')+'</span>'+(ok&&x['Others in photo have consent?']?' <span class="tag">Others consented</span>':'')+
       '<p style="font-size:13.5px;margin-top:6px"><b>'+esc(x['Name'])+'</b> · '+esc(x['Who'])+(x['Caption']?'<br>'+esc(x['Caption']):'')+'</p><p class="meta">'+esc(x['Tour'])+'</p>'+
-      '<p style="margin-top:6px"><button class="lnk" data-dl="'+esc(x['Photo ID'])+'" data-name="'+esc((x['Name']||'photo')+'_'+x['Photo ID'])+'">Download</button></p></div>'; }).join('')+'</div>';
+      '<p style="margin-top:6px"><button class="lnk" data-dl="'+esc(x['Photo ID'])+'" data-name="'+esc((x['Name']||'photo')+'_'+x['Photo ID'])+'">Download</button></p><p style="margin-top:6px">'+webBtn('photo',x['Photo ID'],on,can)+'</p></div>'; }).join('')+'</div>';
   return '';
 }
 /* Photos load one by one through the password-protected backend */
@@ -102,6 +158,10 @@ function thumbs(){ [].forEach.call(document.querySelectorAll('img[data-ph]'),fun
   if(IMG[id]){ img.src=IMG[id]; return; }
   fetch(API+'?type=sheetphoto&id='+encodeURIComponent(id),{headers:{'x-sheet-key':key()}}).then(function(r){return r.json();}).then(function(j){ if(j&&j.data){ IMG[id]=j.data; img.src=j.data; } }).catch(function(){}); }); }
 document.addEventListener('click',function(e){
+  var w=e.target.closest('[data-web]'); if(w){ setWeb(w.getAttribute('data-web'),w.getAttribute('data-id'),w.getAttribute('data-on')==='1'); return; }
+  var wa=e.target.closest('[data-weball]'); if(wa){ setWeb(wa.getAttribute('data-weball'),null,true,true); return; }
+  var wl=e.target.closest('[data-leader]'); if(wl){ setLeader(wl.getAttribute('data-leader'),wl.getAttribute('data-on')==='1'); return; }
+  var ws=e.target.closest('[data-stars]'); if(ws){ setStars(ws.getAttribute('data-id'),ws.getAttribute('data-stars')==='1'); return; }
   var c=e.target.closest('[data-copy]'); if(c){ copy(c.getAttribute('data-copy')); return; }
   var d=e.target.closest('[data-dl]'); if(d){ var id=d.getAttribute('data-dl'); if(!IMG[id]){ flash('Still loading'); return; } var a=document.createElement('a'); a.href=IMG[id]; a.download=String(d.getAttribute('data-name')).replace(/[^\w-]+/g,'_')+'.jpg'; document.body.appendChild(a); a.click(); a.remove(); }
 });

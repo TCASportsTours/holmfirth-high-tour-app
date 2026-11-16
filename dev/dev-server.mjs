@@ -18,7 +18,7 @@ http.createServer(async (req, res) => {
   if (u.pathname === "/.netlify/functions/tour") {
     const body = ["GET", "HEAD", "OPTIONS"].includes(req.method) ? undefined : await new Promise((r) => { let b = ""; req.on("data", (c) => (b += c)); req.on("end", () => r(b)); });
     const out = await handler(new Request(u, { method: req.method, headers: req.headers, body }));
-    res.writeHead(out.status, Object.fromEntries(out.headers)); res.end(await out.text()); return;
+    res.writeHead(out.status, Object.fromEntries(out.headers)); res.end(Buffer.from(await out.arrayBuffer())); return;
   }
   let f = path.join(root, decodeURIComponent(u.pathname));
   if (!f.startsWith(root)) { res.writeHead(403); res.end(); return; }

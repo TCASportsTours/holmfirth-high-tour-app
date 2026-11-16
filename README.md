@@ -222,7 +222,63 @@ Known limits (by design): students sign in without a password, so someone could 
 - Comments show next to their rating: a "…: comment" column on the Teachers tab, a **Comment** column on Trip ratings, and in the app's Questionnaire results.
 - Example names in empty boxes are now **Alexander Hamilton** (teacher and student forms, and the expense form), not real people.
 
-## v32: Sally Nook New York feedback form (past tour)
+## v32: testimonials and photos onto tcatours.co.uk
+
+- **Results page (feedback.tcatours.co.uk):**
+  - **Website reviews** and **Photos** each have **Add to website** / **Remove** per item, and **Add all N to the website**.
+  - Only items with permission can go on. Testimonials need "Yes" to using their comment. Photos need "Yes, you can post them" **and** the tick confirming everyone in them has permission. The server checks this; test answers can't go on.
+  - Photos ask for a confirm first: check them against the school's photo consent list.
+- **On tcatours.co.uk (once):** add an HTML / embed block and paste:
+
+  ```html
+  <div data-tca-testimonials></div>
+  <div data-tca-photos></div>
+  <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
+  ```
+
+  Anything added on the results page then shows there automatically (within about 2 minutes), in TCA styling. Use `data-limit="6"` to cap the number shown. The code is also on the results page, under "Website code".
+- **Public feed:** `?type=pubreviews`, `?type=pubphotos`, `?type=pubphoto&id=`. Only what's been added: quote, agreed credit line, tour name, and photo caption. No student names with photos.
+- Deleting a response also takes it off the website. Admin → Clear test data (`fb`) clears the website list too.
+- The dev server now passes binary responses (photos) through unchanged.
+
+## v33: embed hides empty sections
+
+- `tca-feedback.js` shows a wrapper marked `data-tca-block` only once there's a testimonial or photo inside it. This lets the website have its own heading for each without ever showing an empty one.
+- **For tcatours.co.uk (tca-tours-site):** paste into `testimonials.html`, just above `<section class="section-stone" id="notebooks">`:
+
+  ```html
+  <section data-tca-block style="display:none"><div class="wrap">
+      <p class="eyebrow">Latest feedback</p>
+      <h2>From our most recent groups</h2>
+      <div data-tca-testimonials></div>
+  </div></section>
+  <section data-tca-block style="display:none"><div class="wrap">
+      <p class="eyebrow">On tour</p>
+      <h2>Photos from our groups</h2>
+      <div data-tca-photos></div>
+  </div></section>
+  <script src="https://feedback.tcatours.co.uk/embed/tca-feedback.js" async></script>
+  ```
+
+## v34: star ratings on website testimonials (optional)
+
+- **Results page → Website reviews:**
+  - Each card shows the person's overall rating.
+  - A tick box, **"Show the person's star rating with testimonials I add"** (on by default; remembered in that browser), decides whether new testimonials go on with stars.
+  - Each testimonial already on the website has **Show stars** / **Hide stars**.
+- **On the website,** the stars appear in gold above the quote (e.g. ★★★★★), with "Rated 5 out of 5" for screen readers. The rating is always the person's own overall rating, never typed in.
+
+## v35: teachers into "Group leaders" on tcatours.co.uk; photos no longer cropped
+
+- **Results page → Teachers:** each teacher response has **Add to Group leaders on the website**. Their full review joins the Wycombe Abbey and Skinners' ones on /testimonials, in the same layout:
+  - their best line set large (what they'd say to another school, else their summary)
+  - "What stood out", "Biggest impact on our students", "What we'd say to another school" and "Further comments", without repeating the large line
+- **Permission needed:** "Yes, with my name and school" (named) or "Yes, with the school name only" (school named, not them). The optional "TCA only" answers never go on.
+- **Scores above the reviews:** with any added, the three scores and the note under them update to cover every group leader, with the working, e.g. "Overall satisfaction: (5 + 5 + 4 + 5) ÷ 4 = 4.8". With none added, the page shows exactly what's written in it.
+- **testimonials.html needs v4** (it marks the scores and adds `<div data-tca-leaders>` after the Skinners review).
+- **Photos on the website now show whole** (portrait and landscape) in a grid, instead of cropped to a landscape shape. The results page and app preview show the whole photo too.
+
+## v36: Sally Nook New York feedback form (past tour)
 
 - **One link:** `https://feedback.tcatours.co.uk/sallynook/` (also works on holmfirthnyc.tcatours.co.uk). Name, school, then five questions:
   1. How many stars (1–5, required) · 2. Highlights of the New York trip and visits · 3. Recommend Tony's New York trips to other schools? (Yes/No)
