@@ -277,3 +277,11 @@ Known limits (by design): students sign in without a password, so someone could 
 - **Scores above the reviews:** with any added, the three scores and the note under them update to cover every group leader, with the working, e.g. "Overall satisfaction: (5 + 5 + 4 + 5) ÷ 4 = 4.8". With none added, the page shows exactly what's written in it.
 - **testimonials.html needs v4** (it marks the scores and adds `<div data-tca-leaders>` after the Skinners review).
 - **Photos on the website now show whole** (portrait and landscape) in a grid, instead of cropped to a landscape shape. The results page and app preview show the whole photo too.
+
+## v36: Sally Nook New York feedback form (past tour)
+
+- **One link:** `https://feedback.tcatours.co.uk/sallynook/` (also works on holmfirthnyc.tcatours.co.uk). Name, school, then five questions:
+  1. How many stars (1–5, required) · 2. Highlights of the New York trip and visits · 3. Recommend Tony's New York trips to other schools? (Yes/No)
+  · 4. What would you say about Tony's New York trips? (used on the website) · 5. Happy for the quote to be used? (the Holmfirth teacher options)
+- No photos, no detail section, no tour app question. Saved as a teacher answer under the same names as the teacher form (highlights = "What stood out", Q4 = "Summary"), so it shows on the Teachers and Website reviews tabs of feedback.tcatours.co.uk, filed under **"Sally Nook · New York"**.
+- How it works: the page sets `window.FB_PAST = {key, tour, short: true}` and sends `tourKey`; the backend only accepts keys listed in `PAST_TOURS` in `netlify/functions/tour.mjs`. Another past tour = copy `public/sallynook/`, change the key, add it to `PAST_TOURS`.

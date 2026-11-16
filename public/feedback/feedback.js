@@ -1,11 +1,13 @@
-/* TCA Tours — tour questionnaires on their own links, v1.
+/* TCA Tours — tour questionnaires on their own links, v3 (v3: short five-question form for past tours, FB_PAST.short).
    /feedback/teachers  (window.FB_KIND = 'teacher')  ·  /feedback/students  (window.FB_KIND = 'student')
    No sign-in. Answers go to the tour app's backend (?type=feedback) and are collected on the password-protected
    results page /sheet (with Download as Excel).
    Photos are optional: shrunk on the phone, uploaded as soon as they're picked, then sent with the answers.
    A draft is kept on the device, so half-finished answers survive closing the page.
    Link options: ?t=<teacher name> (from inside the tour app: fills in the name and marks it done in the app),
-   ?test=1 (TCA preview: marked as a test). */
+   ?test=1 (TCA preview: marked as a test).
+   v2: past tours get their own links (e.g. /sallynook/teachers/). The page sets window.FB_PAST = {key, tour, trips, noApp, short}
+   and the answers are filed under that tour in the same master results (feedback.tcatours.co.uk). */
 (function(){
 'use strict';
 var KIND = window.FB_KIND === 'teacher' ? 'teacher' : 'student';
@@ -14,7 +16,8 @@ var MAX_PHOTOS = 6;
 var Q = new URLSearchParams(location.search);
 var APP_TEACHER = Q.get('t') || '';
 var TEST = Q.get('test') === '1';
-var DRAFT = 'tcafb_' + KIND + '_draft';
+var PAST = window.FB_PAST || null;
+var DRAFT = 'tcafb_' + (PAST ? PAST.key + '_' : '') + KIND + '_draft';
 var A = {}, PHOTOS = [], TOUR = null, EVENTS = [];
 
 function $(id){ return document.getElementById(id); }
@@ -67,24 +70,34 @@ function render(){
   if(A.school==null) A.school=school;
   if(KIND==='teacher' && !A.name && APP_TEACHER) A.name=APP_TEACHER;
   h+='<p class="label">'+esc(t['Tour Name']||'Your trip')+'</p>'+
-    '<h1>'+(KIND==='teacher'?'Teacher <em>questionnaire</em>':'How was <em>your trip?</em>')+'</h1>'+
+    '<h1>'+(PAST&&PAST.short?'How was <em>New York?</em>':KIND==='teacher'?'Teacher <em>questionnaire</em>':'How was <em>your trip?</em>')+'</h1>'+
     '<p class="intro">'+(KIND==='teacher'
-      ?'Thank you for travelling with TCA Tours. About three minutes; the optional details take another two. Only the starred questions are needed.'
+      ?(PAST&&PAST.short?'Thank you for travelling with TCA Tours. Five quick questions, about two minutes. Only the starred questions are needed.':'Thank you for travelling with TCA Tours. About three minutes; the optional details take another two. Only the starred questions are needed.')
       :'Tell us what you thought of the trip. It takes about two minutes. Only the starred questions are needed.')+'</p>'+
     (TEST?'<p class="banner"><i class="ti ti-eye"></i> Preview: anything you send is marked as a test.</p>':'');
 
-  if(KIND==='teacher'){
+  if(PAST&&PAST.short){
+    /* Short form for a past tour: name, school and five questions. Saved under the same answer names as the
+       teacher form, so it lands in the same results columns (stoodOut = highlights, summary = website comment). */
+    h+=card('ti-user','About you', q('Your name','As you’d like it shown if we quote you',true)+text('name','e.g. Alexander Hamilton')+q('School','')+text('school','School name'));
+    h+=card('ti-star','Your trip',
+      q('1. How many stars would you give the trip?','1 = poor, 5 = excellent',true)+stars('r_overall')+
+      q('2. What were the highlights of the New York trip and the visits you went on?','')+text('stoodOut','The moments you and your students will remember',3)+
+      q('3. Would you recommend Tony’s New York trips to other schools?','')+chips('recommend',['Yes','No'])+
+      q('4. What would you say about Tony’s New York trips?','This comment will be used on the website')+text('summary','A few sentences about the trip and working with Tony and TCA Tours',5)+
+      q('5. Would you be happy for this quote to be used on the TCA Tours website?','')+chips('quoteOk',QUOTE_T),{id:'cRating'});
+  } else if(KIND==='teacher'){
     h+=card('ti-user','About you', q('Your name','As you’d like it shown if we quote you',true)+text('name','e.g. Alexander Hamilton')+q('School','')+text('school','School name'));
     h+=card('ti-star','Your rating','<p class="hint">1 = very dissatisfied, 5 = extremely satisfied.</p>'+CORE_T.map(function(r){ return q(r[1],r[2],r[3])+stars(r[0])+cmt(r[0]); }).join(''),{id:'cRating'});
-    h+=card('ti-school','The trip',q('What stood out about this trip for you and your students?','')+text('stoodOut','e.g. the business tour, the hockey game…',3)+
+    h+=card('ti-school','The trip',q('What stood out about this trip for you and your students?','')+text('stoodOut',PAST?'e.g. a place, a moment, a person you met…':'e.g. the business tour, the hockey game…',3)+
       q('What was the biggest impact of this trip on your students?','')+text('impact','What did they take away from it?',3));
     h+=card('ti-message-heart','Your review',q('Would you recommend TCA Tours to another school?','')+chips('recommend',['Yes','No'])+
       '<div id="wSay">'+q('What would you say to another school considering this trip?','')+text('say','e.g. Use TCA Tours because…',3)+'</div>'+
       q('Sum up the trip and working with TCA Tours in a few sentences','This is the comment we’d love to use on our website')+text('summary','Your thoughts on the trip, and on working with TCA Tours',5)+
       q('Are you happy for us to use your comments on our website and social media?','')+chips('quoteOk',QUOTE_T));
     h+=card('ti-adjustments','More detail','<p class="hint">For the TCA Tours team only: none of this goes on the website.</p>'+
-      DETAIL_T.map(function(r){ return q(r[1],'')+stars(r[0],'Not for me')+cmt(r[0]); }).join('')+
-      (tl.length?q('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+stars('trip.'+i,'Didn’t go')+cmt('trip.'+i)+'</div>'; }).join(''):'')+
+      DETAIL_T.filter(function(r){ return !(PAST&&PAST.noApp&&r[0]==='r_app'); }).map(function(r){ return q(r[1],'')+stars(r[0],'Not for me')+cmt(r[0]); }).join('')+
+      (tl.length?q('Rate the trips and venues','Tap “Didn’t go” for any your group missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+(x.day?'<span>Day '+esc(x.day)+'</span>':'')+'</p>'+stars('trip.'+i,'Didn’t go')+cmt('trip.'+i)+'</div>'; }).join(''):'')+
       q('How much spending money would you recommend for students next time?','For the whole trip')+chips('spend',['Under $100','$100–$200','$200–$300','$300–$400','Over $400'])+
       q('Any additional comments or suggestions?','Anything we could do better: it helps')+text('improve','Be honest',3)+
       q('Would you book another trip with TCA Tours?','')+chips('again',['Yes','Maybe','No'])+
@@ -94,14 +107,14 @@ function render(){
   } else {
     h+=card('ti-user','About you', q('Your name','First name and surname',true)+text('name','e.g. Alexander Hamilton')+q('School','')+text('school','School name'));
     h+=card('ti-star','The trip',q('How would you rate the trip overall?','1 = poor, 5 = amazing',true)+stars('r_overall')+
-      (tl.length?q('Rate the trips and places you visited','Tap “Didn’t go” for any you missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+'<span>Day '+esc(x.day)+'</span></p>'+stars('trip.'+i,'Didn’t go')+'</div>'; }).join(''):'')+
+      (tl.length?q('Rate the trips and places you visited','Tap “Didn’t go” for any you missed')+tl.map(function(x,i){ return '<div class="trip"><p>'+esc(x.title)+(x.day?'<span>Day '+esc(x.day)+'</span>':'')+'</p>'+stars('trip.'+i,'Didn’t go')+'</div>'; }).join(''):'')+
       q('What was the best bit?','')+text('best','The thing you’ll remember most',3)+
       q('Is there anything you’d change?','')+text('change','Be honest: it helps us',2)+
       q('Would you recommend this trip to a friend?','')+chips('recommend',['Yes','Maybe','No']),{id:'cRating'});
     h+=card('ti-message-heart','Your comment',q('How would you describe the trip to a friend?','A sentence or two')+text('summary','e.g. The best week ever because…',3)+
       q('Can we use your comment on our website and social media?','Please check with your parent or guardian first')+chips('quoteOk',QUOTE_S));
   }
-  h+=card('ti-photo','Your photos',
+  if(!(PAST&&PAST.short)) h+=card('ti-photo','Your photos',
     '<p class="hint" style="font-size:13.5px;color:var(--charcoal)">Totally optional: share up to '+MAX_PHOTOS+' of your best photos from the trip, if you’d like to. You can skip this.</p>'+
     '<div class="photos" id="phList"></div>'+
     '<label class="addph" id="phAdd"><i class="ti ti-camera-plus"></i> Add photos<input type="file" id="phFile" accept="image/*" multiple hidden></label>'+
@@ -204,11 +217,11 @@ function submit(){
   Object.keys(a).forEach(function(k){ if(a[k]===''||a[k]==null||(Array.isArray(a[k])&&!a[k].length)) delete a[k]; });
   var btn=$('send'); btn.disabled=true; btn.innerHTML='<i class="ti ti-loader"></i> Sending…';
   fetch(API+'?type=feedback',{method:'POST',headers:{'content-type':'application/json'},
-    body:JSON.stringify({kind:KIND,a:a,photos:ph.map(function(p){return {id:p.id,cap:String(p.cap||'').trim()};}),source:APP_TEACHER?'App':'Link',test:TEST})})
+    body:JSON.stringify({kind:KIND,a:a,photos:ph.map(function(p){return {id:p.id,cap:String(p.cap||'').trim()};}),source:APP_TEACHER?'App':'Link',test:TEST,tourKey:PAST?PAST.key:undefined})})
     .then(function(r){ return r.json().then(function(j){ return {r:r,j:j}; }); }).then(function(x){
       btn.disabled=false; btn.innerHTML='<i class="ti ti-send"></i> Send my answers';
       if(!x.r.ok||!x.j.ok) return fail((x.j&&x.j.error)||('Not sent ('+x.r.status+'). Please try again.'));
-      ls(DRAFT,null); ls('tcafb_'+KIND+'_sent',String(Date.now()));
+      ls(DRAFT,null); ls('tcafb_'+(PAST?PAST.key+'_':'')+KIND+'_sent',String(Date.now()));
       if(APP_TEACHER) ls('hny_tq_done_'+APP_TEACHER,'1');   /* the tour app stops asking this teacher */
       $('main').innerHTML='<section class="card done"><div class="ic"><i class="ti ti-check"></i></div><h1>Thank <em>you</em></h1>'+
         '<p class="intro">Your answers are with TCA Tours.'+(ph.length?' So are your '+ph.length+' photo'+(ph.length>1?'s':'')+'.':'')+'</p>'+
@@ -220,7 +233,8 @@ function submit(){
 /* ---------- start ---------- */
 try{ var d=JSON.parse(ls(DRAFT)||'null'); if(d){ A=d.a||{}; PHOTOS=(d.photos||[]).map(function(p){ return {id:p.id,cap:p.cap,thumb:p.thumb,st:'ok'}; }); } }catch(e){}
 document.addEventListener('click',onClick); document.addEventListener('input',onInput); document.addEventListener('change',function(e){ if(e.target.id==='phFile'){ addFiles(e.target.files); e.target.value=''; } else onInput(e); });
-fetch(API,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&j.tour){ TOUR=j.tour; EVENTS=j.events||[]; } })
+if(PAST){ TOUR=PAST.tour||{}; EVENTS=(PAST.trips||[]).map(function(t){ return {title:t,type:'Activity',day:''}; }); render(); }
+else fetch(API,{cache:'no-store'}).then(function(r){return r.json();}).then(function(j){ if(j&&j.tour){ TOUR=j.tour; EVENTS=j.events||[]; } })
   .catch(function(){})
   .then(function(){ if(!TOUR&&window.TOUR_DEFAULT){ TOUR=window.TOUR_DEFAULT.tour; EVENTS=window.TOUR_DEFAULT.events||[]; } render(); });
 })();
